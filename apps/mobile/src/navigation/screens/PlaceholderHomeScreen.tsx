@@ -14,11 +14,14 @@ interface PlaceholderHomeScreenProps {
  * for now it just proves role-based routing works and offers logout.
  */
 export function PlaceholderHomeScreen({ roleLabel, description }: PlaceholderHomeScreenProps) {
+  const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>{roleLabel}</Text>
+      <Text style={styles.eyebrow}>
+        {roleLabel} — {user?.name}
+      </Text>
       <Text style={styles.title}>Nothing built here yet</Text>
       <Text style={styles.description}>{description}</Text>
 
