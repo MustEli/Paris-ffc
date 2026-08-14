@@ -118,7 +118,7 @@ Built one thin slice at a time — a feature working screen-to-database — rath
 
 1. **Scaffold `apps/mobile`** with Expo + TypeScript, confirm it renders on a real device via Expo Go. *(done — see Status below)*
 2. **Navigation shell** — login screen + role-based routing stub (Staff / Admin / Management land on separate empty screens). *(done — see Status below)*
-3. **Minimal backend in parallel** — just enough NestJS endpoints to support step 4 (login, start-shift, end-shift, shift-status), not the full domain model yet.
+3. **Minimal backend in parallel** — just enough NestJS endpoints to support step 4 (login, start-shift, end-shift, shift-status), not the full domain model yet. *(done — see Status below)*
 4. **Attendance feature end-to-end** (Feature 1 — smallest, most fully-specified in the doc): one real screen, one real button, one real API call, one real database row. Proves the whole stack holds together.
 5. **Offline handling + push notifications**, retrofitted onto the now-working Attendance slice.
 6. **Repeat the pattern** for Reception → Seller Stock → Put-Away → Order Preparation, reusing the auth/navigation/offline/notifications plumbing built in steps 2–5.
@@ -127,8 +127,9 @@ Built one thin slice at a time — a feature working screen-to-database — rath
 ## Status
 
 - `apps/mobile`: Expo + TypeScript scaffold, pinned to SDK 54 (steps 1–2 of the roadmap above). Confirmed working end-to-end on a real Android device via Expo Go; iOS not yet device-tested (no iOS device/simulator available in this environment — see the standing iOS-parity note below), but bundles cleanly for the `ios` platform target.
-- Navigation shell in place: `RootNavigator` switches between `AuthNavigator` (mock login — pick a role, no real credentials) and a `StaffNavigator` / `AdminNavigator` / `ManagementNavigator`, each with one placeholder home screen and a logout button. Role state lives in `core/auth/authStore.ts` (Zustand) — **not real auth**, just enough to prove role-based routing until step 3 (backend) exists.
-- Next up: step 3, a minimal backend (login, start-shift, end-shift, shift-status) to replace the mock login and unblock step 4 (Attendance feature).
-- `packages/backend`, `apps/web-dashboard`, `packages/shared`: not yet scaffolded.
+- Navigation shell in place, confirmed on a real Android device: `RootNavigator` switches between `AuthNavigator` (mock login — pick a role, no real credentials) and a `StaffNavigator` / `AdminNavigator` / `ManagementNavigator`, each with one placeholder home screen and a logout button. Role state lives in `apps/mobile/src/core/auth/authStore.ts` (Zustand) — still **not real auth**, still local-only.
+- `packages/backend`: NestJS scaffold with real (if intentionally minimal) `auth` and `shifts` modules — JWT login against 3 seeded dev users, and a working start/end/status shift lifecycle with correct conflict handling (409 on double-start, 404 on double-end). **In-memory storage, not Postgres yet** — a deliberate scope decision, see `packages/backend/README.md` Status for why and what swapping to Postgres later involves. Verified via a passing Jest e2e suite (4/4) plus manual curl exercise of the full flow, not just type-checked.
+- Next up: step 4 — wire `apps/mobile`'s mock login to actually call `POST /auth/login`, and build the real Attendance screen (Start/End Shift button) against `POST /shifts/start` / `/end` / `GET /shifts/status`.
+- `apps/web-dashboard`, `packages/shared`: not yet scaffolded.
 
 **Standing constraint: consider iOS alongside Android for everything built.** Only Android has been tested on a real device so far. This environment has no Mac/iOS simulator/iPhone, so iOS testing depends on the user running Expo Go on their own iPhone — the same `npm start` session serves both platforms simultaneously, no separate setup needed.
