@@ -1,10 +1,9 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDetailScreen';
+import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
 import { AdminHomeScreen } from './screens/AdminHomeScreen';
-
-export type AdminStackParamList = {
-  AdminHome: undefined;
-};
+import { type AdminStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
 
@@ -12,6 +11,16 @@ export function AdminNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: 'Admin' }} />
+      <Stack.Screen
+        name="ReceptionList"
+        component={ReceptionListScreen}
+        options={{ title: 'Reception Log' }}
+      />
+      <Stack.Screen
+        name="ReceptionDetail"
+        component={ReceptionDetailScreen}
+        options={{ title: 'Delivery' }}
+      />
     </Stack.Navigator>
   );
 }
