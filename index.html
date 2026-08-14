@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Warehouse HQ</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="top-bar">
+        <div>
+          <p class="eyebrow">Welcome back</p>
+          <h1 id="greeting">Good morning</h1>
+        </div>
+        <div class="avatar">A</div>
+      </header>
+
+      <section class="hero-card">
+        <div>
+          <p class="eyebrow">Home status</p>
+          <h2>Everything is running smoothly</h2>
+          <p>Lights, locks, and climate are all in sync.</p>
+        </div>
+        <button class="primary-btn" id="actionButton">Open dashboard</button>
+      </section>
+
+      <section class="quick-actions" aria-label="Quick actions">
+        <button class="action-btn">🔒 Secure</button>
+        <button class="action-btn">💡 Lights</button>
+        <button class="action-btn">🎵 Music</button>
+      </section>
+
+      <section class="info-grid" aria-label="Home overview">
+        <article class="info-card">
+          <p class="label">Temperature</p>
+          <h3>24°C</h3>
+        </article>
+        <article class="info-card">
+          <p class="label">Weather</p>
+          <h3>Sunny</h3>
+        </article>
+        <article class="info-card">
+          <p class="label">Energy</p>
+          <h3>82%</h3>
+        </article>
+      </section>
+
+      <p class="status-text" id="message">Tap any action to begin.</p>
+
+      <nav class="bottom-nav" aria-label="Bottom navigation">
+        <button class="nav-item active">🏠 Home</button>
+        <button class="nav-item">📅 Plans</button>
+        <button class="nav-item">⚙️ Settings</button>
+      </nav>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
