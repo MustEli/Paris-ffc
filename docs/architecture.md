@@ -53,6 +53,50 @@ app-project/
 
 Each `apps/*` and `packages/*` folder currently holds only a `package.json` + `README.md` describing its intended contents — no framework has been scaffolded yet (no `npx create-expo-app`, no `nest new`), per instruction to structure first, build later.
 
+## Mobile app internal architecture
+
+`apps/mobile/src` is organized **by feature**, mirroring the requirements doc's own Feature 0–5 structure 1:1, so there's always an obvious place for new spec sections to land:
+
+```
+apps/mobile/src/
+├── app/                    # entry point, role-based navigation root
+├── navigation/             # React Navigation stacks (Staff / Admin / Management)
+├── features/
+│   ├── attendance/
+│   │   ├── screens/        # ShiftScreen.tsx
+│   │   ├── components/     # StartShiftButton.tsx
+│   │   ├── hooks/          # useShiftStatus.ts
+│   │   └── api.ts          # calls into core/api
+│   ├── reception/
+│   ├── sellerStock/
+│   ├── putAway/
+│   └── orderPrep/
+├── core/
+│   ├── api/                 # shared HTTP client, auth headers
+│   ├── auth/                # login, token storage, role handling
+│   ├── notifications/       # push + audible alert wiring
+│   ├── offline/              # sync queue for poor warehouse connectivity
+│   ├── i18n/                 # French/English strings
+│   └── theme/
+└── components/               # shared dumb UI (buttons, cards) used across features
+```
+
+Each `features/*` folder is self-contained — Attendance can be built, tested, and shipped without Reception existing yet. `core/` holds the cross-cutting concerns every feature needs.
+
+**Library choices:**
+
+| Concern | Choice | Why |
+|---|---|---|
+| Navigation | React Navigation | Standard, supports role-based stacks cleanly |
+| Server state (data from the API) | TanStack Query | Caching, retry, and offline-aware refetching for free |
+| Local/UI state | Zustand | Minimal boilerplate for ephemeral UI state |
+| Offline storage | AsyncStorage + React Query persistence first; WatermelonDB only if sync conflicts get complex | Don't build for complexity that doesn't exist yet |
+| Auth token storage | expo-secure-store | Encrypted on-device JWT storage |
+| Camera (label/damage photos) | expo-camera / expo-image-picker | Required by Reception & Seller Stock |
+| Location (future geofencing) | expo-location | Matches the doc's "Future developments" section |
+| Push + audible alerts | expo-notifications + expo-av | Doc requires distinct audible alerts, not silent push |
+| i18n | react-i18next | French/English requirement for staff/admin |
+
 ## Domain model (from requirements doc)
 
 `User`, `Role` (Staff/Admin/Management/IT), `Device`, `Shift`, `Break`, `Reception` (categories: Return Parcels, Packaging Stock, Sellers Stock, Equipment/Other), `SellerStockPallet` (weight, condition, damage evidence), `PutAwayTask`, `PickPackTask`, `AuditLog`.
@@ -64,9 +108,19 @@ These sections in the requirements doc are stubs (headers only, no detail) and w
 - Outgoing flow / return process ("Onglet 7")
 - Reporting and visualisation ("Onglet 9")
 
-## Next steps (not started)
+## Build roadmap (vertical slices)
 
-1. Scaffold `apps/mobile` with Expo + TypeScript template.
-2. Scaffold `packages/backend` with Nest CLI.
-3. Define `packages/shared` type definitions from the domain model above.
-4. Build the Attendance feature end-to-end first (smallest, most fully-specified feature) as the vertical slice proving the stack.
+Built one thin slice at a time — a feature working screen-to-database — rather than building out the full architecture before anything runs. Each step below is a prerequisite for the next:
+
+1. **Scaffold `apps/mobile`** with Expo + TypeScript, confirm it renders on a real device via Expo Go. *(done — see Status below)*
+2. **Navigation shell** — login screen + role-based routing stub (Staff / Admin / Management land on separate empty screens).
+3. **Minimal backend in parallel** — just enough NestJS endpoints to support step 4 (login, start-shift, end-shift, shift-status), not the full domain model yet.
+4. **Attendance feature end-to-end** (Feature 1 — smallest, most fully-specified in the doc): one real screen, one real button, one real API call, one real database row. Proves the whole stack holds together.
+5. **Offline handling + push notifications**, retrofitted onto the now-working Attendance slice.
+6. **Repeat the pattern** for Reception → Seller Stock → Put-Away → Order Preparation, reusing the auth/navigation/offline/notifications plumbing built in steps 2–5.
+7. **EAS Build** for real device installs and MDM white-list testing, once there's something worth installing.
+
+## Status
+
+- `apps/mobile`: Expo + TypeScript scaffold in place (step 1 of the roadmap above). No screens/features built yet — next up is step 2 (navigation shell).
+- `packages/backend`, `apps/web-dashboard`, `packages/shared`: not yet scaffolded.

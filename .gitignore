@@ -28,8 +28,17 @@ Thumbs.db
 # Native
 *.jks
 *.p12
+*.p8
 *.key
+*.pem
 *.mobileprovision
+*.orig.*
+.kotlin/
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+apps/mobile/ios/
+apps/mobile/android/
 
 # Misc temp
 tmp/
