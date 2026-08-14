@@ -58,30 +58,34 @@ Each `apps/*` and `packages/*` folder currently holds only a `package.json` + `R
 `apps/mobile/src` is organized **by feature**, mirroring the requirements doc's own Feature 0–5 structure 1:1, so there's always an obvious place for new spec sections to land:
 
 ```
-apps/mobile/src/
-├── app/                    # entry point, role-based navigation root
-├── navigation/             # React Navigation stacks (Staff / Admin / Management)
-├── features/
-│   ├── attendance/
-│   │   ├── screens/        # ShiftScreen.tsx
-│   │   ├── components/     # StartShiftButton.tsx
-│   │   ├── hooks/          # useShiftStatus.ts
-│   │   └── api.ts          # calls into core/api
-│   ├── reception/
-│   ├── sellerStock/
-│   ├── putAway/
-│   └── orderPrep/
-├── core/
-│   ├── api/                 # shared HTTP client, auth headers
-│   ├── auth/                # login, token storage, role handling
-│   ├── notifications/       # push + audible alert wiring
-│   ├── offline/              # sync queue for poor warehouse connectivity
-│   ├── i18n/                 # French/English strings
-│   └── theme/
-└── components/               # shared dumb UI (buttons, cards) used across features
+apps/mobile/
+├── App.tsx / index.ts       # Expo/Metro entry point (fixed location, not movable into src/)
+└── src/
+    ├── navigation/           # role-based routing root + stacks
+    │   ├── RootNavigator.tsx      # picks Auth/Staff/Admin/Management stack by role
+    │   ├── AuthNavigator.tsx, StaffNavigator.tsx, AdminNavigator.tsx, ManagementNavigator.tsx
+    │   └── screens/          # navigation-shell screens (Login, per-role placeholder homes)
+    ├── features/
+    │   ├── attendance/
+    │   │   ├── screens/        # ShiftScreen.tsx
+    │   │   ├── components/     # StartShiftButton.tsx
+    │   │   ├── hooks/          # useShiftStatus.ts
+    │   │   └── api.ts          # calls into core/api
+    │   ├── reception/
+    │   ├── sellerStock/
+    │   ├── putAway/
+    │   └── orderPrep/
+    ├── core/
+    │   ├── api/                 # shared HTTP client, auth headers
+    │   ├── auth/                # authStore.ts — role state (mock login for now, see Status)
+    │   ├── notifications/       # push + audible alert wiring
+    │   ├── offline/              # sync queue for poor warehouse connectivity
+    │   ├── i18n/                 # French/English strings
+    │   └── theme/
+    └── components/               # shared dumb UI (buttons, cards) used across features
 ```
 
-Each `features/*` folder is self-contained — Attendance can be built, tested, and shipped without Reception existing yet. `core/` holds the cross-cutting concerns every feature needs.
+Each `features/*` folder is self-contained — Attendance can be built, tested, and shipped without Reception existing yet. `core/` holds the cross-cutting concerns every feature needs. Once a role's real feature screens exist, they replace that role stack's placeholder home screen — the navigation shell doesn't change shape, it just stops pointing at a placeholder.
 
 **Library choices:**
 
@@ -113,7 +117,7 @@ These sections in the requirements doc are stubs (headers only, no detail) and w
 Built one thin slice at a time — a feature working screen-to-database — rather than building out the full architecture before anything runs. Each step below is a prerequisite for the next:
 
 1. **Scaffold `apps/mobile`** with Expo + TypeScript, confirm it renders on a real device via Expo Go. *(done — see Status below)*
-2. **Navigation shell** — login screen + role-based routing stub (Staff / Admin / Management land on separate empty screens).
+2. **Navigation shell** — login screen + role-based routing stub (Staff / Admin / Management land on separate empty screens). *(done — see Status below)*
 3. **Minimal backend in parallel** — just enough NestJS endpoints to support step 4 (login, start-shift, end-shift, shift-status), not the full domain model yet.
 4. **Attendance feature end-to-end** (Feature 1 — smallest, most fully-specified in the doc): one real screen, one real button, one real API call, one real database row. Proves the whole stack holds together.
 5. **Offline handling + push notifications**, retrofitted onto the now-working Attendance slice.
@@ -122,5 +126,9 @@ Built one thin slice at a time — a feature working screen-to-database — rath
 
 ## Status
 
-- `apps/mobile`: Expo + TypeScript scaffold in place (step 1 of the roadmap above). No screens/features built yet — next up is step 2 (navigation shell).
+- `apps/mobile`: Expo + TypeScript scaffold, pinned to SDK 54 (steps 1–2 of the roadmap above). Confirmed working end-to-end on a real Android device via Expo Go; iOS not yet device-tested (no iOS device/simulator available in this environment — see the standing iOS-parity note below), but bundles cleanly for the `ios` platform target.
+- Navigation shell in place: `RootNavigator` switches between `AuthNavigator` (mock login — pick a role, no real credentials) and a `StaffNavigator` / `AdminNavigator` / `ManagementNavigator`, each with one placeholder home screen and a logout button. Role state lives in `core/auth/authStore.ts` (Zustand) — **not real auth**, just enough to prove role-based routing until step 3 (backend) exists.
+- Next up: step 3, a minimal backend (login, start-shift, end-shift, shift-status) to replace the mock login and unblock step 4 (Attendance feature).
 - `packages/backend`, `apps/web-dashboard`, `packages/shared`: not yet scaffolded.
+
+**Standing constraint: consider iOS alongside Android for everything built.** Only Android has been tested on a real device so far. This environment has no Mac/iOS simulator/iPhone, so iOS testing depends on the user running Expo Go on their own iPhone — the same `npm start` session serves both platforms simultaneously, no separate setup needed.

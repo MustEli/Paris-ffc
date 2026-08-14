@@ -1,3 +1,7 @@
+// Must be the first import — sets up gesture-handler's native event
+// listeners before anything else (including React Navigation) loads.
+import 'react-native-gesture-handler';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

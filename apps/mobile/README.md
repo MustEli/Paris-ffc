@@ -12,7 +12,9 @@ Staff & Admin native app — Android + iOS.
 
 ## Status
 
-Scaffolded (Expo + TypeScript, SDK 54). No screens/features built yet beyond the placeholder `App.tsx` — next up is the navigation shell. See [../../docs/architecture.md](../../docs/architecture.md) for the roadmap and stack rationale.
+Scaffolded (Expo + TypeScript, SDK 54), confirmed working on a real Android device via Expo Go. Navigation shell is in: mock role login (`src/navigation/screens/LoginScreen.tsx`) routes into `StaffNavigator` / `AdminNavigator` / `ManagementNavigator`, each currently showing a placeholder home screen. No real auth yet — role selection is local-only until the backend exists. Next up: a minimal backend to replace the mock login, then the Attendance feature. See [../../docs/architecture.md](../../docs/architecture.md) for the full roadmap and stack rationale.
+
+**iOS not yet device-tested** — this dev environment has no Mac/iOS simulator. The bundle builds cleanly for the `ios` platform target, but that's not the same as confirming it renders correctly. To test: install **Expo Go** from the App Store on an iPhone and scan the same QR code `npm start` produces — it serves both platforms from one session.
 
 ## Running it
 
