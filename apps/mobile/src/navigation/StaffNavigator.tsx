@@ -4,6 +4,9 @@ import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
 import { NewDeliveryScreen } from '../features/reception/screens/NewDeliveryScreen';
 import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDetailScreen';
 import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
+import { NewPalletScreen } from '../features/sellerStock/screens/NewPalletScreen';
+import { SellerStockDetailScreen } from '../features/sellerStock/screens/SellerStockDetailScreen';
+import { SellerStockListScreen } from '../features/sellerStock/screens/SellerStockListScreen';
 import { StaffHomeScreen } from './screens/StaffHomeScreen';
 import { type StaffStackParamList } from './types';
 
@@ -20,6 +23,17 @@ export function StaffNavigator() {
         name="ReceptionDetail"
         component={ReceptionDetailScreen}
         options={{ title: 'Delivery' }}
+      />
+      <Stack.Screen
+        name="SellerStockList"
+        component={SellerStockListScreen}
+        options={{ title: 'Seller Stock' }}
+      />
+      <Stack.Screen name="NewPallet" component={NewPalletScreen} options={{ title: 'New Pallet' }} />
+      <Stack.Screen
+        name="SellerStockDetail"
+        component={SellerStockDetailScreen}
+        options={{ title: 'Pallet' }}
       />
     </Stack.Navigator>
   );

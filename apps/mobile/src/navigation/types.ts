@@ -9,11 +9,19 @@ export type ReceptionStackParamList = {
   ReceptionDetail: { id: string };
 };
 
-export type StaffStackParamList = ReceptionStackParamList & {
-  StaffHome: undefined;
-  Attendance: undefined;
+export type SellerStockStackParamList = {
+  SellerStockList: undefined;
+  NewPallet: undefined;
+  SellerStockDetail: { id: string };
 };
 
-export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> & {
-  AdminHome: undefined;
-};
+export type StaffStackParamList = ReceptionStackParamList &
+  SellerStockStackParamList & {
+    StaffHome: undefined;
+    Attendance: undefined;
+  };
+
+export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
+  Omit<SellerStockStackParamList, 'NewPallet'> & {
+    AdminHome: undefined;
+  };

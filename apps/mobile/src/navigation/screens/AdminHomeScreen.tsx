@@ -17,6 +17,11 @@ export function AdminHomeScreen({ navigation }: Props) {
           description: 'Review incoming deliveries and give put-away instructions.',
           onPress: () => navigation.navigate('ReceptionList'),
         },
+        {
+          label: 'Seller Stock pipeline',
+          description: 'Review pallets, especially damaged/overweight ones, and give put-away locations.',
+          onPress: () => navigation.navigate('SellerStockList'),
+        },
       ]}
     />
   );

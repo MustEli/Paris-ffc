@@ -22,6 +22,11 @@ export function StaffHomeScreen({ navigation }: Props) {
           description: 'Log incoming deliveries and confirm put-away.',
           onPress: () => navigation.navigate('ReceptionList'),
         },
+        {
+          label: 'Seller Stock',
+          description: 'Log seller pallets, capture photos, and confirm placement.',
+          onPress: () => navigation.navigate('SellerStockList'),
+        },
       ]}
     />
   );

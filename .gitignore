@@ -40,6 +40,9 @@ expo-env.d.ts
 apps/mobile/ios/
 apps/mobile/android/
 
+# Uploaded files (local-disk dev storage — see packages/backend/src/uploads)
+packages/backend/uploads/
+
 # Misc temp
 tmp/
 *.tmp
