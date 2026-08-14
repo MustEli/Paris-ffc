@@ -1,0 +1,6 @@
+{
+  "name": "@warehouse-hq/web-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Management reporting & analytics web dashboard. React + TypeScript. Not yet scaffolded — see README.md."
+}

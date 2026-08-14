@@ -1,0 +1,6 @@
+{
+  "name": "@warehouse-hq/backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "API server — NestJS + TypeScript. Not yet scaffolded — see README.md."
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@warehouse-hq/shared",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Shared TypeScript types and API client, consumed by mobile, web-dashboard, and backend."
+}

@@ -1,0 +1,13 @@
+{
+  "name": "warehouse-hq",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Warehouse Manager platform for a secondhand car parts marketplace — staff attendance, task assignment, scheduling, and process control.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}
