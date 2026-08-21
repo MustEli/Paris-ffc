@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 
 import { resolvePhotoUrl, uploadPhoto } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { compressForUpload } from '../../../core/media/compressImage';
 
 interface Props {
   label: string;
@@ -34,7 +35,8 @@ export function PhotoCaptureButton({ label, value, onChange }: Props) {
 
     setIsUploading(true);
     try {
-      const url = await uploadPhoto(token!, result.assets[0].uri);
+      const compressedUri = await compressForUpload(result.assets[0].uri);
+      const url = await uploadPhoto(token!, compressedUri);
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
