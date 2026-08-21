@@ -3,8 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { type SellerStockStackParamList } from '../../../navigation/types';
-import { DamageEvidenceCapture } from '../components/DamageEvidenceCapture';
-import { PhotoCaptureButton } from '../components/PhotoCaptureButton';
+import { MultiPhotoCapture } from '../components/MultiPhotoCapture';
 import { useCreatePallet } from '../hooks/useSellerStock';
 import { OVERWEIGHT_THRESHOLD_KG, type PalletCondition } from '../types';
 
@@ -14,7 +13,7 @@ interface Props {
 
 /** Doc's Initial Scan + Measurement & Inspection + Branching Decision steps, all in one form. */
 export function NewPalletScreen({ navigation }: Props) {
-  const [labelPhotoUrl, setLabelPhotoUrl] = useState<string | null>(null);
+  const [labelPhotos, setLabelPhotos] = useState<string[]>([]);
   const [boxNumber, setBoxNumber] = useState('');
   const [sellerName, setSellerName] = useState('');
   const [weightKg, setWeightKg] = useState('');
@@ -28,7 +27,7 @@ export function NewPalletScreen({ navigation }: Props) {
   const isOverweight = !!weightKg && weightValue > OVERWEIGHT_THRESHOLD_KG;
 
   const isValid =
-    !!labelPhotoUrl &&
+    labelPhotos.length > 0 &&
     !!boxNumber &&
     !!sellerName &&
     !!weightKg &&
@@ -38,7 +37,7 @@ export function NewPalletScreen({ navigation }: Props) {
   function handleSubmit() {
     submit(
       {
-        labelPhotoUrl: labelPhotoUrl!,
+        labelPhotoUrls: labelPhotos,
         boxNumber,
         sellerName,
         weightKg: weightValue,
@@ -52,7 +51,7 @@ export function NewPalletScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <PhotoCaptureButton label="Shipping label photo" value={labelPhotoUrl} onChange={setLabelPhotoUrl} />
+      <MultiPhotoCapture label="Shipping label photo" photos={labelPhotos} onChange={setLabelPhotos} />
 
       <Text style={styles.label}>Box number</Text>
       <TextInput style={styles.input} value={boxNumber} onChangeText={setBoxNumber} />
@@ -90,7 +89,7 @@ export function NewPalletScreen({ navigation }: Props) {
             value={damageRemarks}
             onChangeText={setDamageRemarks}
           />
-          <DamageEvidenceCapture photos={damagePhotos} onChange={setDamagePhotos} />
+          <MultiPhotoCapture label="Damage evidence photo" photos={damagePhotos} onChange={setDamagePhotos} />
         </>
       )}
 

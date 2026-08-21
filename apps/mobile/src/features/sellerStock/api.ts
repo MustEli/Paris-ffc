@@ -2,7 +2,7 @@ import { apiRequest } from '../../core/api/client';
 import { type PalletCondition, type SellerStockPallet } from './types';
 
 export interface CreatePalletInput {
-  labelPhotoUrl: string;
+  labelPhotoUrls: string[];
   boxNumber: string;
   sellerName: string;
   weightKg: number;

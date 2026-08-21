@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
+import { MAX_PHOTOS_PER_FIELD } from '../src/seller-stock/seller-stock.types';
 
 async function loginAs(app: INestApplication<App>, email: string): Promise<string> {
   const response = await request(app.getHttpServer())
@@ -54,7 +55,13 @@ describe('Seller Stock (e2e)', () => {
     return request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ labelPhotoUrl, boxNumber: 'B-1', sellerName: 'Acme Parts', weightKg: 50, condition: 'damaged' })
+      .send({
+        labelPhotoUrls: [labelPhotoUrl],
+        boxNumber: 'B-1',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        condition: 'damaged',
+      })
       .expect(400);
   });
 
@@ -63,22 +70,36 @@ describe('Seller Stock (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ labelPhotoUrl, boxNumber: 'B-2', sellerName: 'Acme Parts', weightKg: 750, condition: 'good' })
+      .send({
+        labelPhotoUrls: [labelPhotoUrl],
+        boxNumber: 'B-2',
+        sellerName: 'Acme Parts',
+        weightKg: 750,
+        condition: 'good',
+      })
       .expect(201);
 
     expect(created.body.overweightFlag).toBe(true);
     expect(created.body.status).toBe('pending_admin_review');
   });
 
-  it('runs the good-condition happy path: log → instructions → put-away', async () => {
-    const labelPhotoUrl = await uploadFakePhoto(app, staffToken);
+  it('runs the good-condition happy path with multiple label photos: log → instructions → put-away', async () => {
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     const created = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ labelPhotoUrl, boxNumber: 'B-3', sellerName: 'Acme Parts', weightKg: 120, condition: 'good' })
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-3',
+        sellerName: 'Acme Parts',
+        weightKg: 120,
+        condition: 'good',
+      })
       .expect(201);
     expect(created.body.status).toBe('ready_for_putaway');
     expect(created.body.palletIndex).toMatch(/^PLT-\d{6}$/);
+    expect(created.body.labelPhotoUrls).toEqual([labelPhotoUrl1, labelPhotoUrl2]);
 
     // Non-admin can't give instructions.
     await request(app.getHttpServer())
@@ -94,9 +115,6 @@ describe('Seller Stock (e2e)', () => {
       .expect(201);
     expect(instructed.body.status).toBe('instructed');
 
-    // Can't put away before instructions on a fresh one — verified implicitly by
-    // this one already being instructed; check the conflict path separately below.
-
     const putAway = await request(app.getHttpServer())
       .post(`/seller-stock/${created.body.id}/put-away`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -109,7 +127,13 @@ describe('Seller Stock (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ labelPhotoUrl, boxNumber: 'B-4', sellerName: 'Acme Parts', weightKg: 90, condition: 'good' })
+      .send({
+        labelPhotoUrls: [labelPhotoUrl],
+        boxNumber: 'B-4',
+        sellerName: 'Acme Parts',
+        weightKg: 90,
+        condition: 'good',
+      })
       .expect(201);
 
     return request(app.getHttpServer())
@@ -126,7 +150,7 @@ describe('Seller Stock (e2e)', () => {
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        labelPhotoUrl,
+        labelPhotoUrls: [labelPhotoUrl],
         boxNumber: 'B-5',
         sellerName: 'Acme Parts',
         weightKg: 200,
@@ -138,5 +162,23 @@ describe('Seller Stock (e2e)', () => {
 
     expect(created.body.status).toBe('pending_admin_review');
     expect(created.body.damageEvidencePhotoUrls).toEqual([damagePhotoUrl]);
+  });
+
+  it(`rejects more than ${MAX_PHOTOS_PER_FIELD} label photos`, async () => {
+    const tooMany = await Promise.all(
+      Array.from({ length: MAX_PHOTOS_PER_FIELD + 1 }, () => uploadFakePhoto(app, staffToken)),
+    );
+
+    return request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: tooMany,
+        boxNumber: 'B-6',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        condition: 'good',
+      })
+      .expect(400);
   });
 });

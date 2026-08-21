@@ -7,9 +7,12 @@ export class CreatePalletDto {
   // Not @IsUrl(): POST /uploads returns a relative path ("/uploads/xyz.jpg"),
   // not an absolute URL — the client prefixes it with the API base URL when
   // displaying. A non-empty string is all that's actually guaranteed here.
-  @IsString()
-  @MinLength(1)
-  labelPhotoUrl!: string;
+  // Array (not a single string): user asked to allow more than one label
+  // photo — a maximum is enforced in the service (MAX_PHOTOS_PER_FIELD).
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  labelPhotoUrls!: string[];
 
   @IsString()
   @MinLength(1)

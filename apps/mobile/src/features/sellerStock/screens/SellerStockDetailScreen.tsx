@@ -33,7 +33,11 @@ export function SellerStockDetailScreen({ route }: Props) {
       <Text style={styles.index}>{pallet.palletIndex}</Text>
       <Text style={styles.status}>{STATUS_LABELS[pallet.status]}</Text>
 
-      <Image source={{ uri: resolvePhotoUrl(pallet.labelPhotoUrl) }} style={styles.labelPhoto} />
+      <View style={styles.photoRow}>
+        {pallet.labelPhotoUrls.map((url) => (
+          <Image key={url} source={{ uri: resolvePhotoUrl(url) }} style={styles.labelPhoto} />
+        ))}
+      </View>
 
       <Text style={styles.meta}>Seller: {pallet.sellerName}</Text>
       <Text style={styles.meta}>Box: {pallet.boxNumber}</Text>
@@ -126,8 +130,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   labelPhoto: {
-    width: '100%',
-    height: 180,
+    width: 110,
+    height: 110,
     borderRadius: 10,
     marginBottom: 14,
     backgroundColor: '#f3f4f6',

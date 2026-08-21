@@ -5,6 +5,9 @@ export type SellerStockStatus = 'ready_for_putaway' | 'pending_admin_review' | '
 
 export const OVERWEIGHT_THRESHOLD_KG = 700;
 
+/** Cap on how many photos can be attached per photo field (label, damage evidence). */
+export const MAX_PHOTOS_PER_FIELD = 6;
+
 export interface SellerStockPallet {
   id: string;
   palletIndex: string;
@@ -15,7 +18,7 @@ export interface SellerStockPallet {
   condition: PalletCondition;
   damageRemarks: string | null;
   damageEvidencePhotoUrls: string[];
-  labelPhotoUrl: string;
+  labelPhotoUrls: string[];
   status: SellerStockStatus;
   putAwayLocation: string | null;
   createdByUserId: string;

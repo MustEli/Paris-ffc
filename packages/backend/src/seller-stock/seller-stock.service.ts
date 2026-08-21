@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { randomUUID } from 'node:crypto';
 
 import { type CreatePalletDto } from './dto/create-pallet.dto';
-import { OVERWEIGHT_THRESHOLD_KG, type SellerStockPallet } from './seller-stock.types';
+import { MAX_PHOTOS_PER_FIELD, OVERWEIGHT_THRESHOLD_KG, type SellerStockPallet } from './seller-stock.types';
 
 /**
  * TEMPORARY IN-MEMORY STORE — see users.service.ts for the pattern and
@@ -24,6 +24,12 @@ export class SellerStockService {
         'Damaged pallets require damageRemarks and at least one damageEvidencePhotoUrls entry',
       );
     }
+    if (dto.labelPhotoUrls.length > MAX_PHOTOS_PER_FIELD) {
+      throw new BadRequestException(`labelPhotoUrls cannot exceed ${MAX_PHOTOS_PER_FIELD} photos`);
+    }
+    if ((dto.damageEvidencePhotoUrls?.length ?? 0) > MAX_PHOTOS_PER_FIELD) {
+      throw new BadRequestException(`damageEvidencePhotoUrls cannot exceed ${MAX_PHOTOS_PER_FIELD} photos`);
+    }
 
     const overweightFlag = dto.weightKg > OVERWEIGHT_THRESHOLD_KG;
     const needsReview = dto.condition === 'damaged' || overweightFlag;
@@ -38,7 +44,7 @@ export class SellerStockService {
       condition: dto.condition,
       damageRemarks: dto.damageRemarks ?? null,
       damageEvidencePhotoUrls: dto.damageEvidencePhotoUrls ?? [],
-      labelPhotoUrl: dto.labelPhotoUrl,
+      labelPhotoUrls: dto.labelPhotoUrls,
       status: needsReview ? 'pending_admin_review' : 'ready_for_putaway',
       putAwayLocation: null,
       createdByUserId: userId,

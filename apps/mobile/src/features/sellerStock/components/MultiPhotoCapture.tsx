@@ -1,15 +1,26 @@
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
+import { MAX_PHOTOS_PER_FIELD } from '../types';
 import { PhotoCaptureButton } from './PhotoCaptureButton';
 
 interface Props {
+  label: string;
   photos: string[]; // relative URLs already uploaded
   onChange: (photos: string[]) => void;
+  maxPhotos?: number;
 }
 
-/** Doc requires "mandatory photo evidence" (plural in the process-flow step) for damaged pallets — at least one, more allowed. */
-export function DamageEvidenceCapture({ photos, onChange }: Props) {
+/**
+ * Take-many-photos control: shows a capture button (hidden once the cap
+ * is hit) plus a scrollable strip of what's been taken so far, each
+ * removable. Used for both the label photo and damage evidence — the
+ * doc's "photo evidence" (plural) and a user request to allow more than
+ * one shot of the label too, since a single photo isn't always enough.
+ */
+export function MultiPhotoCapture({ label, photos, onChange, maxPhotos = MAX_PHOTOS_PER_FIELD }: Props) {
+  const atMax = photos.length >= maxPhotos;
+
   function addPhoto(url: string) {
     onChange([...photos, url]);
   }
@@ -20,7 +31,17 @@ export function DamageEvidenceCapture({ photos, onChange }: Props) {
 
   return (
     <View>
-      <PhotoCaptureButton label="Damage evidence photo" value={null} onChange={addPhoto} />
+      {atMax ? (
+        <Text style={styles.maxReached}>
+          {label} — maximum {maxPhotos} photos reached
+        </Text>
+      ) : (
+        <PhotoCaptureButton
+          label={photos.length > 0 ? `${label} (${photos.length}/${maxPhotos})` : label}
+          value={null}
+          onChange={addPhoto}
+        />
+      )}
 
       {photos.length > 0 && (
         <ScrollView horizontal style={styles.row} showsHorizontalScrollIndicator={false}>
@@ -37,6 +58,12 @@ export function DamageEvidenceCapture({ photos, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  maxReached: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
   row: {
     marginTop: 10,
   },

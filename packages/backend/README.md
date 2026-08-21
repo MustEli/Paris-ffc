@@ -45,7 +45,7 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 | POST | `/receptions/:id/instructions` | Bearer token, **admin only** | `{ instructions }` — 403 for non-admins, 409 if not in `arrived` status |
 | POST | `/receptions/:id/complete` | Bearer token | 409 if not in `ready_for_putaway` status |
 | POST | `/uploads` | Bearer token | multipart `file` field → `{ url: "/uploads/<uuid>.jpg" }` (relative path, not absolute) |
-| POST | `/seller-stock` | Bearer token | `{ labelPhotoUrl, boxNumber, sellerName, weightKg, condition, damageRemarks?, damageEvidencePhotoUrls? }` — 400 if damaged without remarks+evidence |
+| POST | `/seller-stock` | Bearer token | `{ labelPhotoUrls[], boxNumber, sellerName, weightKg, condition, damageRemarks?, damageEvidencePhotoUrls? }` — 400 if damaged without remarks+evidence, or if either photo array exceeds `MAX_PHOTOS_PER_FIELD` (6) |
 | GET | `/seller-stock` | Bearer token | full pipeline, newest first |
 | GET | `/seller-stock/:id` | Bearer token | single pallet |
 | POST | `/seller-stock/:id/instructions` | Bearer token, **admin only** | `{ location }` — works from either `ready_for_putaway` or `pending_admin_review` |
@@ -65,6 +65,8 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 **Seller Stock (Feature 3) scope cuts, documented in `seller-stock.types.ts`/`seller-stock.service.ts`:**
 - Doc's "batch completion" (grouping multiple pallets into one documentation-complete action) isn't modeled — each pallet is its own record.
 
-Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 14/14 passing (4 attendance, 4 reception, 6 uploads+seller-stock) — plus manual curl exercise of earlier flows, not just type-checked.
+**Multi-photo refinement (2026-08-21):** user tested Seller Stock on-device and asked to allow more than one photo for the label (previously single-photo-only) — `labelPhotoUrl: string` became `labelPhotoUrls: string[]`, with `MAX_PHOTOS_PER_FIELD` (6) enforced server-side for both label and damage-evidence photos, not just capped in the UI.
+
+Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 15/15 passing (4 attendance, 4 reception, 7 uploads+seller-stock) — plus manual curl exercise of earlier flows, not just type-checked.
 
 Not yet done: Admin-driven user account creation (each real person should have their own login, not share the 3 seed accounts — deferred by explicit choice, not forgotten); WebSocket-based real-time push (currently the mobile app polls via TanStack Query refetch, not a live push).
