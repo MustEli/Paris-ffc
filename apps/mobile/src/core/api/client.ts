@@ -49,10 +49,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
-  } catch {
-    // Network-level failure (backend not running, wrong network, etc.) —
-    // not something the backend itself returned, so no status code.
-    throw new ApiError(0, `Could not reach the server at ${API_BASE_URL}. Is the backend running?`);
+  } catch (err) {
+    // Surface the real underlying error instead of a blanket "unreachable"
+    // message — a caught fetch exception isn't always "server is down";
+    // hiding the actual cause made this much harder to debug than it
+    // needed to be.
+    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    throw new ApiError(0, `Request failed (${detail}) — target was ${API_BASE_URL}${path}`);
   }
 
   const payload = await response.json().catch(() => null);

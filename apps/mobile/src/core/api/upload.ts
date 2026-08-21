@@ -22,8 +22,13 @@ export async function uploadPhoto(token: string, localUri: string): Promise<stri
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-  } catch {
-    throw new ApiError(0, `Could not reach the server at ${API_BASE_URL}. Is the backend running?`);
+  } catch (err) {
+    // Surface the real underlying error instead of a blanket "unreachable"
+    // message — React Native's fetch can throw for reasons other than a
+    // dead server (bad FormData/file URI, request aborted, etc.), and
+    // hiding that made this much harder to debug than it needed to be.
+    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    throw new ApiError(0, `Upload request failed (${detail}) — target was ${API_BASE_URL}/uploads`);
   }
 
   const payload = await response.json().catch(() => null);
