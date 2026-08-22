@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
+import { useTaskAssignmentAlerts } from '../features/putAway/hooks/useTaskAssignmentAlerts';
 import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
 import { PutAwayTaskListScreen } from '../features/putAway/screens/PutAwayTaskListScreen';
 import { NewDeliveryScreen } from '../features/reception/screens/NewDeliveryScreen';
@@ -15,6 +16,11 @@ import { type StaffStackParamList } from './types';
 const Stack = createNativeStackNavigator<StaffStackParamList>();
 
 export function StaffNavigator() {
+  // Polls for new task assignments and fires a local audible alert —
+  // mounted here (not inside a specific screen) so it keeps running
+  // for the whole staff session, regardless of which screen is active.
+  useTaskAssignmentAlerts();
+
   return (
     <Stack.Navigator>
       <Stack.Screen name="StaffHome" component={StaffHomeScreen} options={{ title: 'Staff' }} />
