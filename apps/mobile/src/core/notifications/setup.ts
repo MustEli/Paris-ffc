@@ -1,5 +1,10 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { LogBox, Platform } from 'react-native';
+
+// expo-notifications warns on import (Android, Expo Go) that remote push
+// isn't supported here — expected, see the comment on initNotifications
+// below. We only use LOCAL notifications, so this is just noise.
+LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
