@@ -15,7 +15,7 @@ interface Props {
 /** Doc Feature 4, "Assignment": Admin picks a specific staff member + location for a pipeline pallet. */
 export function AssignTaskScreen({ route, navigation }: Props) {
   const { palletId } = route.params;
-  const { data: staffUsers, isPending: isLoadingStaff } = useStaffUsers();
+  const { data: staffUsers, isPending: isLoadingStaff, error: staffError } = useStaffUsers();
   const [assignedToUserId, setAssignedToUserId] = useState<string | null>(null);
   const [location, setLocation] = useState('');
 
@@ -32,6 +32,7 @@ export function AssignTaskScreen({ route, navigation }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.label}>Assign to</Text>
+      {staffError && <Text style={styles.error}>{staffError.message}</Text>}
       {isLoadingStaff ? (
         <ActivityIndicator />
       ) : (
