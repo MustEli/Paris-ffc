@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
+import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
+import { PutAwayTaskListScreen } from '../features/putAway/screens/PutAwayTaskListScreen';
 import { NewDeliveryScreen } from '../features/reception/screens/NewDeliveryScreen';
 import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDetailScreen';
 import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
@@ -34,6 +36,16 @@ export function StaffNavigator() {
         name="SellerStockDetail"
         component={SellerStockDetailScreen}
         options={{ title: 'Pallet' }}
+      />
+      <Stack.Screen
+        name="PutAwayTaskList"
+        component={PutAwayTaskListScreen}
+        options={{ title: 'My Put-Away Tasks' }}
+      />
+      <Stack.Screen
+        name="PutAwayTaskDetail"
+        component={PutAwayTaskDetailScreen}
+        options={{ title: 'Put-Away Task' }}
       />
     </Stack.Navigator>
   );

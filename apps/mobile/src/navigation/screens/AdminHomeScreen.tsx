@@ -22,6 +22,11 @@ export function AdminHomeScreen({ navigation }: Props) {
           description: 'Review pallets, especially damaged/overweight ones, and give put-away locations.',
           onPress: () => navigation.navigate('SellerStockList'),
         },
+        {
+          label: 'Put-Away Tasks',
+          description: 'See task progress and reassign any that hit an issue.',
+          onPress: () => navigation.navigate('PutAwayTaskList'),
+        },
       ]}
     />
   );

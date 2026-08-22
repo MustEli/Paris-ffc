@@ -1,7 +1,7 @@
 import { IsString, MinLength } from 'class-validator';
 
-export class PutAwayInstructionsDto {
+export class ReportIssueDto {
   @IsString()
   @MinLength(1)
-  location!: string;
+  description!: string;
 }

@@ -15,13 +15,21 @@ export type SellerStockStackParamList = {
   SellerStockDetail: { id: string };
 };
 
+export type PutAwayStackParamList = {
+  PutAwayTaskList: undefined;
+  AssignTask: { palletId: string };
+  PutAwayTaskDetail: { id: string };
+};
+
 export type StaffStackParamList = ReceptionStackParamList &
-  SellerStockStackParamList & {
+  SellerStockStackParamList &
+  Omit<PutAwayStackParamList, 'AssignTask'> & {
     StaffHome: undefined;
     Attendance: undefined;
   };
 
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
-  Omit<SellerStockStackParamList, 'NewPallet'> & {
+  Omit<SellerStockStackParamList, 'NewPallet'> &
+  PutAwayStackParamList & {
     AdminHome: undefined;
   };

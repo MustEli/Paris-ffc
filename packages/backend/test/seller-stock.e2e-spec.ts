@@ -6,6 +6,10 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { MAX_PHOTOS_PER_FIELD } from '../src/seller-stock/seller-stock.types';
 
+// Covers intake only (Feature 3). Put-away assignment (Feature 4) — the
+// old instructions/put-away endpoints that used to live on this
+// controller — moved to put-away.e2e-spec.ts along with the module.
+
 async function loginAs(app: INestApplication<App>, email: string): Promise<string> {
   const response = await request(app.getHttpServer())
     .post('/auth/login')
@@ -26,7 +30,6 @@ async function uploadFakePhoto(app: INestApplication<App>, token: string): Promi
 describe('Seller Stock (e2e)', () => {
   let app: INestApplication<App>;
   let staffToken: string;
-  let adminToken: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -38,7 +41,6 @@ describe('Seller Stock (e2e)', () => {
     await app.init();
 
     staffToken = await loginAs(app, 'staff@warehousehq.dev');
-    adminToken = await loginAs(app, 'admin@warehousehq.dev');
   });
 
   afterEach(async () => {
@@ -83,7 +85,7 @@ describe('Seller Stock (e2e)', () => {
     expect(created.body.status).toBe('pending_admin_review');
   });
 
-  it('runs the good-condition happy path with multiple label photos: log → instructions → put-away', async () => {
+  it('logs a good-condition pallet with multiple label photos', async () => {
     const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
     const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     const created = await request(app.getHttpServer())
@@ -101,45 +103,11 @@ describe('Seller Stock (e2e)', () => {
     expect(created.body.palletIndex).toMatch(/^PLT-\d{6}$/);
     expect(created.body.labelPhotoUrls).toEqual([labelPhotoUrl1, labelPhotoUrl2]);
 
-    // Non-admin can't give instructions.
-    await request(app.getHttpServer())
-      .post(`/seller-stock/${created.body.id}/instructions`)
+    const listed = await request(app.getHttpServer())
+      .get('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ location: 'Aisle 7' })
-      .expect(403);
-
-    const instructed = await request(app.getHttpServer())
-      .post(`/seller-stock/${created.body.id}/instructions`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ location: 'Aisle 7, bay 3' })
-      .expect(201);
-    expect(instructed.body.status).toBe('instructed');
-
-    const putAway = await request(app.getHttpServer())
-      .post(`/seller-stock/${created.body.id}/put-away`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .expect(201);
-    expect(putAway.body.status).toBe('put_away');
-  });
-
-  it('rejects putting away before instructions exist', async () => {
-    const labelPhotoUrl = await uploadFakePhoto(app, staffToken);
-    const created = await request(app.getHttpServer())
-      .post('/seller-stock')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        labelPhotoUrls: [labelPhotoUrl],
-        boxNumber: 'B-4',
-        sellerName: 'Acme Parts',
-        weightKg: 90,
-        condition: 'good',
-      })
-      .expect(201);
-
-    return request(app.getHttpServer())
-      .post(`/seller-stock/${created.body.id}/put-away`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .expect(409);
+      .expect(200);
+    expect(listed.body.some((p: { id: string }) => p.id === created.body.id)).toBe(true);
   });
 
   it('runs the damaged path with evidence photos', async () => {

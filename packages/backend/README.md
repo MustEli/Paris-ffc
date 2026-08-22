@@ -10,7 +10,7 @@ API server for the Warehouse HQ platform.
 
 ## Domain models (from requirements doc)
 
-Users, Roles, Devices, Shifts, Breaks, Receptions, SellerStockPallets, PutAwayTasks, PickPackTasks, AuditLogs. `User`, `Shift`, `Reception`, and `SellerStockPallet` exist so far — the rest arrive with their corresponding features.
+Users, Roles, Devices, Shifts, Breaks, Receptions, SellerStockPallets, PutAwayTasks, PickPackTasks, AuditLogs. `User`, `Shift`, `Reception`, `SellerStockPallet`, and `PutAwayTask` exist so far — the rest arrive with their corresponding features.
 
 ## Running it
 
@@ -48,8 +48,14 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 | POST | `/seller-stock` | Bearer token | `{ labelPhotoUrls[], boxNumber, sellerName, weightKg, condition, damageRemarks?, damageEvidencePhotoUrls? }` — 400 if damaged without remarks+evidence, or if either photo array exceeds `MAX_PHOTOS_PER_FIELD` (6) |
 | GET | `/seller-stock` | Bearer token | full pipeline, newest first |
 | GET | `/seller-stock/:id` | Bearer token | single pallet |
-| POST | `/seller-stock/:id/instructions` | Bearer token, **admin only** | `{ location }` — works from either `ready_for_putaway` or `pending_admin_review` |
-| POST | `/seller-stock/:id/put-away` | Bearer token | 409 if not yet `instructed` |
+| GET | `/users?role=` | Bearer token, **admin/management only** | read-only, powers the "assign to staff" picker — no create/remove yet, see Status |
+| POST | `/put-away-tasks` | Bearer token, **admin only** | `{ palletId, assignedToUserId, location }` — 400 if assignee isn't a staff user, 409 if the pallet already has an active task; moves the pallet to `instructed` as a side effect |
+| GET | `/put-away-tasks` | Bearer token | staff see only their own tasks; admin/management see all |
+| GET | `/put-away-tasks/:id` | Bearer token | 403 for staff who aren't the assignee |
+| POST | `/put-away-tasks/:id/start` | Bearer token, assignee only | 409 if not in `assigned` status |
+| POST | `/put-away-tasks/:id/complete` | Bearer token, assignee only | 409 if not `in_progress`; puts the pallet away as a side effect, computes `durationMs` |
+| POST | `/put-away-tasks/:id/report-issue` | Bearer token, assignee only | `{ description }` — allowed from `assigned` or `in_progress` |
+| POST | `/put-away-tasks/:id/reassign` | Bearer token, **admin only** | `{ assignedToUserId, location? }` — only from `issue_reported`, resets the task back to `assigned` |
 
 ## Status
 
@@ -67,6 +73,8 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 
 **Multi-photo refinement (2026-08-21):** user tested Seller Stock on-device and asked to allow more than one photo for the label (previously single-photo-only) — `labelPhotoUrl: string` became `labelPhotoUrls: string[]`, with `MAX_PHOTOS_PER_FIELD` (6) enforced server-side for both label and damage-evidence photos, not just capped in the UI.
 
-Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 15/15 passing (4 attendance, 4 reception, 7 uploads+seller-stock) — plus manual curl exercise of earlier flows, not just type-checked.
+**Put-Away (Feature 4) built (2026-08-22):** proper per-staff task assignment, superseding the old direct `/seller-stock/:id/instructions` and `/seller-stock/:id/put-away` endpoints (removed — `SellerStockService`'s `giveInstructions`/`putAway`/`updateLocation` methods are still there, just called internally by `PutAwayService` now instead of exposed directly). Admin assigns a *specific* pallet to a *specific* staff member (validated: must actually be a `staff`-role user) with a location; staff starts the task (timestamp), then either completes it (timestamp, computes `durationMs`, puts the pallet away) or reports a blocking issue, which only Admin can resolve via reassignment. One active task per pallet at a time. `GET /users?role=` is new too — read-only, just enough to power the assignment picker; it is **not** the deferred user-management feature (no create/remove yet).
 
-Not yet done: Admin-driven user account creation (each real person should have their own login, not share the 3 seed accounts — deferred by explicit choice, not forgotten); WebSocket-based real-time push (currently the mobile app polls via TanStack Query refetch, not a live push).
+Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 23/23 passing (4 attendance, 4 reception, 6 seller-stock intake, 9 put-away) — not just type-checked.
+
+Not yet done: Admin-driven user account creation (each real person should have their own login, not share the 3 seed accounts — deferred by explicit choice, not forgotten); WebSocket-based real-time push (currently the mobile app polls via TanStack Query refetch, not a live push); Performance Analytics dashboard (doc Feature 4 requirement — task durations are recorded per-task but there's no aggregated throughput view yet).

@@ -2,13 +2,19 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { type PublicUser } from '../users/user.types';
 import { CreatePalletDto } from './dto/create-pallet.dto';
-import { PutAwayInstructionsDto } from './dto/put-away-instructions.dto';
 import { SellerStockService } from './seller-stock.service';
 
+/**
+ * NOTE: put-away assignment used to live here directly (instructions +
+ * put-away endpoints) but has moved to packages/backend/src/put-away —
+ * a proper per-staff task-assignment layer (Feature 4). This controller
+ * now only covers intake (Feature 3); SellerStockService's
+ * giveInstructions/putAway/updateLocation methods are still here and
+ * still used, just called by PutAwayService instead of exposed directly.
+ */
 @Controller('seller-stock')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SellerStockController {
@@ -27,16 +33,5 @@ export class SellerStockController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.sellerStockService.findOne(id);
-  }
-
-  @Post(':id/instructions')
-  @Roles('admin')
-  giveInstructions(@Param('id') id: string, @Body() dto: PutAwayInstructionsDto) {
-    return this.sellerStockService.giveInstructions(id, dto.location);
-  }
-
-  @Post(':id/put-away')
-  putAway(@Param('id') id: string) {
-    return this.sellerStockService.putAway(id);
   }
 }

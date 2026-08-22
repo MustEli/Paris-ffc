@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
-import { type User } from './user.types';
+import { type Role, type User } from './user.types';
 
 /**
  * TEMPORARY IN-MEMORY STORE.
@@ -45,5 +45,9 @@ export class UsersService {
 
   findById(id: string): User | undefined {
     return this.users.find((user) => user.id === id);
+  }
+
+  findAll(role?: Role): User[] {
+    return role ? this.users.filter((user) => user.role === role) : [...this.users];
   }
 }

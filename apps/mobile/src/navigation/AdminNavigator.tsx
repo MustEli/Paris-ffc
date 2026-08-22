@@ -1,5 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { AssignTaskScreen } from '../features/putAway/screens/AssignTaskScreen';
+import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
+import { PutAwayTaskListScreen } from '../features/putAway/screens/PutAwayTaskListScreen';
 import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDetailScreen';
 import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
 import { SellerStockDetailScreen } from '../features/sellerStock/screens/SellerStockDetailScreen';
@@ -32,6 +35,17 @@ export function AdminNavigator() {
         name="SellerStockDetail"
         component={SellerStockDetailScreen}
         options={{ title: 'Pallet' }}
+      />
+      <Stack.Screen
+        name="PutAwayTaskList"
+        component={PutAwayTaskListScreen}
+        options={{ title: 'Put-Away Tasks' }}
+      />
+      <Stack.Screen name="AssignTask" component={AssignTaskScreen} options={{ title: 'Assign Task' }} />
+      <Stack.Screen
+        name="PutAwayTaskDetail"
+        component={PutAwayTaskDetailScreen}
+        options={{ title: 'Put-Away Task' }}
       />
     </Stack.Navigator>
   );

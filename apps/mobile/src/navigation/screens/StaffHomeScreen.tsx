@@ -27,6 +27,11 @@ export function StaffHomeScreen({ navigation }: Props) {
           description: 'Log seller pallets, capture photos, and confirm placement.',
           onPress: () => navigation.navigate('SellerStockList'),
         },
+        {
+          label: 'My Put-Away Tasks',
+          description: 'Start, complete, or report an issue on assigned tasks.',
+          onPress: () => navigation.navigate('PutAwayTaskList'),
+        },
       ]}
     />
   );

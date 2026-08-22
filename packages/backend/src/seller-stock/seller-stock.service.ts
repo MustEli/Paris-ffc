@@ -88,4 +88,16 @@ export class SellerStockService {
     pallet.putAwayAt = new Date().toISOString();
     return pallet;
   }
+
+  /**
+   * Used by PutAwayService when reassigning a task with a new location —
+   * the pallet is already 'instructed' at that point (unchanged status
+   * throughout a task's lifecycle), so this just updates the field
+   * without giveInstructions()'s status guard.
+   */
+  updateLocation(id: string, location: string): SellerStockPallet {
+    const pallet = this.findOne(id);
+    pallet.putAwayLocation = location;
+    return pallet;
+  }
 }

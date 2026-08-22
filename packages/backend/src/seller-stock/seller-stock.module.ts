@@ -8,5 +8,6 @@ import { SellerStockService } from './seller-stock.service';
   imports: [AuthModule], // needed for JwtStrategy to be registered
   controllers: [SellerStockController],
   providers: [SellerStockService],
+  exports: [SellerStockService], // PutAwayModule calls into this directly
 })
 export class SellerStockModule {}
