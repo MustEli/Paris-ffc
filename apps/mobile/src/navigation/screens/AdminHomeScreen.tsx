@@ -32,6 +32,11 @@ export function AdminHomeScreen({ navigation }: Props) {
           description: 'Calculate staffing for a volume of parts and assign pickers/packers.',
           onPress: () => navigation.navigate('OrderPrepSessionList'),
         },
+        {
+          label: 'Users',
+          description: 'Create and remove staff accounts, and assign roles.',
+          onPress: () => navigation.navigate('UserList'),
+        },
       ]}
     />
   );

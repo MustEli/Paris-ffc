@@ -48,7 +48,11 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 | POST | `/seller-stock` | Bearer token | `{ labelPhotoUrls[], boxNumber, sellerName, weightKg, condition, damageRemarks?, damageEvidencePhotoUrls? }` — 400 if damaged without remarks+evidence, or if either photo array exceeds `MAX_PHOTOS_PER_FIELD` (6) |
 | GET | `/seller-stock` | Bearer token | full pipeline, newest first |
 | GET | `/seller-stock/:id` | Bearer token | single pallet |
-| GET | `/users?role=` | Bearer token, **admin/management only** | read-only, powers the "assign to staff" picker — no create/remove yet, see Status |
+| GET | `/users?role=` | Bearer token, **admin/management only** | list, optionally filtered by role |
+| GET | `/users/:id` | Bearer token, **admin/management only** | single user |
+| POST | `/users` | Bearer token, **admin only** | `{ name, email, password, role }` — 409 if the email already exists |
+| DELETE | `/users/:id` | Bearer token, **admin only** | 400 if removing yourself, or the last remaining admin |
+| POST | `/users/:id/role` | Bearer token, **admin only** | `{ role }` — 400 if it's the sole admin demoting themselves |
 | POST | `/put-away-tasks` | Bearer token, **admin only** | `{ palletId, assignedToUserId, location }` — 400 if assignee isn't a staff user, 409 if the pallet already has an active task; moves the pallet to `instructed` as a side effect |
 | GET | `/put-away-tasks` | Bearer token | staff see only their own tasks; admin/management see all |
 | GET | `/put-away-tasks/:id` | Bearer token | 403 for staff who aren't the assignee |
@@ -90,6 +94,10 @@ Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 23/23 p
 **Order Preparation (Feature 5) built (2026-08-23):** the last feature in the doc's main sequence, and the only one that's a labor calculator rather than a single-item pipeline. `POST /order-prep/sessions` takes a part volume and computes staffing (`order-prep.types.ts` documents the exact formula — the doc gives throughput rates, 25 parts/hr/picker and 20/hr/packer, but no formula for staff count or stagger delay, so both are stated, tunable assumptions, not values from the doc). Task assignment reuses the same assign→start→complete pattern as Put-Away, plus one new mechanic: a packer's `start` is rejected with 409 until enough time has passed since the first picker actually started (not session creation time) — the doc's "prevent packer idle time" requirement.
 - **Deliberately not built:** per-task part-count capture (doc mentions "pick xx parts" as a target, but tracking actual parts-per-task isn't needed to prove the stagger-timing mechanic) and the resulting "refine average throughput" analytics loop — same Performance Analytics deferral as Put-Away.
 
-Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 31/31 passing (4 attendance, 4 reception, 6 seller-stock, 9 put-away, 8 order-prep) — not just type-checked.
+Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 31/31 passing (4 attendance, 4 reception, 6 seller-stock, 9 put-away, 8 order-prep) — not just type-checked. Confirmed on-device — this completes device confirmation for all five main features from the requirements doc.
 
-Not yet done: Admin-driven user account creation (each real person should have their own login, not share the 3 seed accounts — deferred by explicit choice, not forgotten); real (remote) push notifications; Performance Analytics dashboard (doc Feature 4/5 requirement — task durations are recorded per-task but there's no aggregated throughput view yet).
+**Admin user management built (2026-08-23) — the long-deferred gap, finally closed.** Admin can now create individual staff/admin/management accounts with their own credentials, change any user's role, and remove accounts — the 3 seed accounts are just initial data now, not a hard limit. Two safety guards baked into `UsersService` to prevent an admin from locking everyone out: can't remove your own account, and can't remove (or self-demote from) the last remaining admin. `GET /users`/`GET /users/:id` stayed admin+management (read-only); create/remove/role-change are admin-only.
+
+Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 41/41 passing (4 attendance, 4 reception, 6 seller-stock, 9 put-away, 8 order-prep, 10 user management) — not just type-checked.
+
+Not yet done: real (remote) push notifications; Performance Analytics dashboard (doc Feature 4/5 requirement — task durations are recorded per-task but there's no aggregated throughput view yet); password reset / self-service account changes (Admin can create/remove/change-role, but there's no "change your own password" flow yet).

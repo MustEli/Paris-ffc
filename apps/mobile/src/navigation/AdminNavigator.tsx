@@ -11,6 +11,9 @@ import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDe
 import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
 import { SellerStockDetailScreen } from '../features/sellerStock/screens/SellerStockDetailScreen';
 import { SellerStockListScreen } from '../features/sellerStock/screens/SellerStockListScreen';
+import { NewUserScreen } from '../features/userManagement/screens/NewUserScreen';
+import { UserDetailScreen } from '../features/userManagement/screens/UserDetailScreen';
+import { UserListScreen } from '../features/userManagement/screens/UserListScreen';
 import { AdminHomeScreen } from './screens/AdminHomeScreen';
 import { type AdminStackParamList } from './types';
 
@@ -71,6 +74,9 @@ export function AdminNavigator() {
         component={OrderPrepTaskDetailScreen}
         options={{ title: 'Order Prep Task' }}
       />
+      <Stack.Screen name="UserList" component={UserListScreen} options={{ title: 'Users' }} />
+      <Stack.Screen name="NewUser" component={NewUserScreen} options={{ title: 'New User' }} />
+      <Stack.Screen name="UserDetail" component={UserDetailScreen} options={{ title: 'User' }} />
     </Stack.Navigator>
   );
 }

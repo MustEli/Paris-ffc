@@ -29,6 +29,12 @@ export type OrderPrepStackParamList = {
   OrderPrepTaskDetail: { id: string };
 };
 
+export type UserManagementStackParamList = {
+  UserList: undefined;
+  NewUser: undefined;
+  UserDetail: { id: string };
+};
+
 export type StaffStackParamList = ReceptionStackParamList &
   SellerStockStackParamList &
   Omit<PutAwayStackParamList, 'AssignTask'> &
@@ -40,6 +46,7 @@ export type StaffStackParamList = ReceptionStackParamList &
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
   Omit<SellerStockStackParamList, 'NewPallet'> &
   PutAwayStackParamList &
-  Omit<OrderPrepStackParamList, 'OrderPrepTaskList'> & {
+  Omit<OrderPrepStackParamList, 'OrderPrepTaskList'> &
+  UserManagementStackParamList & {
     AdminHome: undefined;
   };
