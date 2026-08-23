@@ -21,15 +21,25 @@ export type PutAwayStackParamList = {
   PutAwayTaskDetail: { id: string };
 };
 
+export type OrderPrepStackParamList = {
+  OrderPrepSessionList: undefined;
+  NewOrderPrepSession: undefined;
+  OrderPrepSessionDetail: { id: string };
+  OrderPrepTaskList: undefined;
+  OrderPrepTaskDetail: { id: string };
+};
+
 export type StaffStackParamList = ReceptionStackParamList &
   SellerStockStackParamList &
-  Omit<PutAwayStackParamList, 'AssignTask'> & {
+  Omit<PutAwayStackParamList, 'AssignTask'> &
+  Omit<OrderPrepStackParamList, 'OrderPrepSessionList' | 'NewOrderPrepSession' | 'OrderPrepSessionDetail'> & {
     StaffHome: undefined;
     Attendance: undefined;
   };
 
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
   Omit<SellerStockStackParamList, 'NewPallet'> &
-  PutAwayStackParamList & {
+  PutAwayStackParamList &
+  Omit<OrderPrepStackParamList, 'OrderPrepTaskList'> & {
     AdminHome: undefined;
   };

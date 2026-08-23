@@ -10,7 +10,7 @@ API server for the Warehouse HQ platform.
 
 ## Domain models (from requirements doc)
 
-Users, Roles, Devices, Shifts, Breaks, Receptions, SellerStockPallets, PutAwayTasks, PickPackTasks, AuditLogs. `User`, `Shift`, `Reception`, `SellerStockPallet`, and `PutAwayTask` exist so far — the rest arrive with their corresponding features.
+Users, Roles, Devices, Shifts, Breaks, Receptions, SellerStockPallets, PutAwayTasks, PickPackTasks, AuditLogs. `User`, `Shift`, `Reception`, `SellerStockPallet`, `PutAwayTask`, and `OrderPrepSession`/`OrderPrepTask` (the doc's `PickPackTask`, under a name that matches the doc's own "Order Preparation" feature title) exist so far — only `AuditLog` and `Device` remain unbuilt.
 
 ## Running it
 
@@ -56,6 +56,14 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 | POST | `/put-away-tasks/:id/complete` | Bearer token, assignee only | 409 if not `in_progress`; puts the pallet away as a side effect, computes `durationMs` |
 | POST | `/put-away-tasks/:id/report-issue` | Bearer token, assignee only | `{ description }` — allowed from `assigned` or `in_progress` |
 | POST | `/put-away-tasks/:id/reassign` | Bearer token, **admin only** | `{ assignedToUserId, location? }` — only from `issue_reported`, resets the task back to `assigned` |
+| POST | `/order-prep/sessions` | Bearer token, **admin only** | `{ totalParts }` → computes `pickersNeeded`/`packersNeeded`/`packingDelayMinutes` — see `order-prep.types.ts` for the formula and its assumptions |
+| GET | `/order-prep/sessions` | Bearer token | all sessions, newest first |
+| GET | `/order-prep/sessions/:id` | Bearer token | session + its tasks |
+| POST | `/order-prep/sessions/:id/tasks` | Bearer token, **admin only** | `{ assignedToUserId, role: 'picker'\|'packer' }` — 400 if assignee isn't staff |
+| GET | `/order-prep/tasks` | Bearer token | staff see only their own tasks; admin/management see all |
+| GET | `/order-prep/tasks/:id` | Bearer token | 403 for staff who aren't the assignee |
+| POST | `/order-prep/tasks/:id/start` | Bearer token, assignee only | pickers: always OK once assigned (first one to start sets the session's `pickingStartedAt`). Packers: 409 until `pickingStartedAt + packingDelayMinutes` has passed |
+| POST | `/order-prep/tasks/:id/complete` | Bearer token, assignee only | 409 if not `in_progress`; computes `durationMs` |
 
 ## Status
 
@@ -79,4 +87,9 @@ Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 23/23 p
 
 **In-app audible task-assignment alerts (2026-08-22, user request):** doc's "staff receives a notification with destination details" — mobile-only change (`apps/mobile/src/features/putAway/hooks/useTaskAssignmentAlerts.ts` polls this API and fires a local notification), no backend change needed since it just polls the existing `GET /put-away-tasks`. **Not real push** — deliberately scoped to what Expo Go actually supports (see `docs/architecture.md` for why real push needs a bigger step, an EAS Build migration).
 
-Not yet done: Admin-driven user account creation (each real person should have their own login, not share the 3 seed accounts — deferred by explicit choice, not forgotten); real (remote) push notifications; Performance Analytics dashboard (doc Feature 4 requirement — task durations are recorded per-task but there's no aggregated throughput view yet).
+**Order Preparation (Feature 5) built (2026-08-23):** the last feature in the doc's main sequence, and the only one that's a labor calculator rather than a single-item pipeline. `POST /order-prep/sessions` takes a part volume and computes staffing (`order-prep.types.ts` documents the exact formula — the doc gives throughput rates, 25 parts/hr/picker and 20/hr/packer, but no formula for staff count or stagger delay, so both are stated, tunable assumptions, not values from the doc). Task assignment reuses the same assign→start→complete pattern as Put-Away, plus one new mechanic: a packer's `start` is rejected with 409 until enough time has passed since the first picker actually started (not session creation time) — the doc's "prevent packer idle time" requirement.
+- **Deliberately not built:** per-task part-count capture (doc mentions "pick xx parts" as a target, but tracking actual parts-per-task isn't needed to prove the stagger-timing mechanic) and the resulting "refine average throughput" analytics loop — same Performance Analytics deferral as Put-Away.
+
+Verified end-to-end: `npm run test:e2e --workspace=packages/backend` — 31/31 passing (4 attendance, 4 reception, 6 seller-stock, 9 put-away, 8 order-prep) — not just type-checked.
+
+Not yet done: Admin-driven user account creation (each real person should have their own login, not share the 3 seed accounts — deferred by explicit choice, not forgotten); real (remote) push notifications; Performance Analytics dashboard (doc Feature 4/5 requirement — task durations are recorded per-task but there's no aggregated throughput view yet).

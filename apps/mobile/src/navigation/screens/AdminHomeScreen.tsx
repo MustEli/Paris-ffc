@@ -27,6 +27,11 @@ export function AdminHomeScreen({ navigation }: Props) {
           description: 'See task progress and reassign any that hit an issue.',
           onPress: () => navigation.navigate('PutAwayTaskList'),
         },
+        {
+          label: 'Order Prep',
+          description: 'Calculate staffing for a volume of parts and assign pickers/packers.',
+          onPress: () => navigation.navigate('OrderPrepSessionList'),
+        },
       ]}
     />
   );

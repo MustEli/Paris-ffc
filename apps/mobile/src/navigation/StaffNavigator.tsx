@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
+import { OrderPrepTaskDetailScreen } from '../features/orderPrep/screens/OrderPrepTaskDetailScreen';
+import { OrderPrepTaskListScreen } from '../features/orderPrep/screens/OrderPrepTaskListScreen';
 import { useTaskAssignmentAlerts } from '../features/putAway/hooks/useTaskAssignmentAlerts';
 import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
 import { PutAwayTaskListScreen } from '../features/putAway/screens/PutAwayTaskListScreen';
@@ -52,6 +54,16 @@ export function StaffNavigator() {
         name="PutAwayTaskDetail"
         component={PutAwayTaskDetailScreen}
         options={{ title: 'Put-Away Task' }}
+      />
+      <Stack.Screen
+        name="OrderPrepTaskList"
+        component={OrderPrepTaskListScreen}
+        options={{ title: 'My Order Prep Tasks' }}
+      />
+      <Stack.Screen
+        name="OrderPrepTaskDetail"
+        component={OrderPrepTaskDetailScreen}
+        options={{ title: 'Order Prep Task' }}
       />
     </Stack.Navigator>
   );

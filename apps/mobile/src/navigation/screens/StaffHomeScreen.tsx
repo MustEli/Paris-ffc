@@ -32,6 +32,11 @@ export function StaffHomeScreen({ navigation }: Props) {
           description: 'Start, complete, or report an issue on assigned tasks.',
           onPress: () => navigation.navigate('PutAwayTaskList'),
         },
+        {
+          label: 'My Order Prep Tasks',
+          description: 'Start and complete your picking or packing tasks.',
+          onPress: () => navigation.navigate('OrderPrepTaskList'),
+        },
       ]}
     />
   );

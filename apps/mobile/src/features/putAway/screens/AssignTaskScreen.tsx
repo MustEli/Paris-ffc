@@ -3,9 +3,9 @@ import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
 import { type PutAwayStackParamList } from '../../../navigation/types';
 import { useAssignTask } from '../hooks/usePutAwayTasks';
-import { useStaffUsers } from '../hooks/useStaffUsers';
 
 interface Props {
   route: RouteProp<PutAwayStackParamList, 'AssignTask'>;

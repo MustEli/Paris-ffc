@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
 import { type PutAwayStackParamList } from '../../../navigation/types';
 import {
   useCompleteTask,
@@ -11,7 +12,6 @@ import {
   useStartTask,
   useTask,
 } from '../hooks/usePutAwayTasks';
-import { useStaffUsers } from '../hooks/useStaffUsers';
 import { STATUS_LABELS } from '../types';
 
 interface Props {

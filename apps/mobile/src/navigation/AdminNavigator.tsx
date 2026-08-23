@@ -1,5 +1,9 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { NewOrderPrepSessionScreen } from '../features/orderPrep/screens/NewOrderPrepSessionScreen';
+import { OrderPrepSessionDetailScreen } from '../features/orderPrep/screens/OrderPrepSessionDetailScreen';
+import { OrderPrepSessionListScreen } from '../features/orderPrep/screens/OrderPrepSessionListScreen';
+import { OrderPrepTaskDetailScreen } from '../features/orderPrep/screens/OrderPrepTaskDetailScreen';
 import { AssignTaskScreen } from '../features/putAway/screens/AssignTaskScreen';
 import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
 import { PutAwayTaskListScreen } from '../features/putAway/screens/PutAwayTaskListScreen';
@@ -46,6 +50,26 @@ export function AdminNavigator() {
         name="PutAwayTaskDetail"
         component={PutAwayTaskDetailScreen}
         options={{ title: 'Put-Away Task' }}
+      />
+      <Stack.Screen
+        name="OrderPrepSessionList"
+        component={OrderPrepSessionListScreen}
+        options={{ title: 'Order Prep' }}
+      />
+      <Stack.Screen
+        name="NewOrderPrepSession"
+        component={NewOrderPrepSessionScreen}
+        options={{ title: 'New Session' }}
+      />
+      <Stack.Screen
+        name="OrderPrepSessionDetail"
+        component={OrderPrepSessionDetailScreen}
+        options={{ title: 'Session' }}
+      />
+      <Stack.Screen
+        name="OrderPrepTaskDetail"
+        component={OrderPrepTaskDetailScreen}
+        options={{ title: 'Order Prep Task' }}
       />
     </Stack.Navigator>
   );
