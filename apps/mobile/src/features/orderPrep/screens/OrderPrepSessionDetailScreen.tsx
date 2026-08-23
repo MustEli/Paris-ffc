@@ -3,6 +3,7 @@ import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useAuthStore } from '../../../core/auth/authStore';
 import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
 import { type OrderPrepStackParamList } from '../../../navigation/types';
 import { useAssignOrderPrepTask, useSession } from '../hooks/useOrderPrep';
@@ -15,14 +16,22 @@ interface Props {
 
 const ROLES: OrderPrepTaskRole[] = ['picker', 'packer'];
 
-/** Admin's view of one session: the calculation, its tasks so far, and a way to assign more. */
+/**
+ * Admin's view of one session: the calculation, its tasks so far, and a
+ * way to assign more. Management also reaches this screen read-only
+ * (from the reporting dashboard) — the assign-a-task section is
+ * admin-only, matching every other shared detail screen's pattern of
+ * gating actions by role rather than by which stack registered the
+ * screen.
+ */
 export function OrderPrepSessionDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
+  const role = useAuthStore((state) => state.user?.role);
   const { data: session, isPending, error } = useSession(id);
   const { data: staffUsers } = useStaffUsers();
   const assign = useAssignOrderPrepTask(id);
 
-  const [role, setRole] = useState<OrderPrepTaskRole>('picker');
+  const [taskRole, setTaskRole] = useState<OrderPrepTaskRole>('picker');
   const [assignedToUserId, setAssignedToUserId] = useState<string | null>(null);
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
@@ -36,7 +45,7 @@ export function OrderPrepSessionDetailScreen({ route, navigation }: Props) {
 
   function handleAssign() {
     if (!assignedToUserId) return;
-    assign.mutate({ assignedToUserId, role }, { onSuccess: () => setAssignedToUserId(null) });
+    assign.mutate({ assignedToUserId, role: taskRole }, { onSuccess: () => setAssignedToUserId(null) });
   }
 
   return (
@@ -67,47 +76,51 @@ export function OrderPrepSessionDetailScreen({ route, navigation }: Props) {
         </Pressable>
       ))}
 
-      <Text style={styles.sectionTitle}>Assign a task</Text>
-      <View style={styles.roleRow}>
-        {ROLES.map((r) => (
-          <Pressable
-            key={r}
-            style={[styles.chip, role === r && styles.chipSelected]}
-            onPress={() => setRole(r)}
-          >
-            <Text style={[styles.chipText, role === r && styles.chipTextSelected]}>
-              {r === 'picker' ? 'Picker' : 'Packer'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <View style={styles.staffRow}>
-        {staffUsers?.map((user) => (
-          <Pressable
-            key={user.id}
-            style={[styles.chip, assignedToUserId === user.id && styles.chipSelected]}
-            onPress={() => setAssignedToUserId(user.id)}
-          >
-            <Text style={[styles.chipText, assignedToUserId === user.id && styles.chipTextSelected]}>
-              {user.name}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {role === 'admin' && (
+        <>
+          <Text style={styles.sectionTitle}>Assign a task</Text>
+          <View style={styles.roleRow}>
+            {ROLES.map((r) => (
+              <Pressable
+                key={r}
+                style={[styles.chip, taskRole === r && styles.chipSelected]}
+                onPress={() => setTaskRole(r)}
+              >
+                <Text style={[styles.chipText, taskRole === r && styles.chipTextSelected]}>
+                  {r === 'picker' ? 'Picker' : 'Packer'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.staffRow}>
+            {staffUsers?.map((user) => (
+              <Pressable
+                key={user.id}
+                style={[styles.chip, assignedToUserId === user.id && styles.chipSelected]}
+                onPress={() => setAssignedToUserId(user.id)}
+              >
+                <Text style={[styles.chipText, assignedToUserId === user.id && styles.chipTextSelected]}>
+                  {user.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
-      {assign.error && <Text style={styles.error}>{assign.error.message}</Text>}
+          {assign.error && <Text style={styles.error}>{assign.error.message}</Text>}
 
-      <Pressable
-        style={[styles.button, (!assignedToUserId || assign.isPending) && styles.buttonDisabled]}
-        disabled={!assignedToUserId || assign.isPending}
-        onPress={handleAssign}
-      >
-        {assign.isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Assign task</Text>
-        )}
-      </Pressable>
+          <Pressable
+            style={[styles.button, (!assignedToUserId || assign.isPending) && styles.buttonDisabled]}
+            disabled={!assignedToUserId || assign.isPending}
+            onPress={handleAssign}
+          >
+            {assign.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Assign task</Text>
+            )}
+          </Pressable>
+        </>
+      )}
     </ScrollView>
   );
 }

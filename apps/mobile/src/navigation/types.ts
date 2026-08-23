@@ -50,3 +50,19 @@ export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
   UserManagementStackParamList & {
     AdminHome: undefined;
   };
+
+/**
+ * Read-only reach into the other features' data (no create/assign
+ * screens — those stay Admin-only) plus the reporting Dashboard. The
+ * shared detail screens (ReceptionDetail, SellerStockDetail,
+ * PutAwayTaskDetail, OrderPrepSessionDetail, OrderPrepTaskDetail)
+ * already gate every action by role, so Management sees the same
+ * screens as Admin with none of the action buttons.
+ */
+export type ManagementStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
+  Omit<SellerStockStackParamList, 'NewPallet'> &
+  Omit<PutAwayStackParamList, 'AssignTask'> &
+  Omit<OrderPrepStackParamList, 'NewOrderPrepSession' | 'OrderPrepTaskList'> & {
+    ManagementHome: undefined;
+    Dashboard: undefined;
+  };

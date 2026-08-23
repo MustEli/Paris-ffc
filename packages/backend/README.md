@@ -74,12 +74,19 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 | GET | `/order-prep/tasks/:id` | Bearer token | 403 for staff who aren't the assignee |
 | POST | `/order-prep/tasks/:id/start` | Bearer token, assignee only | pickers: always OK once assigned (first one to start sets the session's `pickingStartedAt`). Packers: 409 until `pickingStartedAt + packingDelayMinutes` has passed |
 | POST | `/order-prep/tasks/:id/complete` | Bearer token, assignee only | 409 if not `in_progress`; computes `durationMs` |
+| GET | `/reports/overview` | Bearer token, **admin/management only** | live counts: staff on shift, pallets pending review, open put-away tasks, active order-prep sessions |
+| GET | `/reports/attendance` | Bearer token, **admin/management only** | per-staff total shifts + total hours worked (completed shifts only) |
+| GET | `/reports/reception` | Bearer token, **admin/management only** | per-category count, average processing time, flagged count |
+| GET | `/reports/put-away` | Bearer token, **admin/management only** | task counts by outcome, average completion time |
+| GET | `/reports/order-prep` | Bearer token, **admin/management only** | picker vs packer task counts and average duration |
 
 ## Status
 
 **Postgres persistence built (2026-08-23) — replaces the original in-memory arrays.** Every service (`UsersService`, `ShiftsService`, `ReceptionsService`, `SellerStockService`, `PutAwayService`, `OrderPrepService`) now reads/writes through `PrismaService` (`prisma/schema.prisma`) instead of a local array that reset on restart. No DTO/controller/guard/domain-type changes — the Prisma schema mirrors each `*.types.ts` shape 1:1, so this was purely a storage swap (see `docs/architecture.md`'s dated entry for the full writeup: why no DB-level foreign keys, the two-database dev/test setup, and the e2e reset harness `test/utils/db.ts` needed once tests share one real database instead of getting a fresh in-memory store per test).
 
 Verified for real: booted the dev server, started a shift, killed the process outright, restarted it, and confirmed `GET /shifts/status` still returned the same shift — not just passing tests. `npm run test:e2e --workspace=packages/backend` — 41/41 passing against the real `warehouse_hq_test` database. **Note:** `test:e2e` now runs with `--runInBand` (serial, not parallel) — parallel Jest workers each reset the *same* shared test database, which raced and threw unique-constraint errors. **Confirmed on-device too (2026-08-23)** — user repeated the same start-shift → restart-backend → still-active check on their own phone.
+
+**Reports module built (2026-08-23) — gives the Management role something to actually look at.** `src/reports/` is a read-only aggregation layer over data other services already record (no new tables, no writes) — see `reports.types.ts` for why each report is shaped the way it is relative to the requirements doc's per-feature "Performance Analytics"/"Reporting" call-outs. Endpoints are admin+management (same convention as `GET /users`). Backend e2e 47/47 passing (41 previous + 6 new), `tsc` clean.
 
 **File uploads are still local-disk, not production-grade** — `uploads/` won't survive a redeploy and only works for a single server instance. Swap for S3/Cloud Storage + signed URLs when this needs to survive anything beyond local dev. Uploaded files are gitignored; the e2e test suite creates real files on disk each run (harmless, just clutter — safe to `rm -rf uploads/` any time).
 

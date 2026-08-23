@@ -1,6 +1,7 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAuthStore } from '../../../core/auth/authStore';
 import { type OrderPrepStackParamList } from '../../../navigation/types';
 import { useSessions } from '../hooks/useOrderPrep';
 
@@ -8,15 +9,24 @@ interface Props {
   navigation: NativeStackNavigationProp<OrderPrepStackParamList, 'OrderPrepSessionList'>;
 }
 
-/** Doc's "Labor Optimization Calculator" — Admin creates a session per volume of parts to process. */
+/**
+ * Doc's "Labor Optimization Calculator" — Admin creates a session per
+ * volume of parts to process. Management also reaches this screen
+ * (read-only, from the reporting dashboard) — the create button is
+ * admin-only since Management's stack doesn't register
+ * NewOrderPrepSession at all.
+ */
 export function OrderPrepSessionListScreen({ navigation }: Props) {
+  const role = useAuthStore((state) => state.user?.role);
   const { data: sessions, isPending, error, refetch, isRefetching } = useSessions();
 
   return (
     <View style={styles.container}>
-      <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewOrderPrepSession')}>
-        <Text style={styles.newButtonText}>+ New Session</Text>
-      </Pressable>
+      {role === 'admin' && (
+        <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewOrderPrepSession')}>
+          <Text style={styles.newButtonText}>+ New Session</Text>
+        </Pressable>
+      )}
 
       {isPending && <ActivityIndicator style={styles.spinner} />}
       {error && <Text style={styles.error}>{error.message}</Text>}
