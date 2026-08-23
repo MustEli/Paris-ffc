@@ -8,12 +8,14 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.warehousehq.mobile",
       "infoPlist": {
         "NSCameraUsageDescription": "Warehouse HQ uses the camera to capture shipping label and damage-evidence photos.",
         "NSPhotoLibraryUsageDescription": "Warehouse HQ needs photo library access to attach an existing photo instead of using the camera."
       }
     },
     "android": {
+      "package": "com.warehousehq.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
