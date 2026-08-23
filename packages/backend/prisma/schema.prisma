@@ -1,0 +1,180 @@
+// Warehouse HQ backend — Prisma schema.
+//
+// Replaces the in-memory arrays each service used to hold (see git
+// history / docs/architecture.md for the "TEMPORARY IN-MEMORY STORE"
+// era). Deliberately a near-literal mirror of the domain types in
+// src/**/*.types.ts — services map DB rows to those same domain shapes,
+// so DTOs/controllers/guards were untouched by this migration.
+//
+// No cross-table foreign keys (e.g. PutAwayTask.assignedToUserId -> User.id)
+// on purpose: the app already validates these references at the service
+// layer (usersService.findById checks) before writing, exactly like the
+// in-memory version did. Adding DB-level FK constraints would make
+// removing a user who has any history (a completed shift, a past task)
+// fail with a constraint violation — a behavior change nobody asked for.
+// If real referential integrity + cascade/restrict policy is wanted later,
+// that's a deliberate product decision (soft-delete? keep history?), not
+// a side effect of "add a database."
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  staff
+  admin
+  management
+}
+
+enum ReceptionCategory {
+  return_parcels
+  packaging_stock
+  sellers_stock
+  equipment_other
+}
+
+enum ReceptionStatus {
+  arrived
+  ready_for_putaway
+  completed
+}
+
+enum PalletCondition {
+  good
+  damaged
+}
+
+enum SellerStockStatus {
+  ready_for_putaway
+  pending_admin_review
+  instructed
+  put_away
+}
+
+enum PutAwayTaskStatus {
+  assigned
+  in_progress
+  completed
+  issue_reported
+}
+
+enum OrderPrepTaskRole {
+  picker
+  packer
+}
+
+enum OrderPrepTaskStatus {
+  assigned
+  in_progress
+  completed
+}
+
+model User {
+  id           String @id @default(uuid())
+  name         String
+  email        String @unique
+  passwordHash String
+  role         Role
+}
+
+model Shift {
+  id        String    @id @default(uuid())
+  userId    String
+  startedAt DateTime
+  endedAt   DateTime?
+
+  @@index([userId])
+}
+
+/**
+ * ReceptionDetails (reception.types.ts) is a discriminated union in the
+ * domain model; here it's flattened into nullable per-category columns
+ * (only the columns matching `category` are ever populated) — the
+ * service layer reconstructs the union on read. Simpler than a JSON
+ * column for this small, fixed set of variants, and keeps columns
+ * queryable/typed.
+ */
+model Reception {
+  id                   String            @id @default(uuid())
+  createdByUserId      String
+  status               ReceptionStatus
+  category             ReceptionCategory
+  parcelCount          Int?
+  transporterCompany   String?
+  packagingType        String?
+  palletCount          Int?
+  itemDescription      String?
+  arrivedAt            DateTime
+  instructions         String?
+  putAwayAt            DateTime?
+  processingDurationMs Int?
+  flaggedForReview     Boolean           @default(false)
+}
+
+model SellerStockPallet {
+  id     String @id @default(uuid())
+  /** Backs the human-readable "PLT-000001" index (was a service-level counter; now a real DB sequence). */
+  seq    Int    @unique @default(autoincrement())
+
+  boxNumber               String
+  sellerName              String
+  weightKg                Float
+  overweightFlag          Boolean
+  condition               PalletCondition
+  damageRemarks           String?
+  damageEvidencePhotoUrls String[]
+  labelPhotoUrls          String[]
+  status                  SellerStockStatus
+  putAwayLocation         String?
+  createdByUserId         String
+  createdAt               DateTime          @default(now())
+  putAwayAt               DateTime?
+}
+
+model PutAwayTask {
+  id               String            @id @default(uuid())
+  palletId         String
+  assignedToUserId String
+  assignedByUserId String
+  location         String
+  status           PutAwayTaskStatus
+  assignedAt       DateTime
+  startedAt        DateTime?
+  completedAt      DateTime?
+  durationMs       Int?
+  issueDescription String?
+
+  @@index([palletId])
+  @@index([assignedToUserId])
+}
+
+model OrderPrepSession {
+  id                  String    @id @default(uuid())
+  totalParts          Int
+  pickersNeeded       Int
+  packersNeeded       Int
+  packingDelayMinutes Int
+  pickingStartedAt    DateTime?
+  createdByUserId     String
+  createdAt           DateTime  @default(now())
+}
+
+model OrderPrepTask {
+  id               String              @id @default(uuid())
+  sessionId        String
+  role             OrderPrepTaskRole
+  assignedToUserId String
+  status           OrderPrepTaskStatus
+  assignedAt       DateTime
+  startedAt        DateTime?
+  completedAt      DateTime?
+  durationMs       Int?
+
+  @@index([sessionId])
+  @@index([assignedToUserId])
+}

@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
+import { closeTestDb, resetDatabase } from './utils/db';
 
 async function loginAs(app: INestApplication<App>, email: string): Promise<string> {
   const response = await request(app.getHttpServer())
@@ -19,6 +20,8 @@ describe('Receptions (e2e)', () => {
   let adminToken: string;
 
   beforeEach(async () => {
+    await resetDatabase();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -33,6 +36,10 @@ describe('Receptions (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  afterAll(async () => {
+    await closeTestDb();
   });
 
   it('rejects an incomplete category payload', () => {

@@ -1,24 +1,42 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { type SellerStockPallet as PrismaPallet } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
+import { PrismaService } from '../prisma/prisma.service';
 import { type CreatePalletDto } from './dto/create-pallet.dto';
 import { MAX_PHOTOS_PER_FIELD, OVERWEIGHT_THRESHOLD_KG, type SellerStockPallet } from './seller-stock.types';
 
 /**
- * TEMPORARY IN-MEMORY STORE — see users.service.ts for the pattern and
- * why. Resets on restart.
+ * Backed by Postgres via Prisma now — see users.service.ts for the
+ * pattern and why. The human-readable palletIndex ("PLT-000001") used
+ * to come from a service-level counter; now it's derived from the
+ * model's `seq` autoincrement column (a real DB sequence) at read time.
  */
 @Injectable()
 export class SellerStockService {
-  private readonly pallets: SellerStockPallet[] = [];
-  private palletCounter = 0;
+  constructor(private readonly prisma: PrismaService) {}
 
-  private nextPalletIndex(): string {
-    this.palletCounter += 1;
-    return `PLT-${String(this.palletCounter).padStart(6, '0')}`;
+  private toDomain(row: PrismaPallet): SellerStockPallet {
+    return {
+      id: row.id,
+      palletIndex: `PLT-${String(row.seq).padStart(6, '0')}`,
+      boxNumber: row.boxNumber,
+      sellerName: row.sellerName,
+      weightKg: row.weightKg,
+      overweightFlag: row.overweightFlag,
+      condition: row.condition,
+      damageRemarks: row.damageRemarks,
+      damageEvidencePhotoUrls: row.damageEvidencePhotoUrls,
+      labelPhotoUrls: row.labelPhotoUrls,
+      status: row.status,
+      putAwayLocation: row.putAwayLocation,
+      createdByUserId: row.createdByUserId,
+      createdAt: row.createdAt.toISOString(),
+      putAwayAt: row.putAwayAt ? row.putAwayAt.toISOString() : null,
+    };
   }
 
-  create(userId: string, dto: CreatePalletDto): SellerStockPallet {
+  async create(userId: string, dto: CreatePalletDto): Promise<SellerStockPallet> {
     if (dto.condition === 'damaged' && (!dto.damageRemarks || !dto.damageEvidencePhotoUrls?.length)) {
       throw new BadRequestException(
         'Damaged pallets require damageRemarks and at least one damageEvidencePhotoUrls entry',
@@ -34,59 +52,67 @@ export class SellerStockService {
     const overweightFlag = dto.weightKg > OVERWEIGHT_THRESHOLD_KG;
     const needsReview = dto.condition === 'damaged' || overweightFlag;
 
-    const pallet: SellerStockPallet = {
-      id: randomUUID(),
-      palletIndex: this.nextPalletIndex(),
-      boxNumber: dto.boxNumber,
-      sellerName: dto.sellerName,
-      weightKg: dto.weightKg,
-      overweightFlag,
-      condition: dto.condition,
-      damageRemarks: dto.damageRemarks ?? null,
-      damageEvidencePhotoUrls: dto.damageEvidencePhotoUrls ?? [],
-      labelPhotoUrls: dto.labelPhotoUrls,
-      status: needsReview ? 'pending_admin_review' : 'ready_for_putaway',
-      putAwayLocation: null,
-      createdByUserId: userId,
-      createdAt: new Date().toISOString(),
-      putAwayAt: null,
-    };
-    this.pallets.push(pallet);
-    return pallet;
+    const row = await this.prisma.sellerStockPallet.create({
+      data: {
+        id: randomUUID(),
+        boxNumber: dto.boxNumber,
+        sellerName: dto.sellerName,
+        weightKg: dto.weightKg,
+        overweightFlag,
+        condition: dto.condition,
+        damageRemarks: dto.damageRemarks ?? null,
+        damageEvidencePhotoUrls: dto.damageEvidencePhotoUrls ?? [],
+        labelPhotoUrls: dto.labelPhotoUrls,
+        status: needsReview ? 'pending_admin_review' : 'ready_for_putaway',
+        putAwayLocation: null,
+        createdByUserId: userId,
+        putAwayAt: null,
+      },
+    });
+    return this.toDomain(row);
   }
 
-  findAll(): SellerStockPallet[] {
-    return [...this.pallets].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  async findAll(): Promise<SellerStockPallet[]> {
+    const rows = await this.prisma.sellerStockPallet.findMany({ orderBy: { createdAt: 'desc' } });
+    return rows.map((row) => this.toDomain(row));
   }
 
-  findOne(id: string): SellerStockPallet {
-    const pallet = this.pallets.find((p) => p.id === id);
-    if (!pallet) {
+  private async findOneRow(id: string): Promise<PrismaPallet> {
+    const row = await this.prisma.sellerStockPallet.findUnique({ where: { id } });
+    if (!row) {
       throw new NotFoundException('Pallet not found');
     }
-    return pallet;
+    return row;
   }
 
-  giveInstructions(id: string, location: string): SellerStockPallet {
-    const pallet = this.findOne(id);
+  async findOne(id: string): Promise<SellerStockPallet> {
+    return this.toDomain(await this.findOneRow(id));
+  }
+
+  async giveInstructions(id: string, location: string): Promise<SellerStockPallet> {
+    const pallet = await this.findOneRow(id);
     if (pallet.status !== 'ready_for_putaway' && pallet.status !== 'pending_admin_review') {
       throw new ConflictException(`Cannot give instructions for a pallet in status "${pallet.status}"`);
     }
-    pallet.putAwayLocation = location;
-    pallet.status = 'instructed';
-    return pallet;
+    const row = await this.prisma.sellerStockPallet.update({
+      where: { id },
+      data: { putAwayLocation: location, status: 'instructed' },
+    });
+    return this.toDomain(row);
   }
 
-  putAway(id: string): SellerStockPallet {
-    const pallet = this.findOne(id);
+  async putAway(id: string): Promise<SellerStockPallet> {
+    const pallet = await this.findOneRow(id);
     if (pallet.status !== 'instructed') {
       throw new ConflictException(
         `Cannot put away a pallet in status "${pallet.status}" — admin instructions are required first`,
       );
     }
-    pallet.status = 'put_away';
-    pallet.putAwayAt = new Date().toISOString();
-    return pallet;
+    const row = await this.prisma.sellerStockPallet.update({
+      where: { id },
+      data: { status: 'put_away', putAwayAt: new Date() },
+    });
+    return this.toDomain(row);
   }
 
   /**
@@ -95,9 +121,9 @@ export class SellerStockService {
    * throughout a task's lifecycle), so this just updates the field
    * without giveInstructions()'s status guard.
    */
-  updateLocation(id: string, location: string): SellerStockPallet {
-    const pallet = this.findOne(id);
-    pallet.putAwayLocation = location;
-    return pallet;
+  async updateLocation(id: string, location: string): Promise<SellerStockPallet> {
+    await this.findOneRow(id);
+    const row = await this.prisma.sellerStockPallet.update({ where: { id }, data: { putAwayLocation: location } });
+    return this.toDomain(row);
   }
 }

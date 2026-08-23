@@ -3,7 +3,7 @@
 API server for the Warehouse HQ platform.
 
 - **Framework:** NestJS + TypeScript.
-- **Database:** in-memory for now (see Status) — real target is PostgreSQL (transactional records: shifts, receptions, tasks, audit logs), plus Redis for cache + pub/sub (real-time task/notification fan-out over Socket.IO), once persistence-across-restarts actually matters.
+- **Database:** PostgreSQL via Prisma (`prisma/schema.prisma`) — real persistence, survives restarts (see Status for the 2026-08-23 migration off the original in-memory arrays). Redis for cache + pub/sub (real-time task/notification fan-out over Socket.IO) is still a future addition, not needed yet.
 - **Auth:** JWT-based (`@nestjs/jwt` + `passport-jwt`), role-based via `RolesGuard` + `@Roles(...)` (Staff / Admin / Management — IT/Infra is a deployment concern, not an app-facing role).
 - **File uploads:** local disk (`packages/backend/uploads/`, gitignored, served at `/uploads/*`) — not production-grade, see Status.
 - **Exposes:** REST for now. WebSocket channel for real-time task assignment/notifications comes with the features that need it (Put-Away).
@@ -14,10 +14,16 @@ Users, Roles, Devices, Shifts, Breaks, Receptions, SellerStockPallets, PutAwayTa
 
 ## Running it
 
+**Prerequisite (one-time):** PostgreSQL running locally (`winget install PostgreSQL.PostgreSQL.17` if not installed), with a `warehouse_hq` database created. Copy `.env.example` to `.env` (and `.env.test` for e2e — see below) and adjust `DATABASE_URL` if your Postgres credentials differ from the defaults.
+
 ```
+npm run prisma:migrate --workspace=packages/backend   # first time only, or after a schema change
+npm run prisma:seed --workspace=packages/backend      # (re)creates the 3 dev accounts below
 npm run start:dev --workspace=packages/backend
 ```
-Listens on `http://localhost:3000` (override with `PORT` env var; copy `.env.example` to `.env` to customize). CORS is wide open — this is a dev server, not a deployment.
+Listens on `http://localhost:3000` (override with `PORT` env var). CORS is wide open — this is a dev server, not a deployment.
+
+**Data now survives restarts.** In-memory storage was retired 2026-08-23 — see Status. `npx prisma studio --workspace=packages/backend` gives a quick GUI to browse/edit the actual database rows if you ever need to inspect or reset state by hand instead of through the API.
 
 **If testing from a phone on the same network:** Windows may block the connection by default on a Public-profile network (common for phone hotspots). If so, run as Administrator:
 ```powershell
@@ -25,7 +31,7 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 ```
 **If testing on an iPhone specifically:** the iPhone cannot be the one hosting the Wi-Fi hotspot — a phone hosting Personal Hotspot stays on cellular itself and can't reach this machine. Have some other device host the hotspot, and join both the laptop and the test phone to it as guests.
 
-**Dev login accounts** (seeded in-memory, see `src/users/users.service.ts`), all with password `password123`:
+**Dev login accounts** (seeded via `prisma/seed-data.ts` — run `npm run prisma:seed` to (re)create them), all with password `password123`:
 - `staff@warehousehq.dev`
 - `admin@warehousehq.dev`
 - `management@warehousehq.dev`
@@ -71,9 +77,11 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 
 ## Status
 
-**In-memory storage — not a real database yet, on purpose.** `UsersService`, `ShiftsService`, `ReceptionsService`, and `SellerStockService` hold plain arrays that reset on every restart. Deliberate scope decision (see `docs/architecture.md`): prove each vertical slice end-to-end first. Swapping to TypeORM + Postgres is a contained change per service — worth doing once the mobile app actually depends on data surviving a server restart.
+**Postgres persistence built (2026-08-23) — replaces the original in-memory arrays.** Every service (`UsersService`, `ShiftsService`, `ReceptionsService`, `SellerStockService`, `PutAwayService`, `OrderPrepService`) now reads/writes through `PrismaService` (`prisma/schema.prisma`) instead of a local array that reset on restart. No DTO/controller/guard/domain-type changes — the Prisma schema mirrors each `*.types.ts` shape 1:1, so this was purely a storage swap (see `docs/architecture.md`'s dated entry for the full writeup: why no DB-level foreign keys, the two-database dev/test setup, and the e2e reset harness `test/utils/db.ts` needed once tests share one real database instead of getting a fresh in-memory store per test).
 
-**File uploads are local-disk, not production-grade either** — `uploads/` won't survive a redeploy and only works for a single server instance. Swap for S3/Cloud Storage + signed URLs when this needs to survive anything beyond local dev. Uploaded files are gitignored; the e2e test suite creates real files on disk each run (harmless, just clutter — safe to `rm -rf uploads/` any time).
+Verified for real: booted the dev server, started a shift, killed the process outright, restarted it, and confirmed `GET /shifts/status` still returned the same shift — not just passing tests. `npm run test:e2e --workspace=packages/backend` — 41/41 passing against the real `warehouse_hq_test` database. **Note:** `test:e2e` now runs with `--runInBand` (serial, not parallel) — parallel Jest workers each reset the *same* shared test database, which raced and threw unique-constraint errors.
+
+**File uploads are still local-disk, not production-grade** — `uploads/` won't survive a redeploy and only works for a single server instance. Swap for S3/Cloud Storage + signed URLs when this needs to survive anything beyond local dev. Uploaded files are gitignored; the e2e test suite creates real files on disk each run (harmless, just clutter — safe to `rm -rf uploads/` any time).
 
 **Reception (Feature 2) scope cuts, documented in `reception.types.ts`/`receptions.service.ts`, not silently dropped:**
 - Sellers Stock category only collects pallet count — the doc's full weight/condition/damage branching is Feature 3 (now built — see `seller-stock/`).

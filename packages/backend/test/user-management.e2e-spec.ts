@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
+import { closeTestDb, resetDatabase } from './utils/db';
 
 async function loginAs(app: INestApplication<App>, email: string): Promise<{ token: string; id: string }> {
   const response = await request(app.getHttpServer())
@@ -20,6 +21,8 @@ describe('User Management (e2e)', () => {
   let management: { token: string; id: string };
 
   beforeEach(async () => {
+    await resetDatabase();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -35,6 +38,10 @@ describe('User Management (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  afterAll(async () => {
+    await closeTestDb();
   });
 
   it('rejects a non-admin (management) creating a user', () => {

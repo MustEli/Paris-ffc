@@ -4,11 +4,14 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
+import { closeTestDb, resetDatabase } from './utils/db';
 
 describe('Warehouse HQ backend (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
+    await resetDatabase();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -20,6 +23,10 @@ describe('Warehouse HQ backend (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  afterAll(async () => {
+    await closeTestDb();
   });
 
   it('/ (GET) health check', () => {

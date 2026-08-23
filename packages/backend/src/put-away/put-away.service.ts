@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { type PutAwayTask as PrismaPutAwayTask } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
+import { PrismaService } from '../prisma/prisma.service';
 import { SellerStockService } from '../seller-stock/seller-stock.service';
 import { type PublicUser } from '../users/user.types';
 import { UsersService } from '../users/users.service';
@@ -9,135 +11,165 @@ import { type ReassignTaskDto } from './dto/reassign-task.dto';
 import { type PutAwayTask } from './put-away.types';
 
 /**
- * TEMPORARY IN-MEMORY STORE — see users.service.ts for the pattern and
- * why. Resets on restart. One active task per pallet at a time — a new
+ * Backed by Postgres via Prisma now — see users.service.ts for the
+ * pattern and why. One active task per pallet at a time — a new
  * assignment for an already-assigned pallet isn't supported (doc doesn't
  * describe concurrent tasks on one pallet); reassignment (below) is the
  * path for "this staff member can't do it, give it to someone else."
  */
 @Injectable()
 export class PutAwayService {
-  private readonly tasks: PutAwayTask[] = [];
-
   constructor(
+    private readonly prisma: PrismaService,
     private readonly sellerStockService: SellerStockService,
     private readonly usersService: UsersService,
   ) {}
 
-  private findOne(id: string): PutAwayTask {
-    const task = this.tasks.find((t) => t.id === id);
+  private toDomain(row: PrismaPutAwayTask): PutAwayTask {
+    return {
+      id: row.id,
+      palletId: row.palletId,
+      assignedToUserId: row.assignedToUserId,
+      assignedByUserId: row.assignedByUserId,
+      location: row.location,
+      status: row.status,
+      assignedAt: row.assignedAt.toISOString(),
+      startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+      completedAt: row.completedAt ? row.completedAt.toISOString() : null,
+      durationMs: row.durationMs,
+      issueDescription: row.issueDescription,
+    };
+  }
+
+  private async findOneRow(id: string): Promise<PrismaPutAwayTask> {
+    const task = await this.prisma.putAwayTask.findUnique({ where: { id } });
     if (!task) {
       throw new NotFoundException('Put-away task not found');
     }
     return task;
   }
 
-  private assertAssignee(task: PutAwayTask, user: PublicUser) {
+  private assertAssignee(task: { assignedToUserId: string }, user: PublicUser) {
     if (task.assignedToUserId !== user.id) {
       throw new ForbiddenException('This task is not assigned to you');
     }
   }
 
-  assign(assignedByUserId: string, dto: AssignTaskDto): PutAwayTask {
-    const assignee = this.usersService.findById(dto.assignedToUserId);
+  async assign(assignedByUserId: string, dto: AssignTaskDto): Promise<PutAwayTask> {
+    const assignee = await this.usersService.findById(dto.assignedToUserId);
     if (!assignee || assignee.role !== 'staff') {
       throw new BadRequestException('assignedToUserId must reference an existing staff user');
     }
-    if (this.tasks.some((t) => t.palletId === dto.palletId && t.status !== 'completed')) {
+    const existingActive = await this.prisma.putAwayTask.findFirst({
+      where: { palletId: dto.palletId, status: { not: 'completed' } },
+    });
+    if (existingActive) {
       throw new ConflictException('This pallet already has an active put-away task');
     }
 
     // Also validates the pallet is in a status eligible for assignment
     // (ready_for_putaway / pending_admin_review) and moves it to 'instructed'.
-    this.sellerStockService.giveInstructions(dto.palletId, dto.location);
+    await this.sellerStockService.giveInstructions(dto.palletId, dto.location);
 
-    const task: PutAwayTask = {
-      id: randomUUID(),
-      palletId: dto.palletId,
-      assignedToUserId: dto.assignedToUserId,
-      assignedByUserId,
-      location: dto.location,
-      status: 'assigned',
-      assignedAt: new Date().toISOString(),
-      startedAt: null,
-      completedAt: null,
-      durationMs: null,
-      issueDescription: null,
-    };
-    this.tasks.push(task);
-    return task;
+    const row = await this.prisma.putAwayTask.create({
+      data: {
+        id: randomUUID(),
+        palletId: dto.palletId,
+        assignedToUserId: dto.assignedToUserId,
+        assignedByUserId,
+        location: dto.location,
+        status: 'assigned',
+        assignedAt: new Date(),
+      },
+    });
+    return this.toDomain(row);
   }
 
-  findAllForUser(user: PublicUser): PutAwayTask[] {
-    const tasks = user.role === 'staff' ? this.tasks.filter((t) => t.assignedToUserId === user.id) : this.tasks;
-    return [...tasks].sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
+  async findAllForUser(user: PublicUser): Promise<PutAwayTask[]> {
+    const rows = await this.prisma.putAwayTask.findMany({
+      where: user.role === 'staff' ? { assignedToUserId: user.id } : undefined,
+      orderBy: { assignedAt: 'desc' },
+    });
+    return rows.map((row) => this.toDomain(row));
   }
 
-  findOneForUser(id: string, user: PublicUser): PutAwayTask {
-    const task = this.findOne(id);
+  async findOneForUser(id: string, user: PublicUser): Promise<PutAwayTask> {
+    const row = await this.findOneRow(id);
     if (user.role === 'staff') {
-      this.assertAssignee(task, user);
+      this.assertAssignee(row, user);
     }
-    return task;
+    return this.toDomain(row);
   }
 
-  start(id: string, user: PublicUser): PutAwayTask {
-    const task = this.findOne(id);
+  async start(id: string, user: PublicUser): Promise<PutAwayTask> {
+    const task = await this.findOneRow(id);
     this.assertAssignee(task, user);
     if (task.status !== 'assigned') {
       throw new ConflictException(`Cannot start a task in status "${task.status}"`);
     }
-    task.status = 'in_progress';
-    task.startedAt = new Date().toISOString();
-    return task;
+    const row = await this.prisma.putAwayTask.update({
+      where: { id },
+      data: { status: 'in_progress', startedAt: new Date() },
+    });
+    return this.toDomain(row);
   }
 
-  complete(id: string, user: PublicUser): PutAwayTask {
-    const task = this.findOne(id);
+  async complete(id: string, user: PublicUser): Promise<PutAwayTask> {
+    const task = await this.findOneRow(id);
     this.assertAssignee(task, user);
     if (task.status !== 'in_progress') {
       throw new ConflictException(`Cannot complete a task in status "${task.status}" — start it first`);
     }
 
     const completedAt = new Date();
-    task.status = 'completed';
-    task.completedAt = completedAt.toISOString();
-    task.durationMs = completedAt.getTime() - new Date(task.startedAt!).getTime();
+    const durationMs = completedAt.getTime() - task.startedAt!.getTime();
+    const row = await this.prisma.putAwayTask.update({
+      where: { id },
+      data: { status: 'completed', completedAt, durationMs },
+    });
 
-    this.sellerStockService.putAway(task.palletId);
-    return task;
+    await this.sellerStockService.putAway(task.palletId);
+    return this.toDomain(row);
   }
 
-  reportIssue(id: string, user: PublicUser, description: string): PutAwayTask {
-    const task = this.findOne(id);
+  async reportIssue(id: string, user: PublicUser, description: string): Promise<PutAwayTask> {
+    const task = await this.findOneRow(id);
     this.assertAssignee(task, user);
     if (task.status !== 'assigned' && task.status !== 'in_progress') {
       throw new ConflictException(`Cannot report an issue on a task in status "${task.status}"`);
     }
-    task.status = 'issue_reported';
-    task.issueDescription = description;
-    return task;
+    const row = await this.prisma.putAwayTask.update({
+      where: { id },
+      data: { status: 'issue_reported', issueDescription: description },
+    });
+    return this.toDomain(row);
   }
 
-  reassign(id: string, dto: ReassignTaskDto): PutAwayTask {
-    const task = this.findOne(id);
+  async reassign(id: string, dto: ReassignTaskDto): Promise<PutAwayTask> {
+    const task = await this.findOneRow(id);
     if (task.status !== 'issue_reported') {
       throw new ConflictException(`Cannot reassign a task in status "${task.status}" — only issue_reported tasks can be reassigned`);
     }
-    const assignee = this.usersService.findById(dto.assignedToUserId);
+    const assignee = await this.usersService.findById(dto.assignedToUserId);
     if (!assignee || assignee.role !== 'staff') {
       throw new BadRequestException('assignedToUserId must reference an existing staff user');
     }
 
     if (dto.location) {
-      this.sellerStockService.updateLocation(task.palletId, dto.location);
-      task.location = dto.location;
+      await this.sellerStockService.updateLocation(task.palletId, dto.location);
     }
-    task.assignedToUserId = dto.assignedToUserId;
-    task.status = 'assigned';
-    task.assignedAt = new Date().toISOString();
-    task.startedAt = null;
-    task.issueDescription = null;
-    return task;
+
+    const row = await this.prisma.putAwayTask.update({
+      where: { id },
+      data: {
+        location: dto.location ?? task.location,
+        assignedToUserId: dto.assignedToUserId,
+        status: 'assigned',
+        assignedAt: new Date(),
+        startedAt: null,
+        issueDescription: null,
+      },
+    });
+    return this.toDomain(row);
   }
 }

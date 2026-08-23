@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
 import { MAX_PHOTOS_PER_FIELD } from '../src/seller-stock/seller-stock.types';
+import { closeTestDb, resetDatabase } from './utils/db';
 
 // Covers intake only (Feature 3). Put-away assignment (Feature 4) — the
 // old instructions/put-away endpoints that used to live on this
@@ -32,6 +33,8 @@ describe('Seller Stock (e2e)', () => {
   let staffToken: string;
 
   beforeEach(async () => {
+    await resetDatabase();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -45,6 +48,10 @@ describe('Seller Stock (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  afterAll(async () => {
+    await closeTestDb();
   });
 
   it('uploads a photo and returns a usable URL', async () => {

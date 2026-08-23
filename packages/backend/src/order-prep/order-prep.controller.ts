@@ -26,9 +26,10 @@ export class OrderPrepController {
   }
 
   @Get('sessions/:id')
-  findSession(@Param('id') id: string) {
-    const session = this.orderPrepService.findSession(id);
-    return { ...session, tasks: this.orderPrepService.tasksForSession(id) };
+  async findSession(@Param('id') id: string) {
+    const session = await this.orderPrepService.findSession(id);
+    const tasks = await this.orderPrepService.tasksForSession(id);
+    return { ...session, tasks };
   }
 
   @Post('sessions/:id/tasks')

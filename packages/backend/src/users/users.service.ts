@@ -2,80 +2,58 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 
+import { PrismaService } from '../prisma/prisma.service';
 import { type CreateUserDto } from './dto/create-user.dto';
 import { type Role, type User } from './user.types';
 
 /**
- * TEMPORARY IN-MEMORY STORE.
- * Just enough of a "domain model" to unblock the Attendance vertical
- * slice (see docs/architecture.md build roadmap, step 3) — no database
- * yet. Resets on every server restart. Swap for a real Postgres-backed
- * repository once persistence-across-restarts actually matters (roadmap
- * step 5+); the seeded dev accounts below exist purely for local testing
- * and are now just the initial data — Admin can create/remove real
- * individual accounts on top of them (see create/remove/changeRole).
+ * Backed by Postgres via Prisma now — was a TEMPORARY IN-MEMORY STORE
+ * (see git history / docs/architecture.md) that reset on every server
+ * restart. The 3 seeded dev accounts (prisma/seed-data.ts) are now just
+ * initial data — Admin can create/remove real individual accounts on
+ * top of them (see create/remove/changeRole).
  */
-const SEED_PASSWORD = 'password123';
-
 @Injectable()
 export class UsersService {
-  private readonly users: User[] = [
-    {
-      id: 'u-staff-1',
-      name: 'Sam Staff',
-      email: 'staff@warehousehq.dev',
-      passwordHash: bcrypt.hashSync(SEED_PASSWORD, 10),
-      role: 'staff',
-    },
-    {
-      id: 'u-admin-1',
-      name: 'Alex Admin',
-      email: 'admin@warehousehq.dev',
-      passwordHash: bcrypt.hashSync(SEED_PASSWORD, 10),
-      role: 'admin',
-    },
-    {
-      id: 'u-management-1',
-      name: 'Morgan Management',
-      email: 'management@warehousehq.dev',
-      passwordHash: bcrypt.hashSync(SEED_PASSWORD, 10),
-      role: 'management',
-    },
-  ];
+  constructor(private readonly prisma: PrismaService) {}
 
-  findByEmail(email: string): User | undefined {
-    return this.users.find((user) => user.email.toLowerCase() === email.toLowerCase());
+  async findByEmail(email: string): Promise<User | undefined> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+    return user ?? undefined;
   }
 
-  findById(id: string): User | undefined {
-    return this.users.find((user) => user.id === id);
+  async findById(id: string): Promise<User | undefined> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    return user ?? undefined;
   }
 
-  findAll(role?: Role): User[] {
-    return role ? this.users.filter((user) => user.role === role) : [...this.users];
+  async findAll(role?: Role): Promise<User[]> {
+    return this.prisma.user.findMany({ where: role ? { role } : undefined });
   }
 
-  findOneOrThrow(id: string): User {
-    const user = this.findById(id);
+  async findOneOrThrow(id: string): Promise<User> {
+    const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return user;
   }
 
-  create(dto: CreateUserDto): User {
-    if (this.findByEmail(dto.email)) {
+  async create(dto: CreateUserDto): Promise<User> {
+    if (await this.findByEmail(dto.email)) {
       throw new ConflictException('A user with this email already exists');
     }
-    const user: User = {
-      id: randomUUID(),
-      name: dto.name,
-      email: dto.email,
-      passwordHash: bcrypt.hashSync(dto.password, 10),
-      role: dto.role,
-    };
-    this.users.push(user);
-    return user;
+    return this.prisma.user.create({
+      data: {
+        id: randomUUID(),
+        name: dto.name,
+        email: dto.email,
+        passwordHash: bcrypt.hashSync(dto.password, 10),
+        role: dto.role,
+      },
+    });
   }
 
   /**
@@ -83,31 +61,23 @@ export class UsersService {
    * can't remove yourself, and can't remove the last remaining admin
    * (even if it's someone else's account).
    */
-  remove(id: string, currentUserId: string): void {
+  async remove(id: string, currentUserId: string): Promise<void> {
     if (id === currentUserId) {
       throw new BadRequestException('Cannot remove your own account');
     }
-    const user = this.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (user.role === 'admin' && this.findAll('admin').length <= 1) {
+    const user = await this.findOneOrThrow(id);
+    if (user.role === 'admin' && (await this.findAll('admin')).length <= 1) {
       throw new BadRequestException('Cannot remove the last admin account');
     }
-    const index = this.users.indexOf(user);
-    this.users.splice(index, 1);
+    await this.prisma.user.delete({ where: { id } });
   }
 
   /** Same last-admin lockout guard as remove() — can't demote yourself away from admin if you're the only one. */
-  changeRole(id: string, role: Role, currentUserId: string): User {
-    const user = this.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (id === currentUserId && user.role === 'admin' && role !== 'admin' && this.findAll('admin').length <= 1) {
+  async changeRole(id: string, role: Role, currentUserId: string): Promise<User> {
+    const user = await this.findOneOrThrow(id);
+    if (id === currentUserId && user.role === 'admin' && role !== 'admin' && (await this.findAll('admin')).length <= 1) {
       throw new BadRequestException('Cannot change your own role — you are the last admin');
     }
-    user.role = role;
-    return user;
+    return this.prisma.user.update({ where: { id }, data: { role } });
   }
 }

@@ -1,51 +1,55 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { type Shift as PrismaShift } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
+import { PrismaService } from '../prisma/prisma.service';
 import { type Shift, type ShiftStatus } from './shift.types';
 
-/**
- * TEMPORARY IN-MEMORY STORE — see users.service.ts for why. Resets on
- * every restart; swap for a real repository once persistence matters.
- */
+/** Backed by Postgres via Prisma now — see users.service.ts for the pattern and why. */
 @Injectable()
 export class ShiftsService {
-  private readonly shifts: Shift[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  private findActiveShift(userId: string): Shift | undefined {
-    return this.shifts.find((shift) => shift.userId === userId && shift.endedAt === null);
+  private toDomain(row: PrismaShift): Shift {
+    return {
+      id: row.id,
+      userId: row.userId,
+      startedAt: row.startedAt.toISOString(),
+      endedAt: row.endedAt ? row.endedAt.toISOString() : null,
+    };
   }
 
-  startShift(userId: string): Shift {
-    if (this.findActiveShift(userId)) {
+  private findActiveShift(userId: string) {
+    return this.prisma.shift.findFirst({ where: { userId, endedAt: null } });
+  }
+
+  async startShift(userId: string): Promise<Shift> {
+    if (await this.findActiveShift(userId)) {
       throw new ConflictException('Shift already in progress — clock out before starting a new one');
     }
 
-    const shift: Shift = {
-      id: randomUUID(),
-      userId,
-      startedAt: new Date().toISOString(),
-      endedAt: null,
-    };
-    this.shifts.push(shift);
-    return shift;
+    const shift = await this.prisma.shift.create({
+      data: { id: randomUUID(), userId, startedAt: new Date(), endedAt: null },
+    });
+    return this.toDomain(shift);
   }
 
-  endShift(userId: string): Shift {
-    const shift = this.findActiveShift(userId);
+  async endShift(userId: string): Promise<Shift> {
+    const shift = await this.findActiveShift(userId);
     if (!shift) {
       throw new NotFoundException('No active shift to end');
     }
 
-    shift.endedAt = new Date().toISOString();
-    return shift;
+    const updated = await this.prisma.shift.update({ where: { id: shift.id }, data: { endedAt: new Date() } });
+    return this.toDomain(updated);
   }
 
-  getStatus(userId: string): ShiftStatus {
-    const shift = this.findActiveShift(userId);
+  async getStatus(userId: string): Promise<ShiftStatus> {
+    const shift = await this.findActiveShift(userId);
     return {
       active: !!shift,
       shiftId: shift?.id ?? null,
-      startedAt: shift?.startedAt ?? null,
+      startedAt: shift ? shift.startedAt.toISOString() : null,
     };
   }
 }

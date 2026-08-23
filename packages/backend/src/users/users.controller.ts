@@ -24,31 +24,31 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  findAll(@Query('role') role?: Role) {
-    return this.usersService.findAll(role).map(toPublicUser);
+  async findAll(@Query('role') role?: Role) {
+    return (await this.usersService.findAll(role)).map(toPublicUser);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return toPublicUser(this.usersService.findOneOrThrow(id));
+  async findOne(@Param('id') id: string) {
+    return toPublicUser(await this.usersService.findOneOrThrow(id));
   }
 
   @Post()
   @Roles('admin')
-  create(@Body() dto: CreateUserDto) {
-    return toPublicUser(this.usersService.create(dto));
+  async create(@Body() dto: CreateUserDto) {
+    return toPublicUser(await this.usersService.create(dto));
   }
 
   @Delete(':id')
   @Roles('admin')
-  remove(@Param('id') id: string, @CurrentUser() user: PublicUser) {
-    this.usersService.remove(id, user.id);
+  async remove(@Param('id') id: string, @CurrentUser() user: PublicUser) {
+    await this.usersService.remove(id, user.id);
     return { success: true };
   }
 
   @Post(':id/role')
   @Roles('admin')
-  changeRole(@Param('id') id: string, @Body() dto: ChangeRoleDto, @CurrentUser() user: PublicUser) {
-    return toPublicUser(this.usersService.changeRole(id, dto.role, user.id));
+  async changeRole(@Param('id') id: string, @Body() dto: ChangeRoleDto, @CurrentUser() user: PublicUser) {
+    return toPublicUser(await this.usersService.changeRole(id, dto.role, user.id));
   }
 }
