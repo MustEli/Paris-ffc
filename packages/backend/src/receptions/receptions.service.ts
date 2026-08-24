@@ -3,10 +3,30 @@ import { type Reception as PrismaReception } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
+import { UsersService } from '../users/users.service';
 import { type CreateReceptionDto } from './dto/create-reception.dto';
 import { type Reception, type ReceptionDetails } from './reception.types';
 
 const REVIEW_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours — doc Step 5
+
+const SHEET_TAB = 'Reception';
+const SHEET_HEADER = [
+  'Category',
+  'Logged By',
+  'Arrived (Local)',
+  'Put Away (Local)',
+  'Processing Time (min)',
+  'Flagged',
+  'Details',
+];
+
+const CATEGORY_LABELS: Record<ReceptionDetails['category'], string> = {
+  return_parcels: 'Return Parcels',
+  packaging_stock: 'Packaging Stock',
+  sellers_stock: 'Sellers Stock',
+  equipment_other: 'Equipment & Other',
+};
 
 /**
  * Backed by Postgres via Prisma now — see users.service.ts for the
@@ -16,7 +36,24 @@ const REVIEW_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours — doc Step 5
  */
 @Injectable()
 export class ReceptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sheetsService: SheetsService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  private summarizeDetails(details: ReceptionDetails): string {
+    switch (details.category) {
+      case 'return_parcels':
+        return `${details.parcelCount} parcel(s) via ${details.transporterCompany}`;
+      case 'packaging_stock':
+        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType}`;
+      case 'sellers_stock':
+        return `${details.palletCount} pallet(s)`;
+      case 'equipment_other':
+        return `${details.parcelCount} parcel(s) — ${details.itemDescription}`;
+    }
+  }
 
   private buildDetails(dto: CreateReceptionDto): ReceptionDetails {
     switch (dto.category) {
@@ -178,6 +215,22 @@ export class ReceptionsService {
         flaggedForReview: durationMs > REVIEW_THRESHOLD_MS,
       },
     });
-    return this.toDomain(row);
+    const domain = this.toDomain(row);
+
+    // Doc's Feature 2: "All recorded in a Google sheet." Same
+    // never-throws/no-op-when-unconfigured contract as Shifts — see
+    // SheetsService's class doc comment.
+    const user = await this.usersService.findById(reception.createdByUserId);
+    await this.sheetsService.appendRow(SHEET_TAB, SHEET_HEADER, [
+      CATEGORY_LABELS[domain.details.category],
+      user?.name ?? reception.createdByUserId,
+      formatTimestampForSheet(row.arrivedAt),
+      formatTimestampForSheet(putAwayAt),
+      Math.round(durationMs / 60_000),
+      domain.flaggedForReview ? 'Yes' : 'No',
+      this.summarizeDetails(domain.details),
+    ]);
+
+    return domain;
   }
 }

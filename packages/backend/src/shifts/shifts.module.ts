@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsService } from './shifts.service';
 
 @Module({
-  imports: [AuthModule], // needed for JwtStrategy to be registered
+  imports: [AuthModule, UsersModule], // AuthModule needed for JwtStrategy to be registered
   controllers: [ShiftsController],
   providers: [ShiftsService],
 })

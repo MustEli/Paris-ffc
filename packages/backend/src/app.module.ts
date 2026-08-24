@@ -7,6 +7,7 @@ import { OrderPrepModule } from './order-prep/order-prep.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PutAwayModule } from './put-away/put-away.module';
 import { ReportsModule } from './reports/reports.module';
+import { SheetsModule } from './sheets/sheets.module';
 import { ReceptionsModule } from './receptions/receptions.module';
 import { SellerStockModule } from './seller-stock/seller-stock.module';
 import { ShiftsModule } from './shifts/shifts.module';
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module';
       envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
     }),
     PrismaModule,
+    SheetsModule,
     UsersModule,
     AuthModule,
     ShiftsModule,

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { type ReceptionCategory } from '../receptions/reception.types';
+import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import {
   type AttendanceReport,
   type OrderPrepReport,
@@ -31,7 +32,10 @@ function average(values: number[]): number | null {
  */
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sheetsService: SheetsService,
+  ) {}
 
   async overview(): Promise<OverviewReport> {
     const [staffOnShiftCount, totalStaffCount, palletsPendingReviewCount, openPutAwayTaskCount, activeSessionRows] =
@@ -136,5 +140,73 @@ export class ReportsService {
       pickerTasks: summarize('picker'),
       packerTasks: summarize('packer'),
     };
+  }
+
+  /**
+   * Manual "snapshot" export — writes the current numbers from every
+   * report to 3 sheet tabs, tagged with an export timestamp. Each call
+   * appends new rows rather than overwriting, so re-running this over
+   * time builds a historical trend log directly in the spreadsheet.
+   * Uses the same never-throws SheetsService as Shifts/Receptions' own
+   * exports — a Sheets outage shouldn't turn a report screen into an error.
+   */
+  async exportSnapshotToSheets(): Promise<void> {
+    const [overview, attendance, reception, putAway, orderPrep] = await Promise.all([
+      this.overview(),
+      this.attendance(),
+      this.reception(),
+      this.putAway(),
+      this.orderPrep(),
+    ]);
+    const exportedAt = formatTimestampForSheet(new Date());
+
+    await Promise.all([
+      this.sheetsService.appendRow(
+        'Dashboard Snapshot',
+        [
+          'Exported At',
+          'Staff On Shift',
+          'Total Staff',
+          'Pallets Pending Review',
+          'Open Put-Away Tasks',
+          'Active Order-Prep Sessions',
+          'Put-Away Completed',
+          'Put-Away Issues Reported',
+          'Put-Away Avg Completion (min)',
+          'Picker Avg Duration (min)',
+          'Packer Avg Duration (min)',
+        ],
+        [
+          exportedAt,
+          overview.staffOnShiftCount,
+          overview.totalStaffCount,
+          overview.palletsPendingReviewCount,
+          overview.openPutAwayTaskCount,
+          overview.activeOrderPrepSessionCount,
+          putAway.completedCount,
+          putAway.issueReportedCount,
+          putAway.averageCompletionMinutes ?? '',
+          orderPrep.pickerTasks.averageDurationMinutes ?? '',
+          orderPrep.packerTasks.averageDurationMinutes ?? '',
+        ],
+      ),
+      this.sheetsService.appendRows(
+        'Attendance Snapshot',
+        ['Exported At', 'User', 'Total Shifts', 'Total Hours Worked'],
+        attendance.rows.map((row) => [exportedAt, row.userName, row.totalShifts, row.totalHoursWorked]),
+      ),
+      this.sheetsService.appendRows(
+        'Reception Snapshot',
+        ['Exported At', 'Category', 'Total', 'Completed', 'Avg Processing (min)', 'Flagged'],
+        reception.categories.map((c) => [
+          exportedAt,
+          c.category,
+          c.totalCount,
+          c.completedCount,
+          c.averageProcessingMinutes ?? '',
+          c.flaggedCount,
+        ]),
+      ),
+    ]);
   }
 }

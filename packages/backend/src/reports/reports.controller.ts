@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -42,5 +42,18 @@ export class ReportsController {
   @Get('order-prep')
   orderPrep() {
     return this.reportsService.orderPrep();
+  }
+
+  /**
+   * Manual trigger — appends a timestamped snapshot of every report to
+   * the Google Sheet configured via GOOGLE_SHEETS_SPREADSHEET_ID (see
+   * SheetsService). A no-op that still returns success if Sheets export
+   * isn't configured, since that's a legitimate, expected state (local
+   * dev, or a deploy that hasn't set it up yet).
+   */
+  @Post('export-to-sheets')
+  async exportToSheets() {
+    await this.reportsService.exportSnapshotToSheets();
+    return { success: true };
   }
 }

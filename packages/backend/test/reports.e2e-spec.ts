@@ -62,6 +62,25 @@ describe('Reports (e2e)', () => {
     }
   });
 
+  it('export-to-sheets is a safe no-op with no Google Sheets configured in this environment, admin/management only', async () => {
+    await request(app.getHttpServer())
+      .post('/reports/export-to-sheets')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/reports/export-to-sheets')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(201)
+      .expect({ success: true });
+
+    await request(app.getHttpServer())
+      .post('/reports/export-to-sheets')
+      .set('Authorization', `Bearer ${management.token}`)
+      .expect(201)
+      .expect({ success: true });
+  });
+
   it('overview reflects live counts, readable by both admin and management', async () => {
     await request(app.getHttpServer())
       .post('/shifts/start')
