@@ -12,6 +12,17 @@ const BACKEND_PORT = 3000;
  * place — so there's no separate network configuration to get right.
  */
 function resolveApiBaseUrl(): string {
+  // Explicit override for builds pointed at a real hosted backend (e.g.
+  // Render) instead of a local dev server — set per-build-profile via
+  // eas.json's `build.<profile>.env.EXPO_PUBLIC_API_BASE_URL` (Expo
+  // inlines EXPO_PUBLIC_* vars into the JS bundle at build time, no
+  // extra config needed). The `development` profile deliberately leaves
+  // this unset so it keeps using the LAN-IP derivation below — that's
+  // still correct for connecting to a locally-running Metro/backend.
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(':')[0];

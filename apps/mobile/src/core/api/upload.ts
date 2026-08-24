@@ -39,7 +39,17 @@ export async function uploadPhoto(token: string, localUri: string): Promise<stri
   return (payload as { url: string }).url;
 }
 
-/** Turns the backend's relative "/uploads/xyz.jpg" into a URL the app can actually load. */
-export function resolvePhotoUrl(relativeUrl: string): string {
-  return `${API_BASE_URL}${relativeUrl}`;
+/**
+ * Turns whatever the backend's /uploads endpoint returned into a URL the
+ * app can actually load. Historically always a relative path
+ * ("/uploads/xyz.jpg") needing the API base prefixed on — now the
+ * backend may instead return an already-absolute Cloudinary URL (see
+ * packages/backend/src/uploads), which must be passed through as-is or
+ * it'd get double-prefixed into garbage.
+ */
+export function resolvePhotoUrl(url: string): string {
+  if (/^https?:\/\//.test(url)) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
 }

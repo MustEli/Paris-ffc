@@ -1,32 +1,30 @@
 import { Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { randomUUID } from 'node:crypto';
-import { extname } from 'node:path';
-import { diskStorage } from 'multer';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { UPLOADS_DIR } from './uploads.constants';
 
 /**
  * Generic file upload, used by any feature that needs a photo (Seller
  * Stock's label/damage-evidence photos so far). Returns a URL; callers
  * store that URL string on their own record rather than embedding file
  * handling in every feature's DTOs.
+ *
+ * Storage backend (Cloudinary vs local disk) is chosen in
+ * uploads.storage.ts, registered at the module level so it can depend
+ * on ConfigService — see that file for why. Multer populates different
+ * fields depending on which storage engine ran: Cloudinary's puts the
+ * resulting secure URL in `file.path`; disk storage just puts the
+ * generated basename in `file.filename`. Checking whether `path` looks
+ * like a URL (rather than assuming based on config) keeps this correct
+ * regardless of which stored the file.
  */
 @Controller('uploads')
 @UseGuards(JwtAuthGuard)
 export class UploadsController {
   @Post()
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: UPLOADS_DIR,
-        filename: (_req, file, cb) => cb(null, `${randomUUID()}${extname(file.originalname)}`),
-      }),
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file'))
   upload(@UploadedFile() file: Express.Multer.File) {
-    return { url: `/uploads/${file.filename}` };
+    const url = /^https?:\/\//.test(file.path ?? '') ? file.path : `/uploads/${file.filename}`;
+    return { url };
   }
 }

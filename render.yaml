@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: warehouse-hq-backend
+    runtime: node
+    plan: free
+    # No rootDir set — runs from the repo root by default, which is what
+    # we want (npm workspaces need installs from root —
+    # never from inside a single package, see docs/architecture.md).
+    # generate must run before build (nest build needs Prisma's
+    # generated types); migrate deploy applies pending migrations
+    # against whatever DATABASE_URL points at (Neon); the seed script is
+    # upsert-based so re-running it on every deploy is harmless.
+    buildCommand: >-
+      npm install --include=dev &&
+      npx prisma generate --schema packages/backend/prisma/schema.prisma &&
+      npm run build --workspace=packages/backend &&
+      npx prisma migrate deploy --schema packages/backend/prisma/schema.prisma &&
+      npm run prisma:seed --workspace=packages/backend
+    startCommand: node packages/backend/dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
