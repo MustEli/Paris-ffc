@@ -19,9 +19,11 @@ Users, Roles, Devices, Shifts, Breaks, Receptions, SellerStockPallets, PutAwayTa
 ```
 npm run prisma:migrate --workspace=packages/backend   # first time only, or after a schema change
 npm run prisma:seed --workspace=packages/backend      # (re)creates the 3 dev accounts below
-npm run start:dev --workspace=packages/backend
+npm run dev --workspace=packages/backend
 ```
 Listens on `http://localhost:3000` (override with `PORT` env var). CORS is wide open — this is a dev server, not a deployment.
+
+**Use `npm run dev`, not `npm run start`/`start:dev` (2026-08-26).** `nest build`/`nest start`'s own CLI wrapper has proven unreliable on at least one Windows machine in this project — it intermittently (and eventually consistently, once a stale build cache was involved) reported success while producing no `dist/main.js` at all, or a partially-nested one, causing `Cannot find module '.../dist/main'` at startup. Plain `tsc -p tsconfig.build.json` never showed this problem — `npm run dev` is exactly that plus `node dist/main`, deliberately bypassing `nest`'s wrapper. `start`/`start:dev` are left as-is (untouched, in case they work fine on other machines) but `dev` is the one to reach for if a restart ever throws that `MODULE_NOT_FOUND` error. If `npm run dev` ever throws the same error, the fix is: delete `dist/` and every `*.tsbuildinfo` file in `packages/backend`, then retry — a stale incremental cache from before a `tsconfig`/`rootDir` change is the most likely cause.
 
 **Data now survives restarts.** In-memory storage was retired 2026-08-23 — see Status. `npx prisma studio --workspace=packages/backend` gives a quick GUI to browse/edit the actual database rows if you ever need to inspect or reset state by hand instead of through the API.
 
