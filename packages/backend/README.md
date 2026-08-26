@@ -79,6 +79,7 @@ New-NetFirewallRule -DisplayName "Warehouse HQ backend (dev, TCP 3000)" -Directi
 | GET | `/reports/reception` | Bearer token, **admin/management only** | per-category count, average processing time, flagged count |
 | GET | `/reports/put-away` | Bearer token, **admin/management only** | task counts by outcome, average completion time |
 | GET | `/reports/order-prep` | Bearer token, **admin/management only** | picker vs packer task counts and average duration |
+| GET | `/reports/admin-dashboard` | Bearer token, **admin/management only** | Admin's home screen: live counts (current state) + today's activity + per-staff status, in one response |
 
 ## Status
 

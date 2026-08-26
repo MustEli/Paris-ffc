@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { useAuthStore } from '../../../core/auth/authStore';
 import {
+  fetchAdminDashboardReport,
   fetchAttendanceReport,
   fetchOrderPrepReport,
   fetchOverviewReport,
@@ -52,5 +53,21 @@ export function useOrderPrepReport() {
     queryKey: ['reports', 'order-prep'],
     queryFn: () => fetchOrderPrepReport(token!),
     enabled: !!token,
+  });
+}
+
+/**
+ * Admin's home screen — "what's happening right now" is the whole
+ * point, so this one auto-refreshes every 30s in the background on top
+ * of the usual pull-to-refresh, unlike Management's Dashboard (which
+ * only refreshes on demand).
+ */
+export function useAdminDashboardReport() {
+  const token = useAuthStore((state) => state.token);
+  return useQuery({
+    queryKey: ['reports', 'admin-dashboard'],
+    queryFn: () => fetchAdminDashboardReport(token!),
+    enabled: !!token,
+    refetchInterval: 30_000,
   });
 }

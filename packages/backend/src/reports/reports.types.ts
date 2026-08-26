@@ -71,3 +71,47 @@ export interface OrderPrepReport {
    * honest proxy available from data actually being recorded.
    */
 }
+
+export interface StaffStatus {
+  userId: string;
+  userName: string;
+  onShift: boolean;
+  /** null when not currently on shift. */
+  shiftStartedAt: string | null;
+  shiftsToday: number;
+  /** Only counts shifts that have already ended today — an in-progress shift's duration isn't known yet. */
+  hoursWorkedToday: number;
+  putAwayCompletedToday: number;
+  orderPrepCompletedToday: number;
+}
+
+/**
+ * Admin's home-screen dashboard — "whatever happening right now,"
+ * distinct from Management's all-time Dashboard. Two different time
+ * scopes on purpose: `liveSummary` is current-state (doesn't reset —
+ * a pending pallet is pending regardless of what day it is),
+ * `today`/`staff` are scoped to the calendar day so the numbers reset
+ * each morning. "Today" uses the server's UTC calendar day — if the
+ * warehouse isn't near UTC, the boundary won't line up with local
+ * midnight; a real timezone setting would fix that if it ever matters.
+ */
+export interface AdminDashboardReport {
+  /** The server's current UTC calendar date, YYYY-MM-DD. */
+  date: string;
+  liveSummary: {
+    staffOnShiftCount: number;
+    totalStaffCount: number;
+    palletsPendingReviewCount: number;
+    openPutAwayTaskCount: number;
+    activeOrderPrepSessionCount: number;
+  };
+  today: {
+    receptionsLoggedCount: number;
+    receptionsCompletedCount: number;
+    palletsLoggedCount: number;
+    putAwayCompletedCount: number;
+    orderPrepSessionsCreatedCount: number;
+  };
+  /** Sorted on-shift-first, then alphabetically. */
+  staff: StaffStatus[];
+}

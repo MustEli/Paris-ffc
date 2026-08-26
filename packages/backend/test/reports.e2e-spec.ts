@@ -54,7 +54,7 @@ describe('Reports (e2e)', () => {
   });
 
   it('rejects a staff member reading any report', async () => {
-    for (const path of ['overview', 'attendance', 'reception', 'put-away', 'order-prep']) {
+    for (const path of ['overview', 'attendance', 'reception', 'put-away', 'order-prep', 'admin-dashboard']) {
       await request(app.getHttpServer())
         .get(`/reports/${path}`)
         .set('Authorization', `Bearer ${staff.token}`)
@@ -225,5 +225,71 @@ describe('Reports (e2e)', () => {
       completedCount: 0,
       averageDurationMinutes: null,
     });
+  });
+
+  it("admin dashboard reflects live state and today's activity, per staff member", async () => {
+    // Live state: staff currently on shift.
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    // Today's activity: a completed reception and a completed put-away task.
+    const reception = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'sellers_stock', palletCount: 3 })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/receptions/${reception.body.id}/instructions`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ instructions: 'Aisle 1' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/receptions/${reception.body.id}/complete`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const photoUrl = await uploadFakePhoto(app, staff.token);
+    const pallet = await request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ labelPhotoUrls: [photoUrl], boxNumber: 'B-9', sellerName: 'Acme', weightKg: 40, condition: 'good' })
+      .expect(201);
+    const task = await request(app.getHttpServer())
+      .post('/put-away-tasks')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ palletId: pallet.body.id, assignedToUserId: staff.id, location: 'Aisle 3' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/put-away-tasks/${task.body.id}/start`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/put-away-tasks/${task.body.id}/complete`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const dashboard = await request(app.getHttpServer())
+      .get('/reports/admin-dashboard')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    expect(dashboard.body.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(dashboard.body.liveSummary.staffOnShiftCount).toBe(1);
+    expect(dashboard.body.today).toMatchObject({
+      receptionsLoggedCount: 1,
+      receptionsCompletedCount: 1,
+      palletsLoggedCount: 1,
+      putAwayCompletedCount: 1,
+    });
+
+    const staffRow = dashboard.body.staff.find((s: { userId: string }) => s.userId === staff.id);
+    expect(staffRow).toMatchObject({
+      userName: 'Sam Staff',
+      onShift: true,
+      putAwayCompletedToday: 1,
+    });
+    expect(staffRow.shiftStartedAt).not.toBeNull();
   });
 });

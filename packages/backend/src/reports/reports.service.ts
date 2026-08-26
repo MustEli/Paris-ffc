@@ -4,12 +4,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { type ReceptionCategory } from '../receptions/reception.types';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import {
+  type AdminDashboardReport,
   type AttendanceReport,
   type OrderPrepReport,
   type OrderPrepRoleStats,
   type OverviewReport,
   type PutAwayReport,
   type ReceptionReport,
+  type StaffStatus,
 } from './reports.types';
 
 const RECEPTION_CATEGORIES: ReceptionCategory[] = [
@@ -139,6 +141,96 @@ export class ReportsService {
       totalSessions,
       pickerTasks: summarize('picker'),
       packerTasks: summarize('packer'),
+    };
+  }
+
+  /**
+   * Admin's home-screen dashboard — see reports.types.ts's doc comment
+   * for the live-vs-today time-scope split and the UTC-calendar-day
+   * caveat.
+   */
+  async adminDashboard(): Promise<AdminDashboardReport> {
+    const now = new Date();
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    const [
+      liveSummary,
+      staffUsers,
+      activeShifts,
+      shiftsToday,
+      receptionsToday,
+      palletsLoggedTodayCount,
+      putAwayCompletedToday,
+      orderPrepSessionsCreatedTodayCount,
+      orderPrepCompletedToday,
+    ] = await Promise.all([
+      this.overview(),
+      this.prisma.user.findMany({ where: { role: 'staff' } }),
+      this.prisma.shift.findMany({ where: { endedAt: null } }),
+      this.prisma.shift.findMany({ where: { startedAt: { gte: startOfDay } } }),
+      this.prisma.reception.findMany({ where: { arrivedAt: { gte: startOfDay } } }),
+      this.prisma.sellerStockPallet.count({ where: { createdAt: { gte: startOfDay } } }),
+      this.prisma.putAwayTask.findMany({ where: { status: 'completed', completedAt: { gte: startOfDay } } }),
+      this.prisma.orderPrepSession.count({ where: { createdAt: { gte: startOfDay } } }),
+      this.prisma.orderPrepTask.findMany({ where: { status: 'completed', completedAt: { gte: startOfDay } } }),
+    ]);
+
+    const activeShiftByUser = new Map(activeShifts.map((s) => [s.userId, s]));
+
+    const shiftsTodayByUser = new Map<string, { count: number; totalMs: number }>();
+    for (const shift of shiftsToday) {
+      const existing = shiftsTodayByUser.get(shift.userId) ?? { count: 0, totalMs: 0 };
+      existing.count += 1;
+      if (shift.endedAt) {
+        existing.totalMs += shift.endedAt.getTime() - shift.startedAt.getTime();
+      }
+      shiftsTodayByUser.set(shift.userId, existing);
+    }
+
+    const countByUser = (tasks: { assignedToUserId: string }[]): Map<string, number> => {
+      const map = new Map<string, number>();
+      for (const task of tasks) {
+        map.set(task.assignedToUserId, (map.get(task.assignedToUserId) ?? 0) + 1);
+      }
+      return map;
+    };
+    const putAwayCountByUser = countByUser(putAwayCompletedToday);
+    const orderPrepCountByUser = countByUser(orderPrepCompletedToday);
+
+    const staff: StaffStatus[] = staffUsers
+      .map((user) => {
+        const activeShift = activeShiftByUser.get(user.id);
+        const todayStats = shiftsTodayByUser.get(user.id);
+        return {
+          userId: user.id,
+          userName: user.name,
+          onShift: !!activeShift,
+          shiftStartedAt: activeShift ? activeShift.startedAt.toISOString() : null,
+          shiftsToday: todayStats?.count ?? 0,
+          hoursWorkedToday: todayStats ? Math.round((todayStats.totalMs / 3_600_000) * 10) / 10 : 0,
+          putAwayCompletedToday: putAwayCountByUser.get(user.id) ?? 0,
+          orderPrepCompletedToday: orderPrepCountByUser.get(user.id) ?? 0,
+        };
+      })
+      .sort((a, b) => (a.onShift !== b.onShift ? (a.onShift ? -1 : 1) : a.userName.localeCompare(b.userName)));
+
+    return {
+      date: now.toISOString().slice(0, 10),
+      liveSummary: {
+        staffOnShiftCount: liveSummary.staffOnShiftCount,
+        totalStaffCount: liveSummary.totalStaffCount,
+        palletsPendingReviewCount: liveSummary.palletsPendingReviewCount,
+        openPutAwayTaskCount: liveSummary.openPutAwayTaskCount,
+        activeOrderPrepSessionCount: liveSummary.activeOrderPrepSessionCount,
+      },
+      today: {
+        receptionsLoggedCount: receptionsToday.length,
+        receptionsCompletedCount: receptionsToday.filter((r) => r.status === 'completed').length,
+        palletsLoggedCount: palletsLoggedTodayCount,
+        putAwayCompletedCount: putAwayCompletedToday.length,
+        orderPrepSessionsCreatedCount: orderPrepSessionsCreatedTodayCount,
+      },
+      staff,
     };
   }
 

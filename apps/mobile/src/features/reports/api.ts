@@ -1,5 +1,6 @@
 import { apiRequest } from '../../core/api/client';
 import {
+  type AdminDashboardReport,
   type AttendanceReport,
   type OrderPrepReport,
   type OverviewReport,
@@ -25,4 +26,8 @@ export function fetchPutAwayReport(token: string) {
 
 export function fetchOrderPrepReport(token: string) {
   return apiRequest<OrderPrepReport>('/reports/order-prep', { token });
+}
+
+export function fetchAdminDashboardReport(token: string) {
+  return apiRequest<AdminDashboardReport>('/reports/admin-dashboard', { token });
 }

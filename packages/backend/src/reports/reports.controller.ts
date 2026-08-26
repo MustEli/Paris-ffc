@@ -44,6 +44,12 @@ export class ReportsController {
     return this.reportsService.orderPrep();
   }
 
+  /** Admin's home-screen dashboard — "what's happening right now" plus today's activity, per-staff. */
+  @Get('admin-dashboard')
+  adminDashboard() {
+    return this.reportsService.adminDashboard();
+  }
+
   /**
    * Manual trigger — appends a timestamped snapshot of every report to
    * the Google Sheet configured via GOOGLE_SHEETS_SPREADSHEET_ID (see
