@@ -1,9 +1,11 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../core/auth/authStore';
+import { SegmentedTabs } from '../../features/reports/components/SegmentedTabs';
 import { StaffStatusRow } from '../../features/reports/components/StaffStatusRow';
-import { StatCard } from '../../features/reports/components/StatCard';
+import { StatRow } from '../../features/reports/components/StatRow';
 import { useAdminDashboardReport } from '../../features/reports/hooks/useReports';
 import { type AdminStackParamList } from '../types';
 
@@ -11,25 +13,34 @@ interface Props {
   navigation: NativeStackNavigationProp<AdminStackParamList, 'AdminHome'>;
 }
 
+type StatusTab = 'current' | 'today' | 'staff';
+
+const STATUS_TABS: { key: StatusTab; label: string }[] = [
+  { key: 'current', label: 'Current' },
+  { key: 'today', label: 'Today' },
+  { key: 'staff', label: 'Staff' },
+];
 
 /**
  * Admin's home screen — "whatever happening right now," per the
- * user's explicit request, rather than a plain menu. `liveSummary` is
- * current-state (doesn't reset with the day); `today`/`staff` reset
- * each calendar day — see reports.types.ts (backend) for why both
- * scopes exist side by side. Module access (Reception, Seller Stock,
- * etc.) is now a compact link row rather than the whole screen.
+ * user's explicit request, laid out as a module sidebar + a tabbed
+ * status panel (Current / Today / Staff) rather than stacked sections
+ * (an explicit structural revision after the first version shipped).
+ * `liveSummary` → "Current" tab (doesn't reset with the day);
+ * `today`/`staff` → their own tabs (calendar-day-scoped) — see
+ * reports.types.ts (backend) for why both time scopes exist.
  */
 export function AdminHomeScreen({ navigation }: Props) {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const { data, isPending, error, refetch, isRefetching } = useAdminDashboardReport();
+  const [statusTab, setStatusTab] = useState<StatusTab>('current');
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 
   return (
@@ -44,57 +55,77 @@ export function AdminHomeScreen({ navigation }: Props) {
       {error && <Text style={styles.error}>{error.message}</Text>}
 
       {data && (
-        <>
-          <Text style={styles.sectionTitle}>Right now</Text>
-          <View style={styles.statGrid}>
-            <StatCard
-              label="Staff on shift"
-              value={`${data.liveSummary.staffOnShiftCount} / ${data.liveSummary.totalStaffCount}`}
-            />
-            <StatCard
-              label="Pallets pending review"
-              value={data.liveSummary.palletsPendingReviewCount}
-              tone={data.liveSummary.palletsPendingReviewCount > 0 ? 'warning' : 'default'}
-            />
-            <StatCard label="Open put-away tasks" value={data.liveSummary.openPutAwayTaskCount} />
-            <StatCard label="Active order-prep sessions" value={data.liveSummary.activeOrderPrepSessionCount} />
+        <View style={styles.layout}>
+          <View style={styles.sidebar}>
+            <Text style={styles.columnTitle}>Modules</Text>
+            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('ReceptionList')}>
+              <Text style={styles.moduleLabel}>Reception</Text>
+            </Pressable>
+            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('SellerStockList')}>
+              <Text style={styles.moduleLabel}>Seller Stock</Text>
+            </Pressable>
+            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('PutAwayTaskList')}>
+              <Text style={styles.moduleLabel}>Put-Away</Text>
+            </Pressable>
+            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('OrderPrepSessionList')}>
+              <Text style={styles.moduleLabel}>Order Prep</Text>
+            </Pressable>
+            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('UserList')}>
+              <Text style={styles.moduleLabel}>Users</Text>
+            </Pressable>
           </View>
 
-          <Text style={styles.sectionTitle}>Today</Text>
-          <View style={styles.statGrid}>
-            <StatCard label="Receptions logged" value={data.today.receptionsLoggedCount} />
-            <StatCard label="Receptions completed" value={data.today.receptionsCompletedCount} />
-            <StatCard label="Pallets logged" value={data.today.palletsLoggedCount} />
-            <StatCard label="Put-away completed" value={data.today.putAwayCompletedCount} />
-            <StatCard label="Order-prep sessions started" value={data.today.orderPrepSessionsCreatedCount} />
-          </View>
+          <View style={styles.statusColumn}>
+            <Text style={styles.columnTitle}>Status</Text>
+            <View style={styles.statusCard}>
+              <SegmentedTabs tabs={STATUS_TABS} selected={statusTab} onSelect={setStatusTab} />
 
-          <Text style={styles.sectionTitle}>Staff</Text>
-          {data.staff.length === 0 && <Text style={styles.empty}>No staff accounts yet.</Text>}
-          {data.staff.map((staff) => (
-            <StaffStatusRow key={staff.userId} staff={staff} />
-          ))}
-        </>
+              <View style={styles.statusContent}>
+                {statusTab === 'current' && (
+                  <>
+                    <StatRow
+                      label="Staff on shift"
+                      value={`${data.liveSummary.staffOnShiftCount} / ${data.liveSummary.totalStaffCount}`}
+                    />
+                    <StatRow
+                      label="Pallets pending review"
+                      value={data.liveSummary.palletsPendingReviewCount}
+                      tone={data.liveSummary.palletsPendingReviewCount > 0 ? 'warning' : 'default'}
+                    />
+                    <StatRow label="Open put-away tasks" value={data.liveSummary.openPutAwayTaskCount} />
+                    <StatRow
+                      label="Active order-prep sessions"
+                      value={data.liveSummary.activeOrderPrepSessionCount}
+                    />
+                  </>
+                )}
+
+                {statusTab === 'today' && (
+                  <>
+                    <StatRow label="Receptions logged" value={data.today.receptionsLoggedCount} />
+                    <StatRow label="Receptions completed" value={data.today.receptionsCompletedCount} />
+                    <StatRow label="Pallets logged" value={data.today.palletsLoggedCount} />
+                    <StatRow label="Put-away completed" value={data.today.putAwayCompletedCount} />
+                    <StatRow
+                      label="Order-prep sessions started"
+                      value={data.today.orderPrepSessionsCreatedCount}
+                    />
+                  </>
+                )}
+
+                {statusTab === 'staff' && (
+                  <>
+                    {data.staff.length === 0 && <Text style={styles.empty}>No staff accounts yet.</Text>}
+                    {data.staff.map((staff) => (
+                      <StaffStatusRow key={staff.userId} staff={staff} />
+                    ))}
+                  </>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
       )}
-
-      <Text style={styles.sectionTitle}>Modules</Text>
-      <View style={styles.linkRow}>
-        <Pressable style={styles.linkChip} onPress={() => navigation.navigate('ReceptionList')}>
-          <Text style={styles.linkChipText}>Reception log</Text>
-        </Pressable>
-        <Pressable style={styles.linkChip} onPress={() => navigation.navigate('SellerStockList')}>
-          <Text style={styles.linkChipText}>Seller Stock</Text>
-        </Pressable>
-        <Pressable style={styles.linkChip} onPress={() => navigation.navigate('PutAwayTaskList')}>
-          <Text style={styles.linkChipText}>Put-Away Tasks</Text>
-        </Pressable>
-        <Pressable style={styles.linkChip} onPress={() => navigation.navigate('OrderPrepSessionList')}>
-          <Text style={styles.linkChipText}>Order Prep</Text>
-        </Pressable>
-        <Pressable style={styles.linkChip} onPress={() => navigation.navigate('UserList')}>
-          <Text style={styles.linkChipText}>Users</Text>
-        </Pressable>
-      </View>
 
       <Pressable style={styles.logoutButton} onPress={logout}>
         <Text style={styles.logoutText}>Log out</Text>
@@ -118,51 +149,68 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0f172a',
     marginTop: 2,
-    marginBottom: 8,
+    marginBottom: 20,
   },
   spinner: {
     marginTop: 20,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  empty: {
-    color: '#9ca3af',
-    fontSize: 13,
   },
   error: {
     color: '#dc2626',
     fontSize: 13,
     marginTop: 8,
   },
-  linkRow: {
+  layout: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
+    alignItems: 'flex-start',
   },
-  linkChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+  sidebar: {
+    width: 96,
+  },
+  statusColumn: {
+    flex: 1,
+  },
+  columnTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  moduleCard: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    minHeight: 64,
   },
-  linkChipText: {
-    fontSize: 13,
+  moduleLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: '#334155',
+    textAlign: 'center',
+  },
+  statusCard: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    padding: 12,
+  },
+  statusContent: {
+    marginTop: 14,
+  },
+  empty: {
+    color: '#9ca3af',
+    fontSize: 13,
+    paddingVertical: 8,
   },
   logoutButton: {
-    marginTop: 32,
+    marginTop: 28,
     alignSelf: 'center',
     paddingVertical: 10,
     paddingHorizontal: 20,
