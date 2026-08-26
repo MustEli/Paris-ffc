@@ -10,8 +10,11 @@ function formatLocalTime(isoString: string): string {
 /**
  * Feature 1 (Shift Attendance) MVP from the requirements doc: a single
  * button that toggles Start Shift / End Shift, backed by
- * POST /shifts/start and /shifts/end. The 7-hour-completion notification
- * logic from the doc is push-notification territory (roadmap step 5) —
+ * POST /shifts/start and /shifts/end. Also covers the doc's "Automated
+ * Break Management" future-dev section, scoped down to a staff-initiated
+ * lunch break (no admin-scheduled windows/reminders yet) — going to
+ * lunch no longer means stopping the whole shift. The 7-hour-completion
+ * notification logic from the doc is still push-notification territory,
  * deliberately not here yet.
  */
 export function ShiftScreen() {
@@ -27,10 +30,17 @@ export function ShiftScreen() {
     end,
     isEnding,
     endError,
+    startLunchBreak,
+    isStartingBreak,
+    startBreakError,
+    endLunchBreak,
+    isEndingBreak,
+    endBreakError,
   } = useShiftStatus();
 
   const isBusy = isStarting || isEnding;
-  const actionError = startError ?? endError ?? statusError;
+  const isBreakBusy = isStartingBreak || isEndingBreak;
+  const actionError = startError ?? endError ?? startBreakError ?? endBreakError ?? statusError;
 
   return (
     <View style={styles.container}>
@@ -40,11 +50,16 @@ export function ShiftScreen() {
       {isLoadingStatus ? (
         <ActivityIndicator style={styles.statusSpinner} />
       ) : (
-        <Text style={styles.status}>
-          {status?.active && status.startedAt
-            ? `On shift since ${formatLocalTime(status.startedAt)}`
-            : 'Not currently on shift'}
-        </Text>
+        <>
+          <Text style={styles.status}>
+            {status?.active && status.startedAt
+              ? `On shift since ${formatLocalTime(status.startedAt)}`
+              : 'Not currently on shift'}
+          </Text>
+          {status?.onBreak && status.breakStartedAt && (
+            <Text style={styles.breakStatus}>On lunch break since {formatLocalTime(status.breakStartedAt)}</Text>
+          )}
+        </>
       )}
 
       {actionError && <Text style={styles.error}>{actionError.message}</Text>}
@@ -64,6 +79,25 @@ export function ShiftScreen() {
           <Text style={styles.buttonText}>{status?.active ? 'End Shift' : 'Start Shift'}</Text>
         )}
       </Pressable>
+
+      {status?.active && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.breakButton,
+            (pressed || isBreakBusy || isLoadingStatus) && styles.buttonPressed,
+          ]}
+          onPress={() => (status.onBreak ? endLunchBreak() : startLunchBreak())}
+          disabled={isBreakBusy || isLoadingStatus}
+        >
+          {isBreakBusy ? (
+            <ActivityIndicator color="#b45309" />
+          ) : (
+            <Text style={styles.breakButtonText}>
+              {status.onBreak ? 'End Lunch Break' : 'Start Lunch Break'}
+            </Text>
+          )}
+        </Pressable>
+      )}
 
       <Pressable style={styles.logoutButton} onPress={logout}>
         <Text style={styles.logoutText}>Log out</Text>
@@ -96,13 +130,20 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 15,
     color: '#374151',
-    marginBottom: 24,
+    textAlign: 'center',
+  },
+  breakStatus: {
+    fontSize: 13,
+    color: '#b45309',
+    fontWeight: '600',
+    marginTop: 6,
     textAlign: 'center',
   },
   error: {
     color: '#dc2626',
     fontSize: 13,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 8,
     textAlign: 'center',
   },
   button: {
@@ -110,6 +151,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 24,
   },
   buttonStart: {
     backgroundColor: '#16a34a',
@@ -123,6 +165,20 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: '700',
+  },
+  breakButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+  },
+  breakButtonText: {
+    color: '#b45309',
+    fontSize: 15,
     fontWeight: '700',
   },
   logoutButton: {

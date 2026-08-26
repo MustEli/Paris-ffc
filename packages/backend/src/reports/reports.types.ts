@@ -25,7 +25,7 @@ export interface AttendanceReportRow {
   userId: string;
   userName: string;
   totalShifts: number;
-  /** Only counts completed (clocked-out) shifts — an in-progress shift's duration isn't known yet. */
+  /** Net of break time. Only counts completed (clocked-out) shifts — an in-progress shift's duration isn't known yet. */
   totalHoursWorked: number;
 }
 
@@ -78,8 +78,10 @@ export interface StaffStatus {
   onShift: boolean;
   /** null when not currently on shift. */
   shiftStartedAt: string | null;
+  /** Only meaningful when onShift is true. */
+  onBreak: boolean;
   shiftsToday: number;
-  /** Only counts shifts that have already ended today — an in-progress shift's duration isn't known yet. */
+  /** Net of break time, and only counts shifts that have already ended today — an in-progress shift's duration isn't known yet. */
   hoursWorkedToday: number;
   putAwayCompletedToday: number;
   orderPrepCompletedToday: number;

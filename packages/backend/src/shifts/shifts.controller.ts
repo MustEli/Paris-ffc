@@ -24,4 +24,14 @@ export class ShiftsController {
   status(@CurrentUser() user: PublicUser) {
     return this.shiftsService.getStatus(user.id);
   }
+
+  @Post('break/start')
+  startBreak(@CurrentUser() user: PublicUser) {
+    return this.shiftsService.startBreak(user.id);
+  }
+
+  @Post('break/end')
+  endBreak(@CurrentUser() user: PublicUser) {
+    return this.shiftsService.endBreak(user.id);
+  }
 }

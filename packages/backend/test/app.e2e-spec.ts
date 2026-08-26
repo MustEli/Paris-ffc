@@ -61,7 +61,7 @@ describe('Warehouse HQ backend (e2e)', () => {
       .get('/shifts/status')
       .set('Authorization', auth)
       .expect(200)
-      .expect({ active: false, shiftId: null, startedAt: null });
+      .expect({ active: false, shiftId: null, startedAt: null, onBreak: false, breakStartedAt: null });
 
     const startResponse = await request(app.getHttpServer())
       .post('/shifts/start')
@@ -82,5 +82,63 @@ describe('Warehouse HQ backend (e2e)', () => {
 
     // Ending again with nothing active is rejected.
     await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(404);
+  });
+
+  it('lets staff take a lunch break without touching the shift, and blocks invalid transitions', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    // Can't take a break with no active shift.
+    await request(app.getHttpServer()).post('/shifts/break/start').set('Authorization', auth).expect(404);
+
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+
+    const breakStart = await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', auth)
+      .expect(201);
+    expect(breakStart.body.endedAt).toBeNull();
+
+    // Starting a second break while one is already open is rejected.
+    await request(app.getHttpServer()).post('/shifts/break/start').set('Authorization', auth).expect(409);
+
+    const statusWhileOnBreak = await request(app.getHttpServer())
+      .get('/shifts/status')
+      .set('Authorization', auth)
+      .expect(200);
+    expect(statusWhileOnBreak.body).toMatchObject({ active: true, onBreak: true });
+    expect(statusWhileOnBreak.body.breakStartedAt).not.toBeNull();
+
+    await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
+
+    // Ending again with nothing open is rejected.
+    await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(404);
+
+    const statusAfterBreak = await request(app.getHttpServer())
+      .get('/shifts/status')
+      .set('Authorization', auth)
+      .expect(200);
+    // The shift itself was never touched by any of this.
+    expect(statusAfterBreak.body).toMatchObject({ active: true, onBreak: false, breakStartedAt: null });
+
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(201);
+  });
+
+  it('ending a shift while on break also closes the open break', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+    await request(app.getHttpServer()).post('/shifts/break/start').set('Authorization', auth).expect(201);
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(201);
+
+    // No open break left to end — it was auto-closed when the shift ended.
+    await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(404);
   });
 });

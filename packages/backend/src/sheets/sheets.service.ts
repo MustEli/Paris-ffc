@@ -98,6 +98,16 @@ export class SheetsService implements OnModuleInit {
     return null;
   }
 
+  /**
+   * Creates the tab if it doesn't exist yet, then **always** syncs row 1
+   * to the current header — using `update` (overwrite that one row),
+   * not `append` (which would stack a second header row below the
+   * first). This matters whenever a header changes after a tab already
+   * has data in it (e.g. adding a column) — without this, old rows
+   * would silently drift out of alignment with a header that no longer
+   * describes them. Only runs once per tab per process lifetime
+   * (`knownTabs`), not on every single row write.
+   */
   private async ensureTab(title: string, headerRow: (string | number)[]): Promise<void> {
     if (this.knownTabs.has(title)) return;
     if (!this.sheets || !this.spreadsheetId) return;
@@ -110,13 +120,14 @@ export class SheetsService implements OnModuleInit {
         spreadsheetId: this.spreadsheetId,
         requestBody: { requests: [{ addSheet: { properties: { title } } }] },
       });
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: `${title}!A1`,
-        valueInputOption: 'RAW',
-        requestBody: { values: [headerRow] },
-      });
     }
+
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `${title}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [headerRow] },
+    });
     this.knownTabs.add(title);
   }
 

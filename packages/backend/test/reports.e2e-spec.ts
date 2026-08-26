@@ -1,10 +1,18 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
 import { closeTestDb, resetDatabase } from './utils/db';
+
+// A second, raw Prisma client — only used to seed a shift+break with
+// exact, known timestamps directly (bypassing the real-time HTTP
+// start/end endpoints), so break-time subtraction can be verified with
+// deterministic numbers instead of racing the wall clock.
+const rawPrisma = new PrismaClient();
 
 async function loginAs(app: INestApplication<App>, email: string): Promise<{ token: string; id: string }> {
   const response = await request(app.getHttpServer())
@@ -51,6 +59,7 @@ describe('Reports (e2e)', () => {
 
   afterAll(async () => {
     await closeTestDb();
+    await rawPrisma.$disconnect();
   });
 
   it('rejects a staff member reading any report', async () => {
@@ -291,5 +300,30 @@ describe('Reports (e2e)', () => {
       putAwayCompletedToday: 1,
     });
     expect(staffRow.shiftStartedAt).not.toBeNull();
+  });
+
+  it('excludes lunch break time from worked-hours totals', async () => {
+    // Seeded directly with exact timestamps (bypassing the real-time
+    // start/end endpoints) so the subtraction can be checked precisely:
+    // a 4-hour shift with a 30-minute break in the middle should net
+    // out to 3.5 hours worked, not 4.
+    const shiftStart = new Date('2026-01-01T09:00:00.000Z');
+    const shiftEnd = new Date('2026-01-01T13:00:00.000Z'); // 4 hours later
+    const breakStart = new Date('2026-01-01T12:00:00.000Z');
+    const breakEnd = new Date('2026-01-01T12:30:00.000Z'); // 30 minutes
+
+    const shift = await rawPrisma.shift.create({
+      data: { id: randomUUID(), userId: staff.id, startedAt: shiftStart, endedAt: shiftEnd },
+    });
+    await rawPrisma.break.create({
+      data: { id: randomUUID(), shiftId: shift.id, startedAt: breakStart, endedAt: breakEnd },
+    });
+
+    const attendance = await request(app.getHttpServer())
+      .get('/reports/attendance')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    const staffRow = attendance.body.rows.find((r: { userId: string }) => r.userId === staff.id);
+    expect(staffRow.totalHoursWorked).toBe(3.5);
   });
 });

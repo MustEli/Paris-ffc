@@ -21,6 +21,17 @@ const RECEPTION_CATEGORIES: ReceptionCategory[] = [
   'equipment_other',
 ];
 
+/** Sums completed breaks (endedAt set) per shiftId — worked-hours totals subtract this, since a lunch break is unpaid, not time on task. */
+function sumBreakMsByShift(breaks: { shiftId: string; startedAt: Date; endedAt: Date | null }[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const b of breaks) {
+    if (!b.endedAt) continue;
+    const ms = b.endedAt.getTime() - b.startedAt.getTime();
+    map.set(b.shiftId, (map.get(b.shiftId) ?? 0) + ms);
+  }
+  return map;
+}
+
 function average(values: number[]): number | null {
   if (values.length === 0) return null;
   const sum = values.reduce((total, value) => total + value, 0);
@@ -70,9 +81,14 @@ export class ReportsService {
     ]);
     const userNames = new Map(users.map((user) => [user.id, user.name]));
 
+    const breaks = await this.prisma.break.findMany({
+      where: { shiftId: { in: completedShifts.map((s) => s.id) } },
+    });
+    const breakMsByShift = sumBreakMsByShift(breaks);
+
     const totals = new Map<string, { totalShifts: number; totalMs: number }>();
     for (const shift of completedShifts) {
-      const durationMs = shift.endedAt!.getTime() - shift.startedAt.getTime();
+      const durationMs = shift.endedAt!.getTime() - shift.startedAt.getTime() - (breakMsByShift.get(shift.id) ?? 0);
       const existing = totals.get(shift.userId) ?? { totalShifts: 0, totalMs: 0 };
       existing.totalShifts += 1;
       existing.totalMs += durationMs;
@@ -177,12 +193,19 @@ export class ReportsService {
 
     const activeShiftByUser = new Map(activeShifts.map((s) => [s.userId, s]));
 
+    const [breaksToday, activeBreaks] = await Promise.all([
+      this.prisma.break.findMany({ where: { shiftId: { in: shiftsToday.map((s) => s.id) } } }),
+      this.prisma.break.findMany({ where: { shiftId: { in: activeShifts.map((s) => s.id) }, endedAt: null } }),
+    ]);
+    const breakMsByShift = sumBreakMsByShift(breaksToday);
+    const shiftIdsOnBreak = new Set(activeBreaks.map((b) => b.shiftId));
+
     const shiftsTodayByUser = new Map<string, { count: number; totalMs: number }>();
     for (const shift of shiftsToday) {
       const existing = shiftsTodayByUser.get(shift.userId) ?? { count: 0, totalMs: 0 };
       existing.count += 1;
       if (shift.endedAt) {
-        existing.totalMs += shift.endedAt.getTime() - shift.startedAt.getTime();
+        existing.totalMs += shift.endedAt.getTime() - shift.startedAt.getTime() - (breakMsByShift.get(shift.id) ?? 0);
       }
       shiftsTodayByUser.set(shift.userId, existing);
     }
@@ -206,6 +229,7 @@ export class ReportsService {
           userName: user.name,
           onShift: !!activeShift,
           shiftStartedAt: activeShift ? activeShift.startedAt.toISOString() : null,
+          onBreak: activeShift ? shiftIdsOnBreak.has(activeShift.id) : false,
           shiftsToday: todayStats?.count ?? 0,
           hoursWorkedToday: todayStats ? Math.round((todayStats.totalMs / 3_600_000) * 10) / 10 : 0,
           putAwayCompletedToday: putAwayCountByUser.get(user.id) ?? 0,

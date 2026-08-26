@@ -16,4 +16,17 @@ export interface ShiftStatus {
   active: boolean;
   shiftId: string | null;
   startedAt: string | null;
+  onBreak: boolean;
+  breakStartedAt: string | null;
+}
+
+/**
+ * A lunch break within a shift — see schema.prisma's Break model doc
+ * comment for why this is its own thing rather than pausing the shift.
+ */
+export interface Break {
+  id: string;
+  shiftId: string;
+  startedAt: string;
+  endedAt: string | null;
 }

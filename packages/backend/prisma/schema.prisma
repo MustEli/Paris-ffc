@@ -92,6 +92,26 @@ model Shift {
 }
 
 /**
+ * A lunch break within a shift — separate from Shift itself so staff
+ * can go to lunch without stopping/restarting their whole shift (the
+ * practical gap the doc's own "Automated Break Management" future-dev
+ * section anticipated, scoped down here to just staff-initiated
+ * start/end, no admin-scheduled windows or reminders yet). One active
+ * (endedAt: null) break per shift at a time — same pattern as one
+ * active shift per user. Break time is subtracted from worked-hours
+ * totals wherever those are computed (ReportsService, the Sheets
+ * export) — it's unpaid time, not time on task.
+ */
+model Break {
+  id        String    @id @default(uuid())
+  shiftId   String
+  startedAt DateTime
+  endedAt   DateTime?
+
+  @@index([shiftId])
+}
+
+/**
  * ReceptionDetails (reception.types.ts) is a discriminated union in the
  * domain model; here it's flattened into nullable per-category columns
  * (only the columns matching `category` are ever populated) — the

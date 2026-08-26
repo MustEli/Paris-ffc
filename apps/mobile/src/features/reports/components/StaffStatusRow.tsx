@@ -17,13 +17,20 @@ export function StaffStatusRow({ staff }: StaffStatusRowProps) {
     <View style={styles.row}>
       <View style={styles.header}>
         <Text style={styles.name}>{staff.userName}</Text>
-        <View style={[styles.pill, staff.onShift ? styles.pillOn : styles.pillOff]}>
-          <Text style={[styles.pillText, staff.onShift ? styles.pillTextOn : styles.pillTextOff]}>
+        <View style={[styles.pill, staff.onBreak ? styles.pillBreak : staff.onShift ? styles.pillOn : styles.pillOff]}>
+          <Text
+            style={[
+              styles.pillText,
+              staff.onBreak ? styles.pillTextBreak : staff.onShift ? styles.pillTextOn : styles.pillTextOff,
+            ]}
+          >
             {staff.onShift && staff.shiftStartedAt
-              ? `On shift since ${new Date(staff.shiftStartedAt).toLocaleTimeString([], {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}`
+              ? staff.onBreak
+                ? 'On lunch break'
+                : `On shift since ${new Date(staff.shiftStartedAt).toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}`
               : 'Off shift'}
           </Text>
         </View>
@@ -66,6 +73,9 @@ const styles = StyleSheet.create({
   pillOff: {
     backgroundColor: '#f1f5f9',
   },
+  pillBreak: {
+    backgroundColor: '#fef3c7',
+  },
   pillText: {
     fontSize: 11,
     fontWeight: '600',
@@ -75,6 +85,9 @@ const styles = StyleSheet.create({
   },
   pillTextOff: {
     color: '#64748b',
+  },
+  pillTextBreak: {
+    color: '#b45309',
   },
   meta: {
     fontSize: 12,

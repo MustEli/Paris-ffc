@@ -57,6 +57,7 @@ export interface StaffStatus {
   userName: string;
   onShift: boolean;
   shiftStartedAt: string | null;
+  onBreak: boolean;
   shiftsToday: number;
   hoursWorkedToday: number;
   putAwayCompletedToday: number;
