@@ -33,6 +33,8 @@ If a feature ever needs something Expo Go itself can't do (custom native modules
 
 `expo-dev-client` is installed and `eas.json` (development/preview/production profiles) is configured. This doesn't change day-to-day work at all — a development build behaves exactly like Expo Go (same `npm start`, same instant reload on save); the only difference is a custom-icon app on the phone instead of the Expo Go app. A rebuild is only needed when something **native** changes (a new native library, an `app.json` permission change, an SDK upgrade) — not for regular feature work.
 
+**Config lives in `app.config.js`, not `app.json` (2026-08-26)** — deliberately, so the `development` build gets its own Android package/iOS bundle ID (`com.warehousehq.mobile.dev`, name "Warehouse HQ (Dev)") distinct from `preview`/`production` (`com.warehousehq.mobile`, "Warehouse HQ"). Before this, both profiles shared one identity, so installing a `preview` build **silently uninstalled** the `development` one (and vice versa) — Android/iOS treat matching package names as the same app. `app.config.js` picks the identity based on `EAS_BUILD_PROFILE` (set automatically by EAS during a real cloud build; unset locally, where package identity doesn't matter anyway). Both builds can now be installed on the same phone at once without either disappearing.
+
 **One-time setup, run by whoever owns the Expo account (these are account-bound steps, not something that can be scripted/run on someone else's behalf):**
 
 ```
