@@ -1,4 +1,15 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    // Without this, TS infers rootDir as the common ancestor of every
+    // compiled file -- since prisma/*.ts sits alongside src/, that
+    // ancestor is the package root, so output ends up nested under
+    // dist/src/main.js instead of the flat dist/main.js every start
+    // command (locally and on Render) actually expects. Scoping the
+    // build to just src/ (prisma/seed.ts runs via ts-node directly,
+    // never through dist/, so it doesn't need compiling here at all)
+    // fixes that.
+    "rootDir": "./src"
+  },
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
 }
