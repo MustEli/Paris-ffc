@@ -26,6 +26,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    // Trial-gating: loginLimit is null for every normal account (the
+    // check is a no-op for them). Only set on accounts handed to an
+    // evaluating company for a limited pilot. Checked after the password
+    // check so a wrong-password attempt never consumes a login.
+    if (user.loginLimit !== null && user.loginCount >= user.loginLimit) {
+      throw new UnauthorizedException('Trial limit reached for this account — contact ELNO to continue.');
+    }
+    await this.usersService.incrementLoginCount(user.id);
+
     const payload: JwtPayload = { sub: user.id, role: user.role };
     return {
       accessToken: await this.jwtService.signAsync(payload),

@@ -80,6 +80,18 @@ model User {
   email        String @unique
   passwordHash String
   role         Role
+
+  /**
+   * Trial-gating fields — deliberately unused (loginLimit: null,
+   * canCreateUsers: true) for every normal account, including every
+   * seed/dev account. Only set on specific accounts handed to an
+   * evaluating company for a time/usage-limited pilot before they've
+   * committed to paying. Checked in AuthService.login() and
+   * UsersService.create() respectively.
+   */
+  loginLimit     Int?
+  loginCount     Int     @default(0)
+  canCreateUsers Boolean @default(true)
 }
 
 model Shift {

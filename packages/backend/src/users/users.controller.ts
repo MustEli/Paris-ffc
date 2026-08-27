@@ -35,8 +35,8 @@ export class UsersController {
 
   @Post()
   @Roles('admin')
-  async create(@Body() dto: CreateUserDto) {
-    return toPublicUser(await this.usersService.create(dto));
+  async create(@Body() dto: CreateUserDto, @CurrentUser() user: PublicUser) {
+    return toPublicUser(await this.usersService.create(dto, user.id));
   }
 
   @Delete(':id')

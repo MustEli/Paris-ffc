@@ -12,6 +12,10 @@ export interface User {
   email: string;
   passwordHash: string;
   role: Role;
+  /** Trial-gating fields — see schema.prisma's User model comment. */
+  loginLimit: number | null;
+  loginCount: number;
+  canCreateUsers: boolean;
 }
 
 /** User shape safe to send to clients — never includes passwordHash. */

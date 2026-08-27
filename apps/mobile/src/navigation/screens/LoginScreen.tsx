@@ -68,10 +68,17 @@ export function LoginScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.devNotice}>
-        Dev accounts: staff@warehousehq.dev / admin@warehousehq.dev /{'\n'}
-        management@warehousehq.dev — password: password123
-      </Text>
+      {/* Only shown in local dev (talking to a laptop-hosted backend) —
+          never in a standalone build pointed at the live hosted backend,
+          which is what any build handed to someone outside this project
+          uses (EXPO_PUBLIC_API_BASE_URL is only ever set for those). No
+          credentials should be visible on a client-facing build. */}
+      {!process.env.EXPO_PUBLIC_API_BASE_URL && (
+        <Text style={styles.devNotice}>
+          Dev accounts: staff@warehousehq.dev / admin@warehousehq.dev /{'\n'}
+          management@warehousehq.dev — password: password123
+        </Text>
+      )}
     </KeyboardAwareScreen>
   );
 }

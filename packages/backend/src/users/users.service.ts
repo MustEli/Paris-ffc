@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 
@@ -41,7 +41,17 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto): Promise<User> {
+  /**
+   * currentUserId gates this on the CALLER's own canCreateUsers flag —
+   * a trial Admin account with that flag off can't create new users at
+   * all, regardless of what they send. Normal accounts (the overwhelming
+   * majority — canCreateUsers defaults true) are unaffected.
+   */
+  async create(dto: CreateUserDto, currentUserId: string): Promise<User> {
+    const currentUser = await this.findOneOrThrow(currentUserId);
+    if (!currentUser.canCreateUsers) {
+      throw new ForbiddenException('Your account is not permitted to create new users during this trial.');
+    }
     if (await this.findByEmail(dto.email)) {
       throw new ConflictException('A user with this email already exists');
     }
@@ -52,8 +62,15 @@ export class UsersService {
         email: dto.email,
         passwordHash: bcrypt.hashSync(dto.password, 10),
         role: dto.role,
+        loginLimit: dto.loginLimit ?? null,
+        canCreateUsers: dto.canCreateUsers ?? true,
       },
     });
+  }
+
+  /** Called once per successful login — see AuthService.login()'s trial-limit check. */
+  async incrementLoginCount(id: string): Promise<void> {
+    await this.prisma.user.update({ where: { id }, data: { loginCount: { increment: 1 } } });
   }
 
   /**
