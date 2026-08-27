@@ -23,9 +23,14 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
 
 /**
  * Admin's home screen — "whatever happening right now," per the
- * user's explicit request, laid out as a module sidebar + a tabbed
- * status panel (Current / Today / Staff) rather than stacked sections
- * (an explicit structural revision after the first version shipped).
+ * user's explicit request. Laid out as one full-width column — a
+ * tabbed status panel (Current / Today / Staff) under the date, then
+ * the module list, then Log out — deliberately matching the Staff
+ * panel's `MenuScreen` card style for the modules (an earlier version
+ * used a narrow sidebar of small square tiles next to the status
+ * panel; the user flagged that as inconsistent with Staff and
+ * cramped, so this reverts the module buttons to the shared look
+ * while keeping the tabbed status panel, just full-width now).
  * `liveSummary` → "Current" tab (doesn't reset with the day);
  * `today`/`staff` → their own tabs (calendar-day-scoped) — see
  * reports.types.ts (backend) for why both time scopes exist.
@@ -55,9 +60,57 @@ export function AdminHomeScreen({ navigation }: Props) {
       {error && <Text style={styles.error}>{error.message}</Text>}
 
       {data && (
-        <View style={styles.layout}>
-          <View style={styles.sidebar}>
-            <Text style={styles.columnTitle}>Modules</Text>
+        <>
+          <Text style={styles.sectionTitle}>Status</Text>
+          <View style={styles.statusCard}>
+            <SegmentedTabs tabs={STATUS_TABS} selected={statusTab} onSelect={setStatusTab} />
+
+            <View style={styles.statusContent}>
+              {statusTab === 'current' && (
+                <>
+                  <StatRow
+                    label="Staff on shift"
+                    value={`${data.liveSummary.staffOnShiftCount} / ${data.liveSummary.totalStaffCount}`}
+                  />
+                  <StatRow
+                    label="Pallets pending review"
+                    value={data.liveSummary.palletsPendingReviewCount}
+                    tone={data.liveSummary.palletsPendingReviewCount > 0 ? 'warning' : 'default'}
+                  />
+                  <StatRow label="Open put-away tasks" value={data.liveSummary.openPutAwayTaskCount} />
+                  <StatRow
+                    label="Active order-prep sessions"
+                    value={data.liveSummary.activeOrderPrepSessionCount}
+                  />
+                </>
+              )}
+
+              {statusTab === 'today' && (
+                <>
+                  <StatRow label="Receptions logged" value={data.today.receptionsLoggedCount} />
+                  <StatRow label="Receptions completed" value={data.today.receptionsCompletedCount} />
+                  <StatRow label="Pallets logged" value={data.today.palletsLoggedCount} />
+                  <StatRow label="Put-away completed" value={data.today.putAwayCompletedCount} />
+                  <StatRow
+                    label="Order-prep sessions started"
+                    value={data.today.orderPrepSessionsCreatedCount}
+                  />
+                </>
+              )}
+
+              {statusTab === 'staff' && (
+                <>
+                  {data.staff.length === 0 && <Text style={styles.empty}>No staff accounts yet.</Text>}
+                  {data.staff.map((staff) => (
+                    <StaffStatusRow key={staff.userId} staff={staff} />
+                  ))}
+                </>
+              )}
+            </View>
+          </View>
+
+          <Text style={[styles.sectionTitle, styles.modulesTitle]}>Modules</Text>
+          <View style={styles.modules}>
             <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('ReceptionList')}>
               <Text style={styles.moduleLabel}>Reception</Text>
             </Pressable>
@@ -74,57 +127,7 @@ export function AdminHomeScreen({ navigation }: Props) {
               <Text style={styles.moduleLabel}>Users</Text>
             </Pressable>
           </View>
-
-          <View style={styles.statusColumn}>
-            <Text style={styles.columnTitle}>Status</Text>
-            <View style={styles.statusCard}>
-              <SegmentedTabs tabs={STATUS_TABS} selected={statusTab} onSelect={setStatusTab} />
-
-              <View style={styles.statusContent}>
-                {statusTab === 'current' && (
-                  <>
-                    <StatRow
-                      label="Staff on shift"
-                      value={`${data.liveSummary.staffOnShiftCount} / ${data.liveSummary.totalStaffCount}`}
-                    />
-                    <StatRow
-                      label="Pallets pending review"
-                      value={data.liveSummary.palletsPendingReviewCount}
-                      tone={data.liveSummary.palletsPendingReviewCount > 0 ? 'warning' : 'default'}
-                    />
-                    <StatRow label="Open put-away tasks" value={data.liveSummary.openPutAwayTaskCount} />
-                    <StatRow
-                      label="Active order-prep sessions"
-                      value={data.liveSummary.activeOrderPrepSessionCount}
-                    />
-                  </>
-                )}
-
-                {statusTab === 'today' && (
-                  <>
-                    <StatRow label="Receptions logged" value={data.today.receptionsLoggedCount} />
-                    <StatRow label="Receptions completed" value={data.today.receptionsCompletedCount} />
-                    <StatRow label="Pallets logged" value={data.today.palletsLoggedCount} />
-                    <StatRow label="Put-away completed" value={data.today.putAwayCompletedCount} />
-                    <StatRow
-                      label="Order-prep sessions started"
-                      value={data.today.orderPrepSessionsCreatedCount}
-                    />
-                  </>
-                )}
-
-                {statusTab === 'staff' && (
-                  <>
-                    {data.staff.length === 0 && <Text style={styles.empty}>No staff accounts yet.</Text>}
-                    {data.staff.map((staff) => (
-                      <StaffStatusRow key={staff.userId} staff={staff} />
-                    ))}
-                  </>
-                )}
-              </View>
-            </View>
-          </View>
-        </View>
+        </>
       )}
 
       <Pressable style={styles.logoutButton} onPress={logout}>
@@ -159,18 +162,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
   },
-  layout: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  sidebar: {
-    width: 96,
-  },
-  statusColumn: {
-    flex: 1,
-  },
-  columnTitle: {
+  sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
     color: '#94a3b8',
@@ -178,22 +170,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 10,
   },
+  modulesTitle: {
+    marginTop: 24,
+  },
+  modules: {
+    gap: 12,
+  },
+  // Same card look as the Staff panel's MenuScreen — label-only here
+  // (no description line), per explicit feedback.
   moduleCard: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    minHeight: 64,
+    padding: 18,
   },
   moduleLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
   },
   statusCard: {
     borderWidth: 1,
