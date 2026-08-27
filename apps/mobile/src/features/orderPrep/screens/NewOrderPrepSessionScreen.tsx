@@ -1,7 +1,8 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { type OrderPrepStackParamList } from '../../../navigation/types';
 import { useCreateSession } from '../hooks/useOrderPrep';
 
@@ -24,7 +25,7 @@ export function NewOrderPrepSessionScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Text style={styles.label}>Total parts to process</Text>
       <TextInput
         style={styles.input}
@@ -47,7 +48,7 @@ export function NewOrderPrepSessionScreen({ navigation }: Props) {
       >
         {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Calculate & create</Text>}
       </Pressable>
-    </View>
+    </KeyboardAwareScreen>
   );
 }
 

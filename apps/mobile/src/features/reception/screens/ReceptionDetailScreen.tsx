@@ -1,8 +1,9 @@
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useAddInstructions, useCompleteReception, useReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS } from '../types';
@@ -39,7 +40,7 @@ export function ReceptionDetailScreen({ route }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Text style={styles.category}>{CATEGORY_LABELS[reception.details.category]}</Text>
       <Text style={styles.summary}>{summarizeDetails(reception)}</Text>
       <Text style={styles.status}>{STATUS_LABELS[reception.status]}</Text>
@@ -107,7 +108,7 @@ export function ReceptionDetailScreen({ route }: Props) {
       {role === 'staff' && reception.status === 'arrived' && (
         <Text style={styles.waiting}>Waiting on admin instructions…</Text>
       )}
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 

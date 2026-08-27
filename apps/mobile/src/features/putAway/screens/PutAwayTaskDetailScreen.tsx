@@ -1,8 +1,9 @@
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
 import { type PutAwayStackParamList } from '../../../navigation/types';
 import {
@@ -44,7 +45,7 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Text style={styles.location}>{task.location}</Text>
       <Text style={styles.status}>{STATUS_LABELS[task.status]}</Text>
       <Text style={styles.meta}>Assigned: {new Date(task.assignedAt).toLocaleString()}</Text>
@@ -112,7 +113,7 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
           </Pressable>
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 

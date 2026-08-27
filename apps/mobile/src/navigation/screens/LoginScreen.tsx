@@ -1,16 +1,7 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { KeyboardAwareScreen } from '../../core/components/KeyboardAwareScreen';
 import { useAuthStore } from '../../core/auth/authStore';
 
 const elnoLogo = require('../../../assets/elno-logo.png');
@@ -31,10 +22,7 @@ export function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Image source={elnoLogo} style={styles.logo} resizeMode="contain" />
       <Text style={styles.poweredBy}>Powered by OVOKO France</Text>
       <Text style={styles.title}>Sign in</Text>
@@ -84,7 +72,7 @@ export function LoginScreen() {
         Dev accounts: staff@warehousehq.dev / admin@warehousehq.dev /{'\n'}
         management@warehousehq.dev — password: password123
       </Text>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScreen>
   );
 }
 
@@ -100,16 +88,19 @@ const styles = StyleSheet.create({
     // Fixed dp dimensions rather than width:'%' + aspectRatio — the
     // percentage-based version rendered at the image's native pixel
     // size instead of being constrained (a real RN layout quirk, not
-    // just a "make it smaller" tweak). 240x105 matches the source
-    // image's real 1567x688 ratio.
+    // just a "make it smaller" tweak). elno-logo.png is cropped tight to
+    // the letters themselves (no more baked-in transparent padding), so
+    // 240x65 matches its real ~3.68:1 ratio.
     width: 240,
-    height: 105,
-    marginBottom: 8,
+    height: 65,
+    marginBottom: 4,
   },
   poweredBy: {
     fontSize: 13,
     color: '#6b7280',
-    marginBottom: 28,
+    // Half of the original 28 — brings "Sign in" and everything below it
+    // up closer to the subtitle, per feedback.
+    marginBottom: 14,
   },
   title: {
     fontSize: 28,

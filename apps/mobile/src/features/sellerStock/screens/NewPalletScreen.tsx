@@ -1,7 +1,8 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { type SellerStockStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../components/MultiPhotoCapture';
 import { useCreatePallet } from '../hooks/useSellerStock';
@@ -50,7 +51,7 @@ export function NewPalletScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <MultiPhotoCapture label="Shipping label photo" photos={labelPhotos} onChange={setLabelPhotos} />
 
       <Text style={styles.label}>Box number</Text>
@@ -102,7 +103,7 @@ export function NewPalletScreen({ navigation }: Props) {
       >
         {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Log pallet</Text>}
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 

@@ -1,8 +1,9 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { type PublicUser } from '../../../core/api/users';
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { type UserManagementStackParamList } from '../../../navigation/types';
 import { useCreateUser } from '../hooks/useUserManagement';
 
@@ -35,7 +36,7 @@ export function NewUserScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Text style={styles.label}>Name</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
 
@@ -75,7 +76,7 @@ export function NewUserScreen({ navigation }: Props) {
       >
         {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create user</Text>}
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 

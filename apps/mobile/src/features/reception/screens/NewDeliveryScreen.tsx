@@ -1,15 +1,8 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useCreateReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS, type ReceptionCategory } from '../types';
@@ -62,7 +55,7 @@ export function NewDeliveryScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Text style={styles.label}>Category</Text>
       <View style={styles.chipRow}>
         {CATEGORIES.map((c) => (
@@ -134,7 +127,7 @@ export function NewDeliveryScreen({ navigation }: Props) {
       >
         {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Log delivery</Text>}
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 

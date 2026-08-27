@@ -1,8 +1,9 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
 import { type PutAwayStackParamList } from '../../../navigation/types';
 import { useAssignTask } from '../hooks/usePutAwayTasks';
@@ -30,7 +31,7 @@ export function AssignTaskScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen contentContainerStyle={styles.container}>
       <Text style={styles.label}>Assign to</Text>
       {staffError && <Text style={styles.error}>{staffError.message}</Text>}
       {isLoadingStaff ? (
@@ -71,7 +72,7 @@ export function AssignTaskScreen({ route, navigation }: Props) {
       >
         {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Assign task</Text>}
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 
