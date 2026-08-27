@@ -13,7 +13,7 @@ import {
 
 import { useAuthStore } from '../../core/auth/authStore';
 
-const elnoLogo = require('../../../assets/elno-logo.jpeg');
+const elnoLogo = require('../../../assets/elno-logo.png');
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
