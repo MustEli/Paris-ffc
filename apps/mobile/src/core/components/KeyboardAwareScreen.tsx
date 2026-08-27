@@ -33,6 +33,18 @@ interface KeyboardAwareScreenProps {
  *    `keyboardShouldPersistTaps="handled"` keeps taps on inputs/buttons
  *    working normally — only taps that land on non-interactive areas
  *    bubble up and dismiss the keyboard.
+ *
+ * `contentContainerStyle` is applied to the inner content view (the one
+ * inside the tap-catcher), not to the ScrollView's own content container —
+ * that inner view is also given `flex: 1`, so a screen that centers its
+ * content with `justifyContent`/`alignItems` (like Login) still centers
+ * correctly, and the tap-catcher still covers the whole screen even when
+ * the actual content is shorter than it (so tapping the empty space still
+ * dismisses the keyboard). Giving that same `flex: 1` to the *outer*
+ * ScrollView content container instead — an earlier version of this
+ * component did — silently broke centering: with only one flex-growing
+ * child, the outer container has no leftover space left to center within,
+ * so `justifyContent: 'center'` has nothing to do.
  */
 export function KeyboardAwareScreen({ children, contentContainerStyle, style }: KeyboardAwareScreenProps) {
   return (
@@ -40,12 +52,9 @@ export function KeyboardAwareScreen({ children, contentContainerStyle, style }: 
       style={[{ flex: 1 }, style]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView
-        contentContainerStyle={[{ flexGrow: 1 }, contentContainerStyle]}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={{ flex: 1 }}>{children}</View>
+          <View style={[{ flex: 1 }, contentContainerStyle]}>{children}</View>
         </TouchableWithoutFeedback>
       </ScrollView>
     </KeyboardAvoidingView>
