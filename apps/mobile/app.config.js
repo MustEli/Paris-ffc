@@ -9,9 +9,15 @@
 // real EAS builds.
 const IS_DEV_BUILD = process.env.EAS_BUILD_PROFILE === 'development';
 
+// Package name/bundle ID deliberately left as-is (not renamed to match
+// "ELNO") — changing it would orphan every already-installed build
+// (same "installing one wipes the other" problem this file was created
+// to solve in the first place), and nothing about the app's technical
+// identity needs to match its display name. Only user-facing text
+// (name, permission descriptions) changed.
 const BASE_PACKAGE = 'com.warehousehq.mobile';
 const androidPackage = IS_DEV_BUILD ? `${BASE_PACKAGE}.dev` : BASE_PACKAGE;
-const appName = IS_DEV_BUILD ? 'Warehouse HQ (Dev)' : 'Warehouse HQ';
+const appName = IS_DEV_BUILD ? 'ELNO (Dev)' : 'ELNO';
 
 module.exports = {
   expo: {
@@ -25,10 +31,9 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: androidPackage,
       infoPlist: {
-        NSCameraUsageDescription:
-          'Warehouse HQ uses the camera to capture shipping label and damage-evidence photos.',
+        NSCameraUsageDescription: 'ELNO uses the camera to capture shipping label and damage-evidence photos.',
         NSPhotoLibraryUsageDescription:
-          'Warehouse HQ needs photo library access to attach an existing photo instead of using the camera.',
+          'ELNO needs photo library access to attach an existing photo instead of using the camera.',
       },
     },
     android: {

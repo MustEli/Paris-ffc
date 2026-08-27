@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,6 +12,8 @@ import {
 } from 'react-native';
 
 import { useAuthStore } from '../../core/auth/authStore';
+
+const elnoLogo = require('../../../assets/elno-logo.jpeg');
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -32,7 +35,8 @@ export function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.eyebrow}>Warehouse HQ</Text>
+      <Image source={elnoLogo} style={styles.logo} resizeMode="contain" />
+      <Text style={styles.poweredBy}>Powered by OVOKO France</Text>
       <Text style={styles.title}>Sign in</Text>
 
       <View style={styles.form}>
@@ -92,10 +96,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  eyebrow: {
-    fontSize: 14,
+  logo: {
+    width: '70%',
+    aspectRatio: 1567 / 688,
+    marginBottom: 8,
+  },
+  poweredBy: {
+    fontSize: 13,
     color: '#6b7280',
-    marginBottom: 4,
+    marginBottom: 28,
   },
   title: {
     fontSize: 28,
