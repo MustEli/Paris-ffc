@@ -97,8 +97,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logo: {
-    width: '70%',
-    aspectRatio: 1567 / 688,
+    // Fixed dp dimensions rather than width:'%' + aspectRatio — the
+    // percentage-based version rendered at the image's native pixel
+    // size instead of being constrained (a real RN layout quirk, not
+    // just a "make it smaller" tweak). 240x105 matches the source
+    // image's real 1567x688 ratio.
+    width: 240,
+    height: 105,
     marginBottom: 8,
   },
   poweredBy: {
