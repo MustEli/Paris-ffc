@@ -20,6 +20,11 @@
 - **npm workspaces monorepo**: `apps/mobile`, `packages/backend`,
   `packages/shared` (a shared types/utilities package — worth actually
   building out this time, rather than leaving it empty as happened before).
+  A fourth workspace, `apps/web-dashboard`, was also scaffolded (for a
+  future management-reporting web app) but never actually built out —
+  it's an empty shell, not a working pattern, so don't treat it as
+  something proven. Only add a web app to the new project if it actually
+  needs one.
 - **Mobile**: React Native via Expo, TypeScript.
 - **Backend**: NestJS + TypeScript + Prisma ORM + PostgreSQL.
 - Rationale that held up: one language (TypeScript) across the whole stack
