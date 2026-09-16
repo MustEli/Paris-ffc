@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../core/components/KeyboardAwareScreen';
 import { useAuthStore } from '../../core/auth/authStore';
@@ -14,6 +15,11 @@ export function LoginScreen() {
   const login = useAuthStore((state) => state.login);
 
   const isLoading = status === 'loading';
+  // This screen has no native header (it's the login/auth flow), so
+  // nothing else accounts for the status bar or the bottom gesture bar /
+  // home indicator — without this, content can render right up against
+  // either edge on some devices.
+  const insets = useSafeAreaInsets();
 
   function handleSubmit() {
     login(email.trim(), password).catch(() => {
@@ -22,7 +28,12 @@ export function LoginScreen() {
   }
 
   return (
-    <KeyboardAwareScreen contentContainerStyle={styles.container}>
+    <KeyboardAwareScreen
+      contentContainerStyle={[
+        styles.container,
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+      ]}
+    >
       <Image source={elnoLogo} style={styles.logo} resizeMode="contain" />
       <Text style={styles.poweredBy}>Powered by OVOKO France</Text>
       <Text style={styles.title}>Sign in</Text>

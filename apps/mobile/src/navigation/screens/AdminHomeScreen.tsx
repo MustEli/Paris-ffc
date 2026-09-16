@@ -1,6 +1,7 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../core/auth/authStore';
 import { SegmentedTabs } from '../../features/reports/components/SegmentedTabs';
@@ -40,6 +41,11 @@ export function AdminHomeScreen({ navigation }: Props) {
   const logout = useAuthStore((state) => state.logout);
   const { data, isPending, error, refetch, isRefetching } = useAdminDashboardReport();
   const [statusTab, setStatusTab] = useState<StatusTab>('current');
+  // No native header takes the bottom edge into account, and this screen
+  // scrolls all the way to a Log Out button at the end — without this,
+  // the button (and the padding meant to clear it) sits under the
+  // Android gesture bar / iOS home indicator instead of above it.
+  const insets = useSafeAreaInsets();
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -50,7 +56,7 @@ export function AdminHomeScreen({ navigation }: Props) {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 40 }]}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
     >
       <Text style={styles.eyebrow}>Admin — {user?.name}</Text>

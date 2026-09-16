@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../core/auth/authStore';
 
@@ -17,9 +18,14 @@ interface MenuScreenProps {
 export function MenuScreen({ roleLabel, items }: MenuScreenProps) {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  // The screen has no native header taking the bottom edge into account,
+  // and "Log out" is pinned to the bottom via marginTop:'auto' — without
+  // this, it renders underneath the Android gesture bar / iOS home
+  // indicator instead of above it.
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
       <Text style={styles.eyebrow}>
         {roleLabel} — {user?.name}
       </Text>

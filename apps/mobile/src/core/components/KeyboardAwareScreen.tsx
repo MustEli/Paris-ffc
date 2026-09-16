@@ -26,8 +26,14 @@ interface KeyboardAwareScreenProps {
  * until the keyboard was dismissed some other way, and there was no way to
  * dismiss it except focusing a different input. This fixes both, in one
  * place, for every screen instead of per-screen:
- *  - KeyboardAvoidingView so iOS shifts content clear of the keyboard
- *    (Android resizes the window natively, so no behavior is needed there).
+ *  - KeyboardAvoidingView shifts content clear of the keyboard on both
+ *    platforms. Android *can* resize the window on its own
+ *    (`windowSoftInputMode="adjustResize"`), but that's not reliable
+ *    enough to depend on alone — it's inconsistent across OEMs/Android
+ *    versions (notably since edge-to-edge display handling became the
+ *    default around Android 15), which is exactly the "works most of the
+ *    time, but not always" symptom this was built to fix. Giving Android
+ *    its own explicit `'height'` behavior here doesn't depend on that.
  *  - A ScrollView so covered content can be dragged into view.
  *  - A tap-catcher that dismisses the keyboard on a tap outside any input.
  *    `keyboardShouldPersistTaps="handled"` keeps taps on inputs/buttons
@@ -50,7 +56,7 @@ export function KeyboardAwareScreen({ children, contentContainerStyle, style }: 
   return (
     <KeyboardAvoidingView
       style={[{ flex: 1 }, style]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
