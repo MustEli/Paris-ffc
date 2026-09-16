@@ -2,7 +2,7 @@ import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { ChipPicker } from '../../../core/components/ChipPicker';
+import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useReferenceList } from '../../../core/hooks/useReferenceList';
 import { type ReceptionStackParamList } from '../../../navigation/types';
@@ -104,11 +104,12 @@ export function NewDeliveryScreen({ navigation }: Props) {
       {category === 'return_parcels' && (
         <>
           <Text style={styles.label}>Transporter company</Text>
-          <ChipPicker
+          <DropdownPicker
             options={transporterCompanies.data?.map((v) => v.value) ?? []}
             value={transporterCompany || null}
             onChange={setTransporterCompany}
             isLoading={transporterCompanies.isPending}
+            placeholder="Select transporter company"
             emptyLabel="No transporter companies yet — ask an Admin to add some in the web dashboard."
           />
         </>
@@ -117,11 +118,12 @@ export function NewDeliveryScreen({ navigation }: Props) {
       {category === 'packaging_stock' && (
         <>
           <Text style={styles.label}>Packaging type</Text>
-          <ChipPicker
+          <DropdownPicker
             options={packagingTypes.data?.map((v) => v.value) ?? []}
             value={packagingType || null}
             onChange={setPackagingType}
             isLoading={packagingTypes.isPending}
+            placeholder="Select packaging type"
             emptyLabel="No packaging types yet — ask an Admin to add some in the web dashboard."
           />
         </>
