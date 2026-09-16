@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrderPrepModule } from './order-prep/order-prep.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PutAwayModule } from './put-away/put-away.module';
+import { ReferenceListsModule } from './reference-lists/reference-lists.module';
 import { ReportsModule } from './reports/reports.module';
 import { SheetsModule } from './sheets/sheets.module';
 import { ReceptionsModule } from './receptions/receptions.module';
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     PutAwayModule,
     OrderPrepModule,
     ReportsModule,
+    ReferenceListsModule,
   ],
   controllers: [AppController],
 })

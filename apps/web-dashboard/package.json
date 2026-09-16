@@ -2,5 +2,28 @@
   "name": "@warehouse-hq/web-dashboard",
   "private": true,
   "version": "0.1.0",
-  "description": "Management reporting & analytics web dashboard. React + TypeScript. Not yet scaffolded — see README.md."
+  "description": "Admin back-office web app: reference-list management (dropdown values for mobile), bulk operations (Excel instructions import, bulk photo download), and reporting dashboards.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router-dom": "^6.26.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/file-saver": "^2.0.7",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.0"
+  }
 }

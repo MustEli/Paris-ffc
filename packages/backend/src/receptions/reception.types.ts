@@ -67,3 +67,10 @@ export interface Reception {
   /** Doc Step 5 (marked "Optional" there too): flagged if processing exceeds 2 hours. */
   flaggedForReview: boolean;
 }
+
+/** One row's outcome from ReceptionsService.bulkAddInstructions() — a bad id/status in one row never aborts the rest. */
+export interface BulkInstructionResult {
+  id: string;
+  success: boolean;
+  error: string | null;
+}

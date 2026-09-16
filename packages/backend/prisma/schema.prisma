@@ -31,6 +31,29 @@ enum Role {
   management
 }
 
+/**
+ * Every admin-managed dropdown category lives in this one enum — adding
+ * a new category (a new dropdown somewhere) is a one-line addition here
+ * plus a migration, not a new table/service/controller. The generic
+ * part the web app gets is managing *values* within any category
+ * through one UI/API — see src/reference-lists/.
+ */
+enum ReferenceListCategory {
+  transporter_company
+  packaging_type
+}
+
+/** One admin-managed value within a category — see ReferenceListCategory's doc comment. */
+model ReferenceListValue {
+  id        String                 @id @default(uuid())
+  category  ReferenceListCategory
+  value     String
+  createdAt DateTime               @default(now())
+
+  @@unique([category, value])
+  @@index([category])
+}
+
 enum ReceptionCategory {
   return_parcels
   packaging_stock

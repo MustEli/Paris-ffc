@@ -28,6 +28,7 @@ export async function resetDatabase(): Promise<void> {
   await prisma.reception.deleteMany();
   await prisma.break.deleteMany();
   await prisma.shift.deleteMany();
+  await prisma.referenceListValue.deleteMany();
   await prisma.user.deleteMany();
 
   const passwordHash = seedPasswordHash();

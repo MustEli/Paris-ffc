@@ -6,6 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ActiveShiftGuard } from '../shifts/active-shift.guard';
 import { type PublicUser } from '../users/user.types';
+import { BulkInstructionsDto } from './dto/bulk-instructions.dto';
 import { CreateReceptionDto } from './dto/create-reception.dto';
 import { InstructionsDto } from './dto/instructions.dto';
 import { ReceptionsService } from './receptions.service';
@@ -35,6 +36,13 @@ export class ReceptionsController {
   @Roles('admin')
   addInstructions(@Param('id') id: string, @Body() dto: InstructionsDto) {
     return this.receptionsService.addInstructions(id, dto.instructions);
+  }
+
+  /** Web dashboard's Excel bulk-instructions flow — see BulkInstructionsDto and the service method's doc comment. */
+  @Post('bulk-instructions')
+  @Roles('admin')
+  bulkAddInstructions(@Body() dto: BulkInstructionsDto) {
+    return this.receptionsService.bulkAddInstructions(dto.items);
   }
 
   @Post(':id/complete')

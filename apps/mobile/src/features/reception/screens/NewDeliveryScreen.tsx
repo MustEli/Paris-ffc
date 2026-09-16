@@ -2,7 +2,9 @@ import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { ChipPicker } from '../../../core/components/ChipPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
+import { useReferenceList } from '../../../core/hooks/useReferenceList';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useCreateReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS, type ReceptionCategory } from '../types';
@@ -23,6 +25,8 @@ export function NewDeliveryScreen({ navigation }: Props) {
   const [itemDescription, setItemDescription] = useState('');
 
   const { mutate: submit, isPending, error } = useCreateReception();
+  const transporterCompanies = useReferenceList('transporter_company');
+  const packagingTypes = useReferenceList('packaging_type');
 
   function isFormValid(): boolean {
     switch (category) {
@@ -100,14 +104,26 @@ export function NewDeliveryScreen({ navigation }: Props) {
       {category === 'return_parcels' && (
         <>
           <Text style={styles.label}>Transporter company</Text>
-          <TextInput style={styles.input} value={transporterCompany} onChangeText={setTransporterCompany} />
+          <ChipPicker
+            options={transporterCompanies.data?.map((v) => v.value) ?? []}
+            value={transporterCompany || null}
+            onChange={setTransporterCompany}
+            isLoading={transporterCompanies.isPending}
+            emptyLabel="No transporter companies yet — ask an Admin to add some in the web dashboard."
+          />
         </>
       )}
 
       {category === 'packaging_stock' && (
         <>
           <Text style={styles.label}>Packaging type</Text>
-          <TextInput style={styles.input} value={packagingType} onChangeText={setPackagingType} />
+          <ChipPicker
+            options={packagingTypes.data?.map((v) => v.value) ?? []}
+            value={packagingType || null}
+            onChange={setPackagingType}
+            isLoading={packagingTypes.isPending}
+            emptyLabel="No packaging types yet — ask an Admin to add some in the web dashboard."
+          />
         </>
       )}
 

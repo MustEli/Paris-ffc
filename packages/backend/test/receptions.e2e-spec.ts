@@ -132,4 +132,50 @@ describe('Receptions (e2e)', () => {
     // Admin has no shift at all, ever — never gated by this.
     await request(app.getHttpServer()).get('/receptions').set('Authorization', `Bearer ${adminToken}`).expect(200);
   });
+
+  it('applies bulk instructions independently per row, without aborting on a bad one', async () => {
+    const first = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'sellers_stock', palletCount: 2 })
+      .expect(201);
+    const second = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'sellers_stock', palletCount: 5 })
+      .expect(201);
+
+    const result = await request(app.getHttpServer())
+      .post('/receptions/bulk-instructions')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        items: [
+          { id: first.body.id, instructions: 'Aisle 1' },
+          { id: 'not-a-real-id', instructions: 'Aisle 2' },
+          { id: second.body.id, instructions: 'Aisle 3' },
+        ],
+      })
+      .expect(201);
+
+    expect(result.body).toEqual([
+      { id: first.body.id, success: true, error: null },
+      { id: 'not-a-real-id', success: false, error: expect.any(String) },
+      { id: second.body.id, success: true, error: null },
+    ]);
+
+    const reloadedFirst = await request(app.getHttpServer())
+      .get(`/receptions/${first.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(reloadedFirst.body.instructions).toBe('Aisle 1');
+    expect(reloadedFirst.body.status).toBe('ready_for_putaway');
+  });
+
+  it('rejects Staff calling bulk-instructions', () => {
+    return request(app.getHttpServer())
+      .post('/receptions/bulk-instructions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ items: [{ id: 'irrelevant', instructions: 'x' }] })
+      .expect(403);
+  });
 });

@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import { UsersService } from '../users/users.service';
 import { type CreateReceptionDto } from './dto/create-reception.dto';
-import { type Reception, type ReceptionDetails } from './reception.types';
+import { type BulkInstructionResult, type Reception, type ReceptionDetails } from './reception.types';
 
 const REVIEW_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours — doc Step 5
 
@@ -193,6 +193,31 @@ export class ReceptionsService {
       data: { instructions, status: 'ready_for_putaway' },
     });
     return this.toDomain(row);
+  }
+
+  /**
+   * Backs the web dashboard's Excel bulk-instructions flow — each row
+   * is applied independently through the exact same addInstructions()
+   * used by the single-item flow (same validation, same status
+   * transition), so one bad id or wrong-status row never aborts the
+   * rest of the batch. The web app shows this per-row result back to
+   * Admin rather than a single pass/fail for the whole upload.
+   */
+  async bulkAddInstructions(items: { id: string; instructions: string }[]): Promise<BulkInstructionResult[]> {
+    const results: BulkInstructionResult[] = [];
+    for (const item of items) {
+      try {
+        await this.addInstructions(item.id, item.instructions);
+        results.push({ id: item.id, success: true, error: null });
+      } catch (error) {
+        results.push({
+          id: item.id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+    return results;
   }
 
   async complete(id: string): Promise<Reception> {
