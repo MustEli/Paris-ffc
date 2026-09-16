@@ -32,6 +32,14 @@ describe('Receptions (e2e)', () => {
 
     staffToken = await loginAs(app, 'staff@warehousehq.dev');
     adminToken = await loginAs(app, 'admin@warehousehq.dev');
+
+    // ActiveShiftGuard: Staff can't use this controller at all without an
+    // active shift. Every existing test here acts as Staff, so start one
+    // globally rather than repeating it in each test.
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(201);
   });
 
   afterEach(async () => {
@@ -106,5 +114,22 @@ describe('Receptions (e2e)', () => {
     expect(completed.body.status).toBe('completed');
     expect(completed.body.processingDurationMs).toBeGreaterThanOrEqual(0);
     expect(completed.body.flaggedForReview).toBe(false);
+  });
+
+  it('blocks Staff from this controller entirely without an active shift, but never blocks Admin', async () => {
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', `Bearer ${staffToken}`).expect(201);
+
+    await request(app.getHttpServer())
+      .get('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes' })
+      .expect(403);
+
+    // Admin has no shift at all, ever — never gated by this.
+    await request(app.getHttpServer()).get('/receptions').set('Authorization', `Bearer ${adminToken}`).expect(200);
   });
 });

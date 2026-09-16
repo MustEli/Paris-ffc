@@ -3,6 +3,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { ActiveShiftGuard } from '../shifts/active-shift.guard';
 import { type PublicUser } from '../users/user.types';
 import { CreatePalletDto } from './dto/create-pallet.dto';
 import { SellerStockService } from './seller-stock.service';
@@ -15,8 +16,9 @@ import { SellerStockService } from './seller-stock.service';
  * giveInstructions/putAway/updateLocation methods are still here and
  * still used, just called by PutAwayService instead of exposed directly.
  */
+/** ActiveShiftGuard only ever checks anything for Staff — Admin/Management browsing this same controller are unaffected. */
 @Controller('seller-stock')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ActiveShiftGuard)
 export class SellerStockController {
   constructor(private readonly sellerStockService: SellerStockService) {}
 

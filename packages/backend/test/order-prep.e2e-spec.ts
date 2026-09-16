@@ -32,6 +32,14 @@ describe('Order Prep (e2e)', () => {
 
     staff = await loginAs(app, 'staff@warehousehq.dev');
     admin = await loginAs(app, 'admin@warehousehq.dev');
+
+    // ActiveShiftGuard: Staff can't use this controller at all without an
+    // active shift. Every existing test here acts as Staff, so start one
+    // globally rather than repeating it in each test.
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
   });
 
   afterEach(async () => {
@@ -212,5 +220,20 @@ describe('Order Prep (e2e)', () => {
       .set('Authorization', `Bearer ${admin.token}`)
       .expect(200);
     expect(adminView.body.length).toBeGreaterThanOrEqual(staffView.body.length);
+  });
+
+  it('blocks Staff from this controller entirely without an active shift, but never blocks Admin', async () => {
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', `Bearer ${staff.token}`).expect(201);
+
+    await request(app.getHttpServer())
+      .get('/order-prep/tasks')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(403);
+
+    // Admin has no shift at all, ever — never gated by this.
+    await request(app.getHttpServer())
+      .get('/order-prep/tasks')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
   });
 });

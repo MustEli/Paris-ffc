@@ -139,6 +139,11 @@ describe('Reports (e2e)', () => {
   });
 
   it('reception report breaks down by category, including flagged count', async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staff.token}`)
@@ -171,6 +176,11 @@ describe('Reports (e2e)', () => {
   });
 
   it('put-away report counts tasks by outcome and averages completion time', async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
     const photoUrl = await uploadFakePhoto(app, staff.token);
     const pallet = await request(app.getHttpServer())
       .post('/seller-stock')
@@ -203,6 +213,11 @@ describe('Reports (e2e)', () => {
   });
 
   it('order-prep report splits picker vs packer task stats', async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
     const session = await request(app.getHttpServer())
       .post('/order-prep/sessions')
       .set('Authorization', `Bearer ${admin.token}`)
@@ -325,5 +340,29 @@ describe('Reports (e2e)', () => {
       .expect(200);
     const staffRow = attendance.body.rows.find((r: { userId: string }) => r.userId === staff.id);
     expect(staffRow.totalHoursWorked).toBe(3.5);
+  });
+
+  it('does NOT exclude short-break time from worked-hours totals — it is paid', async () => {
+    // Same 4-hour shift shape as the lunch-break test above, but with a
+    // 20-minute *short* break instead — since that's paid time, the net
+    // should come out to the full 4 hours, not 3.667.
+    const shiftStart = new Date('2026-01-01T09:00:00.000Z');
+    const shiftEnd = new Date('2026-01-01T13:00:00.000Z'); // 4 hours later
+    const breakStart = new Date('2026-01-01T12:00:00.000Z');
+    const breakEnd = new Date('2026-01-01T12:20:00.000Z'); // 20 minutes
+
+    const shift = await rawPrisma.shift.create({
+      data: { id: randomUUID(), userId: staff.id, startedAt: shiftStart, endedAt: shiftEnd },
+    });
+    await rawPrisma.break.create({
+      data: { id: randomUUID(), shiftId: shift.id, type: 'short', startedAt: breakStart, endedAt: breakEnd },
+    });
+
+    const attendance = await request(app.getHttpServer())
+      .get('/reports/attendance')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    const staffRow = attendance.body.rows.find((r: { userId: string }) => r.userId === staff.id);
+    expect(staffRow.totalHoursWorked).toBe(4);
   });
 });

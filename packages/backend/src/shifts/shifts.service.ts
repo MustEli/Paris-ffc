@@ -5,14 +5,28 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import { UsersService } from '../users/users.service';
-import { type Break, type Shift, type ShiftStatus } from './shift.types';
+import { SHORT_BREAK_LIMIT_MS, type Break, type BreakType, type Shift, type ShiftStatus } from './shift.types';
 
 const SHEET_TAB = 'Attendance';
 const SHEET_HEADER = ['User', 'Shift Start (Local)', 'Shift End (Local)', 'Break Minutes', 'Hours Worked (Net)'];
 
-/** Sums completed breaks only — an open one shouldn't exist by the time this is called (endShift auto-closes it), but this stays defensive rather than crashing on a data glitch. */
-function sumBreakMs(breaks: { startedAt: Date; endedAt: Date | null }[]): number {
-  return breaks.reduce((total, b) => (b.endedAt ? total + (b.endedAt.getTime() - b.startedAt.getTime()) : total), 0);
+/**
+ * If a shift's last heartbeat (or its startedAt, if none has landed yet)
+ * is older than this, the app is assumed to have been closed without
+ * "End Shift" ever being pressed — see getEffectiveActiveShift(). The
+ * mobile app sends a heartbeat every ~15 min while a shift is active and
+ * the app is open, so 30 min gives real margin for one missed beat
+ * (a slow network, a brief background spell) without either falsely
+ * closing an active shift or leaving a truly-abandoned one open for long.
+ */
+const HEARTBEAT_STALE_TOLERANCE_MS = 30 * 60_000;
+
+/** Sums only unpaid (lunch) completed breaks — short breaks are paid and never subtracted from worked hours. An open break shouldn't exist by the time this is called (endShift auto-closes it), but this stays defensive rather than crashing on a data glitch. */
+function sumUnpaidBreakMs(breaks: { type: BreakType; startedAt: Date; endedAt: Date | null }[]): number {
+  return breaks.reduce(
+    (total, b) => (b.type === 'lunch' && b.endedAt ? total + (b.endedAt.getTime() - b.startedAt.getTime()) : total),
+    0,
+  );
 }
 
 /** Backed by Postgres via Prisma now — see users.service.ts for the pattern and why. */
@@ -37,6 +51,7 @@ export class ShiftsService {
     return {
       id: row.id,
       shiftId: row.shiftId,
+      type: row.type,
       startedAt: row.startedAt.toISOString(),
       endedAt: row.endedAt ? row.endedAt.toISOString() : null,
     };
@@ -50,13 +65,40 @@ export class ShiftsService {
     return this.prisma.break.findFirst({ where: { shiftId, endedAt: null } });
   }
 
+  /**
+   * The one place every read of "is this user on shift" goes through.
+   * Besides fetching the active shift, it lazily auto-ends one that's
+   * gone stale (no heartbeat within tolerance) — see the constant's doc
+   * comment above for why this is a lazy/on-read check rather than a
+   * background job (none exists in this app). Called on every status
+   * check, and by ActiveShiftGuard before any staff action.
+   */
+  private async getEffectiveActiveShift(userId: string): Promise<PrismaShift | null> {
+    const shift = await this.findActiveShift(userId);
+    if (!shift) return null;
+
+    const lastSignal = shift.lastHeartbeatAt ?? shift.startedAt;
+    const staleCutoff = Date.now() - HEARTBEAT_STALE_TOLERANCE_MS;
+    if (lastSignal.getTime() >= staleCutoff) {
+      return shift;
+    }
+
+    // Stale — the app almost certainly closed without "End Shift" being
+    // pressed. End it as of the last real signal we have, not "now":
+    // crediting worked time all the way up to the moment we happened to
+    // notice would over-count however long it sat unnoticed.
+    await this.endShiftInternal(shift, lastSignal);
+    return null;
+  }
+
   async startShift(userId: string): Promise<Shift> {
     if (await this.findActiveShift(userId)) {
       throw new ConflictException('Shift already in progress — clock out before starting a new one');
     }
 
+    const now = new Date();
     const shift = await this.prisma.shift.create({
-      data: { id: randomUUID(), userId, startedAt: new Date(), endedAt: null },
+      data: { id: randomUUID(), userId, startedAt: now, endedAt: null, lastHeartbeatAt: now },
     });
     return this.toDomain(shift);
   }
@@ -66,9 +108,11 @@ export class ShiftsService {
     if (!shift) {
       throw new NotFoundException('No active shift to end');
     }
+    return this.toDomain(await this.endShiftInternal(shift, new Date()));
+  }
 
-    const endedAt = new Date();
-
+  /** Shared by the real "End Shift" call and the stale-shift auto-end path. */
+  private async endShiftInternal(shift: PrismaShift, endedAt: Date): Promise<PrismaShift> {
     // Clocking out ends any open break too — there's no such thing as
     // "still on break" once the shift itself is over.
     const openBreak = await this.findActiveBreak(shift.id);
@@ -83,40 +127,66 @@ export class ShiftsService {
     // instant no-op when unconfigured, so awaiting it costs nothing
     // when disabled and only a real network round-trip when enabled.
     const [user, allBreaks] = await Promise.all([
-      this.usersService.findById(userId),
+      this.usersService.findById(shift.userId),
       this.prisma.break.findMany({ where: { shiftId: shift.id } }),
     ]);
-    const breakMs = sumBreakMs(allBreaks);
-    const breakMinutes = Math.round(breakMs / 60_000);
+    const unpaidBreakMs = sumUnpaidBreakMs(allBreaks);
+    const breakMinutes = Math.round(unpaidBreakMs / 60_000);
     const netHoursWorked =
-      Math.round(((updated.endedAt!.getTime() - updated.startedAt.getTime() - breakMs) / 3_600_000) * 10) / 10;
+      Math.round(((updated.endedAt!.getTime() - updated.startedAt.getTime() - unpaidBreakMs) / 3_600_000) * 10) / 10;
 
     await this.sheetsService.appendRow(SHEET_TAB, SHEET_HEADER, [
-      user?.name ?? userId,
+      user?.name ?? shift.userId,
       formatTimestampForSheet(updated.startedAt),
       formatTimestampForSheet(updated.endedAt!),
       breakMinutes,
       netHoursWorked,
     ]);
 
-    return this.toDomain(updated);
+    return updated;
+  }
+
+  /** Cumulative "short" break time for a shift, including any currently in progress (counted up to `now`). */
+  private async shortBreakUsedMs(shiftId: string, now: Date): Promise<number> {
+    const breaks = await this.prisma.break.findMany({ where: { shiftId, type: 'short' } });
+    return breaks.reduce((total, b) => total + ((b.endedAt ?? now).getTime() - b.startedAt.getTime()), 0);
   }
 
   async getStatus(userId: string): Promise<ShiftStatus> {
-    const shift = await this.findActiveShift(userId);
+    const now = new Date();
+    const shift = await this.getEffectiveActiveShift(userId);
     const activeBreak = shift ? await this.findActiveBreak(shift.id) : undefined;
+    const shortBreakUsedMs = shift ? await this.shortBreakUsedMs(shift.id, now) : 0;
+
     return {
       active: !!shift,
       shiftId: shift?.id ?? null,
       startedAt: shift ? shift.startedAt.toISOString() : null,
       onBreak: !!activeBreak,
       breakStartedAt: activeBreak ? activeBreak.startedAt.toISOString() : null,
+      breakType: activeBreak?.type ?? null,
+      shortBreakUsedMs,
+      shortBreakRemainingMs: Math.max(0, SHORT_BREAK_LIMIT_MS - shortBreakUsedMs),
     };
   }
 
-  /** Doc's scoped-down "Automated Break Management" — staff-initiated only, no admin-scheduled windows/reminders yet. */
-  async startBreak(userId: string): Promise<Break> {
+  /** Also used by ActiveShiftGuard — a no-op cost for non-staff callers, since it only ever runs for staff. */
+  async hasActiveShift(userId: string): Promise<boolean> {
+    return (await this.getEffectiveActiveShift(userId)) !== null;
+  }
+
+  /** Refreshed every ~15 min by the app while a shift is active and the app is open — see HEARTBEAT_STALE_TOLERANCE_MS. */
+  async heartbeat(userId: string): Promise<{ ok: true }> {
     const shift = await this.findActiveShift(userId);
+    if (shift) {
+      await this.prisma.shift.update({ where: { id: shift.id }, data: { lastHeartbeatAt: new Date() } });
+    }
+    return { ok: true };
+  }
+
+  /** Doc's scoped-down "Automated Break Management" — staff-initiated only, no admin-scheduled windows/reminders yet. */
+  async startBreak(userId: string, type: BreakType): Promise<Break> {
+    const shift = await this.getEffectiveActiveShift(userId);
     if (!shift) {
       throw new NotFoundException('No active shift to take a break from');
     }
@@ -124,14 +194,22 @@ export class ShiftsService {
       throw new ConflictException('Already on a break — end it before starting another');
     }
 
+    const now = new Date();
+    if (type === 'short') {
+      const usedMs = await this.shortBreakUsedMs(shift.id, now);
+      if (usedMs >= SHORT_BREAK_LIMIT_MS) {
+        throw new ConflictException('Short break allowance for this shift has already been used up');
+      }
+    }
+
     const brk = await this.prisma.break.create({
-      data: { id: randomUUID(), shiftId: shift.id, startedAt: new Date(), endedAt: null },
+      data: { id: randomUUID(), shiftId: shift.id, type, startedAt: now, endedAt: null },
     });
     return this.toBreakDomain(brk);
   }
 
   async endBreak(userId: string): Promise<Break> {
-    const shift = await this.findActiveShift(userId);
+    const shift = await this.getEffectiveActiveShift(userId);
     if (!shift) {
       throw new NotFoundException('No active shift');
     }

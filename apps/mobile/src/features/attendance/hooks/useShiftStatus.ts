@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuthStore } from '../../../core/auth/authStore';
-import { endBreak, endShift, fetchShiftStatus, startBreak, startShift } from '../api';
+import { endBreak, endShift, fetchShiftStatus, startBreak, startShift, type BreakType } from '../api';
 
-const SHIFT_STATUS_QUERY_KEY = ['shift-status'];
+/** Exported so useShiftLifecycle (heartbeat + background auto-end) shares the same cache entry. */
+export const SHIFT_STATUS_QUERY_KEY = ['shift-status'];
 
 /**
  * Bundles the status query with the start/end mutations (shift and
@@ -19,6 +20,14 @@ export function useShiftStatus() {
     queryKey: SHIFT_STATUS_QUERY_KEY,
     queryFn: () => fetchShiftStatus(token!),
     enabled: !!token,
+    // Poll while an actual short break is running, so the on-screen
+    // countdown stays accurate and the "allowance ran out" auto-end
+    // (see ShiftScreen) fires promptly — not needed the rest of the
+    // time, so this doesn't otherwise add any background network use.
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.onBreak && data.breakType === 'short' ? 5_000 : false;
+    },
   });
 
   function invalidate() {
@@ -36,7 +45,7 @@ export function useShiftStatus() {
   });
 
   const startBreakMutation = useMutation({
-    mutationFn: () => startBreak(token!),
+    mutationFn: (type: BreakType) => startBreak(token!, type),
     onSettled: invalidate,
   });
 
@@ -55,10 +64,12 @@ export function useShiftStatus() {
     end: endMutation.mutate,
     isEnding: endMutation.isPending,
     endError: endMutation.error,
-    startLunchBreak: startBreakMutation.mutate,
+    startBreak: startBreakMutation.mutate,
     isStartingBreak: startBreakMutation.isPending,
     startBreakError: startBreakMutation.error,
-    endLunchBreak: endBreakMutation.mutate,
+    // Ends whichever break type is currently open — the backend doesn't
+    // need to be told which, since only one can ever be open at a time.
+    endBreak: endBreakMutation.mutate,
     isEndingBreak: endBreakMutation.isPending,
     endBreakError: endBreakMutation.error,
   };

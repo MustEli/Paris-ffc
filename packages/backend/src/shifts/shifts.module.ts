@@ -9,5 +9,6 @@ import { ShiftsService } from './shifts.service';
   imports: [AuthModule, UsersModule], // AuthModule needed for JwtStrategy to be registered
   controllers: [ShiftsController],
   providers: [ShiftsService],
+  exports: [ShiftsService], // ActiveShiftGuard, used by Reception/SellerStock/PutAway/OrderPrep, needs this
 })
 export class ShiftsModule {}

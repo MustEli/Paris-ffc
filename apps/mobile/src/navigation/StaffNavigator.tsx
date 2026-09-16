@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { useShiftLifecycle } from '../features/attendance/hooks/useShiftLifecycle';
 import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
 import { OrderPrepTaskDetailScreen } from '../features/orderPrep/screens/OrderPrepTaskDetailScreen';
 import { OrderPrepTaskListScreen } from '../features/orderPrep/screens/OrderPrepTaskListScreen';
@@ -22,6 +23,9 @@ export function StaffNavigator() {
   // mounted here (not inside a specific screen) so it keeps running
   // for the whole staff session, regardless of which screen is active.
   useTaskAssignmentAlerts();
+  // Heartbeat + best-effort auto-end-on-background — same reasoning,
+  // needs to run regardless of which screen staff is on.
+  useShiftLifecycle();
 
   return (
     <Stack.Navigator>

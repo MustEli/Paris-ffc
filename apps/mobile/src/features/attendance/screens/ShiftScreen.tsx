@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
@@ -7,15 +8,24 @@ function formatLocalTime(isoString: string): string {
   return new Date(isoString).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatMinutesSeconds(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
 /**
  * Feature 1 (Shift Attendance) MVP from the requirements doc: a single
  * button that toggles Start Shift / End Shift, backed by
  * POST /shifts/start and /shifts/end. Also covers the doc's "Automated
- * Break Management" future-dev section, scoped down to a staff-initiated
- * lunch break (no admin-scheduled windows/reminders yet) — going to
- * lunch no longer means stopping the whole shift. The 7-hour-completion
- * notification logic from the doc is still push-notification territory,
- * deliberately not here yet.
+ * Break Management" future-dev section, scoped down to two
+ * staff-initiated break types (no admin-scheduled windows/reminders
+ * yet): an unpaid Lunch Break (excluded from worked-hours totals) and a
+ * paid Short Break capped at 20 cumulative minutes per shift (not
+ * excluded — it's paid time). Only one break of either type can be open
+ * at once. The 7-hour-completion notification logic from the doc is
+ * still push-notification territory, deliberately not here yet.
  */
 export function ShiftScreen() {
   const user = useAuthStore((state) => state.user);
@@ -30,10 +40,10 @@ export function ShiftScreen() {
     end,
     isEnding,
     endError,
-    startLunchBreak,
+    startBreak,
     isStartingBreak,
     startBreakError,
-    endLunchBreak,
+    endBreak,
     isEndingBreak,
     endBreakError,
   } = useShiftStatus();
@@ -41,6 +51,39 @@ export function ShiftScreen() {
   const isBusy = isStarting || isEnding;
   const isBreakBusy = isStartingBreak || isEndingBreak;
   const actionError = startError ?? endError ?? startBreakError ?? endBreakError ?? statusError;
+
+  const onShortBreak = !!status?.onBreak && status.breakType === 'short';
+  const onLunchBreak = !!status?.onBreak && status.breakType === 'lunch';
+
+  // Ticks every second so the short-break countdown moves smoothly
+  // between the ~5s server polls (see useShiftStatus's refetchInterval)
+  // rather than jumping once every poll.
+  const [displayRemainingMs, setDisplayRemainingMs] = useState<number | null>(null);
+  useEffect(() => {
+    setDisplayRemainingMs(onShortBreak ? (status?.shortBreakRemainingMs ?? 0) : null);
+  }, [onShortBreak, status?.shortBreakRemainingMs]);
+  useEffect(() => {
+    if (displayRemainingMs === null) return;
+    const interval = setInterval(() => {
+      setDisplayRemainingMs((prev) => (prev !== null ? Math.max(0, prev - 1000) : null));
+    }, 1000);
+    return () => clearInterval(interval);
+    // Intentionally only restarts when we start/stop counting down, not
+    // on every tick of the value itself — see the effect above for that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayRemainingMs === null]);
+
+  // The actual cutoff is enforced by the server-reported value (fresh
+  // every ~5s while on a short break) — this just acts on it the moment
+  // it's seen, while the app is open. See docs/architecture.md for why
+  // this can't be instant if the app gets closed mid-break instead.
+  useEffect(() => {
+    if (onShortBreak && (status?.shortBreakRemainingMs ?? 0) <= 0 && !isEndingBreak) {
+      endBreak();
+    }
+  }, [onShortBreak, status?.shortBreakRemainingMs, isEndingBreak, endBreak]);
+
+  const shortBreakAvailable = (status?.shortBreakRemainingMs ?? 0) > 0;
 
   return (
     <View style={styles.container}>
@@ -56,8 +99,13 @@ export function ShiftScreen() {
               ? `On shift since ${formatLocalTime(status.startedAt)}`
               : 'Not currently on shift'}
           </Text>
-          {status?.onBreak && status.breakStartedAt && (
+          {onLunchBreak && status?.breakStartedAt && (
             <Text style={styles.breakStatus}>On lunch break since {formatLocalTime(status.breakStartedAt)}</Text>
+          )}
+          {onShortBreak && (
+            <Text style={styles.breakStatus}>
+              On short break — {formatMinutesSeconds(displayRemainingMs ?? 0)} remaining
+            </Text>
           )}
         </>
       )}
@@ -81,22 +129,46 @@ export function ShiftScreen() {
       </Pressable>
 
       {status?.active && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.breakButton,
-            (pressed || isBreakBusy || isLoadingStatus) && styles.buttonPressed,
-          ]}
-          onPress={() => (status.onBreak ? endLunchBreak() : startLunchBreak())}
-          disabled={isBreakBusy || isLoadingStatus}
-        >
-          {isBreakBusy ? (
-            <ActivityIndicator color="#b45309" />
-          ) : (
-            <Text style={styles.breakButtonText}>
-              {status.onBreak ? 'End Lunch Break' : 'Start Lunch Break'}
-            </Text>
-          )}
-        </Pressable>
+        <>
+          <Pressable
+            style={({ pressed }) => [
+              styles.breakButton,
+              (pressed || isBreakBusy || isLoadingStatus || onShortBreak) && styles.buttonPressed,
+              onShortBreak && styles.buttonDisabled,
+            ]}
+            onPress={() => (onLunchBreak ? endBreak() : startBreak('lunch'))}
+            disabled={isBreakBusy || isLoadingStatus || onShortBreak}
+          >
+            {isBreakBusy && onLunchBreak ? (
+              <ActivityIndicator color="#b45309" />
+            ) : (
+              <Text style={styles.breakButtonText}>{onLunchBreak ? 'End Lunch Break' : 'Start Lunch Break'}</Text>
+            )}
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.breakButton,
+              (pressed || isBreakBusy || isLoadingStatus || onLunchBreak || (!onShortBreak && !shortBreakAvailable)) &&
+                styles.buttonPressed,
+              (onLunchBreak || (!onShortBreak && !shortBreakAvailable)) && styles.buttonDisabled,
+            ]}
+            onPress={() => (onShortBreak ? endBreak() : startBreak('short'))}
+            disabled={isBreakBusy || isLoadingStatus || onLunchBreak || (!onShortBreak && !shortBreakAvailable)}
+          >
+            {isBreakBusy && onShortBreak ? (
+              <ActivityIndicator color="#b45309" />
+            ) : (
+              <Text style={styles.breakButtonText}>
+                {onShortBreak
+                  ? 'End Short Break'
+                  : shortBreakAvailable
+                    ? 'Start Short Break'
+                    : 'Short Break Used Up'}
+              </Text>
+            )}
+          </Pressable>
+        </>
       )}
 
       <Pressable style={styles.logoutButton} onPress={logout}>
@@ -161,6 +233,9 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.8,
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   buttonText: {
     color: '#fff',

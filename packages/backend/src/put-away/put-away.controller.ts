@@ -4,14 +4,16 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { ActiveShiftGuard } from '../shifts/active-shift.guard';
 import { type PublicUser } from '../users/user.types';
 import { AssignTaskDto } from './dto/assign-task.dto';
 import { ReassignTaskDto } from './dto/reassign-task.dto';
 import { ReportIssueDto } from './dto/report-issue.dto';
 import { PutAwayService } from './put-away.service';
 
+/** ActiveShiftGuard only ever checks anything for Staff — Admin's assign/reassign endpoints here are unaffected. */
 @Controller('put-away-tasks')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ActiveShiftGuard)
 export class PutAwayController {
   constructor(private readonly putAwayService: PutAwayService) {}
 

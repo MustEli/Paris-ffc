@@ -21,11 +21,13 @@ const RECEPTION_CATEGORIES: ReceptionCategory[] = [
   'equipment_other',
 ];
 
-/** Sums completed breaks (endedAt set) per shiftId — worked-hours totals subtract this, since a lunch break is unpaid, not time on task. */
-function sumBreakMsByShift(breaks: { shiftId: string; startedAt: Date; endedAt: Date | null }[]): Map<string, number> {
+/** Sums completed *lunch* breaks (endedAt set) per shiftId — worked-hours totals subtract this, since lunch is unpaid, not time on task. Short breaks are paid and deliberately excluded here. */
+function sumBreakMsByShift(
+  breaks: { shiftId: string; type: 'lunch' | 'short'; startedAt: Date; endedAt: Date | null }[],
+): Map<string, number> {
   const map = new Map<string, number>();
   for (const b of breaks) {
-    if (!b.endedAt) continue;
+    if (b.type !== 'lunch' || !b.endedAt) continue;
     const ms = b.endedAt.getTime() - b.startedAt.getTime();
     map.set(b.shiftId, (map.get(b.shiftId) ?? 0) + ms);
   }

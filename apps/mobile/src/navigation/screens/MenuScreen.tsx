@@ -7,6 +7,10 @@ interface MenuItem {
   label: string;
   description: string;
   onPress: () => void;
+  /** When true, the card can't be opened at all (not just its actions) — e.g. Staff without an active shift. */
+  disabled?: boolean;
+  /** Shown instead of `description` while disabled, if provided — e.g. "Start your shift to unlock this." */
+  disabledHint?: string;
 }
 
 interface MenuScreenProps {
@@ -32,9 +36,16 @@ export function MenuScreen({ roleLabel, items }: MenuScreenProps) {
 
       <View style={styles.menu}>
         {items.map((item) => (
-          <Pressable key={item.label} style={styles.card} onPress={item.onPress}>
-            <Text style={styles.cardLabel}>{item.label}</Text>
-            <Text style={styles.cardDescription}>{item.description}</Text>
+          <Pressable
+            key={item.label}
+            style={[styles.card, item.disabled && styles.cardDisabled]}
+            onPress={item.onPress}
+            disabled={item.disabled}
+          >
+            <Text style={[styles.cardLabel, item.disabled && styles.cardLabelDisabled]}>{item.label}</Text>
+            <Text style={styles.cardDescription}>
+              {item.disabled && item.disabledHint ? item.disabledHint : item.description}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -67,11 +78,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 18,
   },
+  cardDisabled: {
+    backgroundColor: '#f9fafb',
+    opacity: 0.6,
+  },
   cardLabel: {
     fontSize: 17,
     fontWeight: '700',
     color: '#0f172a',
     marginBottom: 4,
+  },
+  cardLabelDisabled: {
+    color: '#9ca3af',
   },
   cardDescription: {
     fontSize: 13,

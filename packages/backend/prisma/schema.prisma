@@ -100,23 +100,46 @@ model Shift {
   startedAt DateTime
   endedAt   DateTime?
 
+  /**
+   * Updated by POST /shifts/heartbeat every ~15 min while the app is
+   * open and this shift is active. If a shift goes stale (no heartbeat
+   * within the tolerance window — see shifts.service.ts) it means the
+   * app was very likely closed without the staff member pressing "End
+   * Shift" — the next time anything checks this shift's status, it gets
+   * auto-ended as of this timestamp. There's no background job doing
+   * this proactively (none exists in this app), so it's a lazy/on-read
+   * check — in practice it's discovered promptly anyway, since the
+   * staff member's own next status poll or Admin's auto-refreshing
+   * dashboard both trigger it.
+   */
+  lastHeartbeatAt DateTime?
+
   @@index([userId])
 }
 
+enum BreakType {
+  /** Unpaid — subtracted from worked-hours totals. */
+  lunch
+  /** Paid — NOT subtracted; cumulative time is capped per shift (see SHORT_BREAK_LIMIT_MS in shifts.service.ts). */
+  short
+}
+
 /**
- * A lunch break within a shift — separate from Shift itself so staff
- * can go to lunch without stopping/restarting their whole shift (the
- * practical gap the doc's own "Automated Break Management" future-dev
- * section anticipated, scoped down here to just staff-initiated
- * start/end, no admin-scheduled windows or reminders yet). One active
- * (endedAt: null) break per shift at a time — same pattern as one
- * active shift per user. Break time is subtracted from worked-hours
- * totals wherever those are computed (ReportsService, the Sheets
- * export) — it's unpaid time, not time on task.
+ * A break within a shift — separate from Shift itself so staff can step
+ * away without stopping/restarting their whole shift (the practical gap
+ * the doc's own "Automated Break Management" future-dev section
+ * anticipated, scoped down here to just staff-initiated start/end, no
+ * admin-scheduled windows or reminders yet). One active (endedAt: null)
+ * break per shift at a time, regardless of type — same pattern as one
+ * active shift per user. `type` distinguishes the unpaid Lunch Break
+ * from the paid, 20-minutes-per-shift Short Break; only `lunch` time is
+ * subtracted from worked-hours totals (ReportsService, the Sheets
+ * export) — `short` is paid, so it isn't.
  */
 model Break {
   id        String    @id @default(uuid())
   shiftId   String
+  type      BreakType @default(lunch)
   startedAt DateTime
   endedAt   DateTime?
 
