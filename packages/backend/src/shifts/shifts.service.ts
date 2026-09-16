@@ -15,11 +15,20 @@ const SHEET_HEADER = ['User', 'Shift Start (Local)', 'Shift End (Local)', 'Break
  * is older than this, the app is assumed to have been closed without
  * "End Shift" ever being pressed — see getEffectiveActiveShift(). The
  * mobile app sends a heartbeat every ~15 min while a shift is active and
- * the app is open, so 30 min gives real margin for one missed beat
- * (a slow network, a brief background spell) without either falsely
- * closing an active shift or leaving a truly-abandoned one open for long.
+ * the app is open, so 30 minutes was originally used here — but that
+ * turned out to be far too tight in practice: this is the *only* signal
+ * used to decide "was the app actually closed," and a tolerance that
+ * short meant any brief real-world gap (not just a closed app) started
+ * to look the same as an abandoned shift. There used to also be a
+ * separate, more aggressive mechanism that ended a shift the instant
+ * the app backgrounded at all — removed entirely (see
+ * useShiftLifecycle.ts on mobile) after it started firing on ordinary
+ * in-app back-button navigation, not just real backgrounding. 3 hours
+ * is deliberately generous: nobody legitimately working a shift goes
+ * 3 hours without the app sending a single heartbeat, so this only
+ * ever fires for a genuinely closed/killed app.
  */
-const HEARTBEAT_STALE_TOLERANCE_MS = 30 * 60_000;
+const HEARTBEAT_STALE_TOLERANCE_MS = 3 * 60 * 60_000;
 
 /** Sums only unpaid (lunch) completed breaks — short breaks are paid and never subtracted from worked hours. An open break shouldn't exist by the time this is called (endShift auto-closes it), but this stays defensive rather than crashing on a data glitch. */
 function sumUnpaidBreakMs(breaks: { type: BreakType; startedAt: Date; endedAt: Date | null }[]): number {

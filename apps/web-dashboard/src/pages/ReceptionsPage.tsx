@@ -133,7 +133,7 @@ export function ReceptionsPage() {
           <h2 style={{ margin: 0 }}>Bulk instructions via Excel</h2>
         </div>
         <div className="flex-row" style={{ marginBottom: 12 }}>
-          <button className="btn btn-primary" onClick={() => downloadTemplate(pending)} disabled={pending.length === 0}>
+          <button className="btn btn-accent" onClick={() => downloadTemplate(pending)} disabled={pending.length === 0}>
             Download Instructions Template ({pending.length} pending)
           </button>
           <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={() => fileInputRef.current?.click()}>

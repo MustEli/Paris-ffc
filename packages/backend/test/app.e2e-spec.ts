@@ -276,10 +276,10 @@ describe('Warehouse HQ backend (e2e)', () => {
     const auth = `Bearer ${loginResponse.body.accessToken}`;
     const userId = loginResponse.body.user.id as string;
 
-    // Seeded directly with a heartbeat 40 minutes old — well past the
-    // 30-minute tolerance — standing in for "the app was closed and
-    // never sent another heartbeat."
-    const lastSignal = new Date(Date.now() - 40 * 60_000);
+    // Seeded directly with a heartbeat 4 hours old — well past the
+    // 3-hour tolerance — standing in for "the app was closed and never
+    // sent another heartbeat."
+    const lastSignal = new Date(Date.now() - 4 * 60 * 60_000);
     const shift = await rawPrisma.shift.create({
       data: { id: randomUUID(), userId, startedAt: lastSignal, endedAt: null, lastHeartbeatAt: lastSignal },
     });
@@ -292,5 +292,22 @@ describe('Warehouse HQ backend (e2e)', () => {
     // Ended as of the last real signal, not "now" — see
     // ShiftsService.getEffectiveActiveShift()'s doc comment for why.
     expect(reloaded.endedAt!.getTime()).toBe(lastSignal.getTime());
+  });
+
+  it('does NOT auto-end a shift with a 1-hour-old heartbeat — the old 30-minute tolerance was too tight', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+    const userId = loginResponse.body.user.id as string;
+
+    const lastSignal = new Date(Date.now() - 60 * 60_000);
+    await rawPrisma.shift.create({
+      data: { id: randomUUID(), userId, startedAt: lastSignal, endedAt: null, lastHeartbeatAt: lastSignal },
+    });
+
+    const status = await request(app.getHttpServer()).get('/shifts/status').set('Authorization', auth).expect(200);
+    expect(status.body.active).toBe(true);
   });
 });

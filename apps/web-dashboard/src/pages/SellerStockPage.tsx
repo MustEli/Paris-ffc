@@ -117,7 +117,7 @@ export function SellerStockPage() {
               </button>
             </div>
             <button
-              className="btn btn-primary"
+              className="btn btn-accent"
               onClick={() => handleDownloadZip(selectedPallets)}
               disabled={isZipping || selectedIds.size === 0}
             >

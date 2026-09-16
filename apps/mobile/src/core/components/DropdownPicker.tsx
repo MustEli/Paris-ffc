@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface DropdownPickerProps {
@@ -11,60 +11,89 @@ interface DropdownPickerProps {
   emptyLabel?: string;
 }
 
+interface AnchorLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /**
  * A collapsed select control — a bordered box showing the current value
- * (or a placeholder) with a chevron, that opens a list of options in a
- * sheet on tap — for a small, admin-managed list of options (Reception's
- * Transporter Company / Packaging Type, and any future admin-managed
- * dropdown needing the same thing). Replaced an earlier always-expanded
- * chip-row version per explicit feedback that it didn't read as a real
- * dropdown; this is a bottom-sheet-style list rather than a popover
- * anchored exactly under the trigger, since that's far simpler and just
- * as clear on a phone screen.
+ * (or a placeholder) with a chevron, that opens a list of options
+ * anchored directly beneath the box itself on tap — for a small,
+ * admin-managed list of options (Reception's Transporter Company /
+ * Packaging Type, and any future admin-managed dropdown needing the
+ * same thing). An earlier version opened a bottom sheet instead —
+ * replaced per feedback that it didn't read as a real dropdown, with a
+ * reference screenshot of exactly this "opens right under the box"
+ * behavior.
  */
 export function DropdownPicker({ options, value, onChange, placeholder = 'Select…', isLoading, emptyLabel }: DropdownPickerProps) {
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<AnchorLayout | null>(null);
+  // collapsable={false} is required on Android — without it, a plain
+  // wrapper View with a single child can get optimized out of the
+  // native view hierarchy, and measureInWindow() below either fails
+  // silently or measures the wrong node.
+  const triggerRef = useRef<View>(null);
   const hasOptions = options.length > 0;
 
   if (isLoading) {
     return <ActivityIndicator style={styles.spinner} />;
   }
 
+  function handleOpen() {
+    if (!hasOptions) return;
+    triggerRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ x, y, width, height });
+      setOpen(true);
+    });
+  }
+
   return (
     <>
-      <Pressable style={styles.trigger} onPress={() => hasOptions && setOpen(true)} disabled={!hasOptions}>
-        <Text
-          style={[styles.triggerText, !value && styles.placeholderText]}
-          numberOfLines={1}
-        >
-          {value ?? (hasOptions ? placeholder : (emptyLabel ?? 'No options available yet.'))}
-        </Text>
-        <Text style={styles.chevron}>⌄</Text>
-      </Pressable>
+      <View ref={triggerRef} collapsable={false}>
+        <Pressable style={styles.trigger} onPress={handleOpen} disabled={!hasOptions}>
+          <Text style={[styles.triggerText, !value && styles.placeholderText]} numberOfLines={1}>
+            {value ?? (hasOptions ? placeholder : (emptyLabel ?? 'No options available yet.'))}
+          </Text>
+          <Text style={styles.chevron}>⌄</Text>
+        </Pressable>
+      </View>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          {/* Consumes the touch so tapping inside the sheet doesn't fall
-              through to the backdrop's onPress and close it. */}
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <ScrollView style={styles.optionList}>
-              {options.map((option) => (
-                <Pressable
-                  key={option}
-                  style={[styles.option, value === option && styles.optionSelected]}
-                  onPress={() => {
-                    onChange(option);
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={[styles.optionText, value === option && styles.optionTextSelected]}>{option}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Pressable style={styles.cancelButton} onPress={() => setOpen(false)}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </Pressable>
-          </Pressable>
+        {/* Covers the whole screen so a tap anywhere outside the
+            dropdown itself closes it — the dropdown's own Pressable
+            (below) consumes taps landing on it before they reach this. */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)}>
+          {anchor && (
+            <View
+              style={[
+                styles.dropdown,
+                { top: anchor.y + anchor.height + 4, left: anchor.x, width: anchor.width },
+              ]}
+            >
+              <Pressable onPress={() => {}}>
+                <ScrollView style={styles.optionList} keyboardShouldPersistTaps="handled">
+                  {options.map((option) => (
+                    <Pressable
+                      key={option}
+                      style={[styles.option, value === option && styles.optionSelected]}
+                      onPress={() => {
+                        onChange(option);
+                        setOpen(false);
+                      }}
+                    >
+                      <Text style={[styles.optionText, value === option && styles.optionTextSelected]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Pressable>
+            </View>
+          )}
         </Pressable>
       </Modal>
     </>
@@ -84,6 +113,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#fff',
   },
   triggerText: {
     fontSize: 15,
@@ -98,47 +128,39 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginLeft: 8,
   },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
+  dropdown: {
+    position: 'absolute',
     backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
-    maxHeight: '60%',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    // A visible shadow matters more here than most cards in this app —
+    // this floats directly over other form content, not inline with it.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    overflow: 'hidden',
   },
   optionList: {
-    flexGrow: 0,
+    maxHeight: 240,
   },
   option: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   optionSelected: {
     backgroundColor: '#f1f5f9',
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#374151',
   },
   optionTextSelected: {
     color: '#0f172a',
     fontWeight: '700',
-  },
-  cancelButton: {
-    marginTop: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#6b7280',
   },
 });

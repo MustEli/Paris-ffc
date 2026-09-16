@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 
+import elnoLogo from '../assets/elno-logo.png';
 import { useAuth } from '../core/auth/AuthContext';
 
 export function LoginPage() {
@@ -19,7 +20,7 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>ELNO Admin</h1>
+        <img src={elnoLogo} alt="ELNO" className="login-logo" />
         <p className="page-subtitle">Powered by OVOKO France</p>
 
         <form onSubmit={handleSubmit}>

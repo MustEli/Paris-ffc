@@ -1,3 +1,8 @@
+:root {
+  /* Sampled directly from the ELNO logo's actual letters, not picked freehand. */
+  --brand-orange: #fd8c1e;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -30,6 +35,7 @@ body {
   font-weight: 700;
   margin-bottom: 32px;
   padding: 0 8px;
+  color: var(--brand-orange);
 }
 
 .sidebar nav {
@@ -80,11 +86,13 @@ body {
 h1 {
   font-size: 22px;
   margin: 0 0 4px;
+  color: var(--brand-orange);
 }
 
 h2 {
   font-size: 16px;
   margin: 0 0 12px;
+  color: var(--brand-orange);
 }
 
 .page-subtitle {
@@ -193,6 +201,22 @@ tr:last-child td {
   opacity: 0.9;
 }
 
+/* The two specific buttons called out for orange: Download Instructions
+   Template and Download ZIP — not every primary button on the site. */
+.btn-accent {
+  background: var(--brand-orange);
+  color: #fff;
+}
+
+.btn-accent:hover {
+  opacity: 0.9;
+}
+
+.btn-accent:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -201,7 +225,10 @@ tr:last-child td {
 .btn-outline {
   background: transparent;
   border: 1px solid #475569;
-  color: #e2e8f0;
+  /* Only the sidebar's Log Out button actually uses this color — every
+     other .btn-outline usage passes its own inline color/borderColor
+     override, so this only affects Log Out. */
+  color: var(--brand-orange);
 }
 
 .btn-outline:hover {
@@ -267,6 +294,18 @@ textarea {
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 32px;
+}
+
+.login-logo {
+  display: block;
+  width: 220px;
+  height: auto;
+  margin: 0 auto 8px;
+}
+
+.login-card .page-subtitle {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
 .chip-row {
