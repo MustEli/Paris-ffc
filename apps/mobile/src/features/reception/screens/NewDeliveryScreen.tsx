@@ -9,7 +9,12 @@ import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useCreateReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS, type ReceptionCategory } from '../types';
 
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as ReceptionCategory[];
+// sellers_stock deliberately excluded — Reception no longer accepts new
+// entries in that category (redundant now that Seller Stock is its own
+// feature/tab). CATEGORY_LABELS itself still includes it, unchanged,
+// since existing historical receptions in that category still need to
+// display correctly elsewhere (the reception list/detail screens).
+const CATEGORIES = (Object.keys(CATEGORY_LABELS) as ReceptionCategory[]).filter((c) => c !== 'sellers_stock');
 
 interface Props {
   navigation: NativeStackNavigationProp<ReceptionStackParamList, 'NewDelivery'>;

@@ -18,8 +18,20 @@ export type SellerStockStatus =
 
 export const OVERWEIGHT_THRESHOLD_KG = 700;
 
-/** Cap on how many photos can be attached per photo field (label, damage evidence) — user-requested (2026-08-21), was single-photo-only for the label. */
+/** Cap on how many photos can be attached to damage evidence — user-requested (2026-08-21), was single-photo-only for the label originally (label now has its own, stricter limits below). */
 export const MAX_PHOTOS_PER_FIELD = 6;
+
+/**
+ * "Delivery Proof" (was "Shipping label photo") — user-requested
+ * (2026-09-17): a real minimum, not just a maximum, since staff were
+ * sometimes attaching only one photo when both a shipping-label shot
+ * and a box-number shot are expected. Still just a plain photo list
+ * server-side (no distinct "this one is the label, this one is the box
+ * number" typing) — the 2-required/3-max limits plus the mobile label's
+ * guidance text carry that intent without needing two separate fields.
+ */
+export const DELIVERY_PROOF_PHOTOS_MIN = 2;
+export const DELIVERY_PROOF_PHOTOS_MAX = 3;
 
 export interface SellerStockPallet {
   id: string;

@@ -6,7 +6,7 @@ import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScree
 import { type SellerStockStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../components/MultiPhotoCapture';
 import { useCreatePallet } from '../hooks/useSellerStock';
-import { OVERWEIGHT_THRESHOLD_KG, type PalletCondition } from '../types';
+import { DELIVERY_PROOF_PHOTOS_MAX, DELIVERY_PROOF_PHOTOS_MIN, OVERWEIGHT_THRESHOLD_KG, type PalletCondition } from '../types';
 
 interface Props {
   navigation: NativeStackNavigationProp<SellerStockStackParamList, 'NewPallet'>;
@@ -28,7 +28,7 @@ export function NewPalletScreen({ navigation }: Props) {
   const isOverweight = !!weightKg && weightValue > OVERWEIGHT_THRESHOLD_KG;
 
   const isValid =
-    labelPhotos.length > 0 &&
+    labelPhotos.length >= DELIVERY_PROOF_PHOTOS_MIN &&
     !!boxNumber &&
     !!sellerName &&
     !!weightKg &&
@@ -52,7 +52,17 @@ export function NewPalletScreen({ navigation }: Props) {
 
   return (
     <KeyboardAwareScreen contentContainerStyle={styles.container}>
-      <MultiPhotoCapture label="Shipping label photo" photos={labelPhotos} onChange={setLabelPhotos} />
+      <Text style={styles.label}>Delivery Proof</Text>
+      <Text style={styles.hint}>
+        At least {DELIVERY_PROOF_PHOTOS_MIN} photos required: one of the shipping label, one of the box number
+        (up to {DELIVERY_PROOF_PHOTOS_MAX} total).
+      </Text>
+      <MultiPhotoCapture
+        label="Delivery Proof"
+        photos={labelPhotos}
+        onChange={setLabelPhotos}
+        maxPhotos={DELIVERY_PROOF_PHOTOS_MAX}
+      />
 
       <Text style={styles.label}>Box number</Text>
       <TextInput style={styles.input} value={boxNumber} onChangeText={setBoxNumber} />
@@ -118,6 +128,11 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginTop: 16,
     marginBottom: 6,
+  },
+  hint: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,

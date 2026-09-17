@@ -15,17 +15,22 @@ async function loginAs(app: INestApplication<App>, email: string): Promise<{ tok
 }
 
 async function createReadyPallet(app: INestApplication<App>, staffToken: string): Promise<string> {
-  const photo = await request(app.getHttpServer())
+  const photo1 = await request(app.getHttpServer())
     .post('/uploads')
     .set('Authorization', `Bearer ${staffToken}`)
     .attach('file', Buffer.from('fake-image-bytes'), 'label.jpg')
+    .expect(201);
+  const photo2 = await request(app.getHttpServer())
+    .post('/uploads')
+    .set('Authorization', `Bearer ${staffToken}`)
+    .attach('file', Buffer.from('fake-image-bytes-2'), 'box.jpg')
     .expect(201);
 
   const pallet = await request(app.getHttpServer())
     .post('/seller-stock')
     .set('Authorization', `Bearer ${staffToken}`)
     .send({
-      labelPhotoUrls: [photo.body.url],
+      labelPhotoUrls: [photo1.body.url, photo2.body.url],
       boxNumber: 'B-100',
       sellerName: 'Acme Parts',
       weightKg: 100,

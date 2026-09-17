@@ -181,11 +181,18 @@ describe('Reports (e2e)', () => {
       .set('Authorization', `Bearer ${staff.token}`)
       .expect(201);
 
-    const photoUrl = await uploadFakePhoto(app, staff.token);
+    const photoUrl1 = await uploadFakePhoto(app, staff.token);
+    const photoUrl2 = await uploadFakePhoto(app, staff.token);
     const pallet = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ labelPhotoUrls: [photoUrl], boxNumber: 'B-1', sellerName: 'Acme', weightKg: 50, condition: 'good' })
+      .send({
+        labelPhotoUrls: [photoUrl1, photoUrl2],
+        boxNumber: 'B-1',
+        sellerName: 'Acme',
+        weightKg: 50,
+        condition: 'good',
+      })
       .expect(201);
 
     const task = await request(app.getHttpServer())
@@ -262,7 +269,7 @@ describe('Reports (e2e)', () => {
     const reception = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ category: 'sellers_stock', palletCount: 3 })
+      .send({ category: 'equipment_other', parcelCount: 3, itemDescription: 'Pallet racking' })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/receptions/${reception.body.id}/instructions`)
@@ -274,11 +281,18 @@ describe('Reports (e2e)', () => {
       .set('Authorization', `Bearer ${staff.token}`)
       .expect(201);
 
-    const photoUrl = await uploadFakePhoto(app, staff.token);
+    const photoUrl1 = await uploadFakePhoto(app, staff.token);
+    const photoUrl2 = await uploadFakePhoto(app, staff.token);
     const pallet = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ labelPhotoUrls: [photoUrl], boxNumber: 'B-9', sellerName: 'Acme', weightKg: 40, condition: 'good' })
+      .send({
+        labelPhotoUrls: [photoUrl1, photoUrl2],
+        boxNumber: 'B-9',
+        sellerName: 'Acme',
+        weightKg: 40,
+        condition: 'good',
+      })
       .expect(201);
     const task = await request(app.getHttpServer())
       .post('/put-away-tasks')

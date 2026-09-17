@@ -72,11 +72,19 @@ describe('Receptions (e2e)', () => {
       .expect(403);
   });
 
+  it('rejects creating a new reception in the sellers_stock category — redundant now that Seller Stock is its own feature', () => {
+    return request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'sellers_stock', palletCount: 1 })
+      .expect(400);
+  });
+
   it('rejects completing before instructions exist', async () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'sellers_stock', palletCount: 5 })
+      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' })
       .expect(201);
 
     return request(app.getHttpServer())
@@ -137,12 +145,12 @@ describe('Receptions (e2e)', () => {
     const first = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'sellers_stock', palletCount: 2 })
+      .send({ category: 'equipment_other', parcelCount: 2, itemDescription: 'Shelving' })
       .expect(201);
     const second = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'sellers_stock', palletCount: 5 })
+      .send({ category: 'equipment_other', parcelCount: 5, itemDescription: 'Forklift parts' })
       .expect(201);
 
     const result = await request(app.getHttpServer())

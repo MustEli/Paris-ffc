@@ -2,12 +2,16 @@ import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 import { type ReceptionCategory } from '../reception.types';
 
-const CATEGORIES: ReceptionCategory[] = [
-  'return_parcels',
-  'packaging_stock',
-  'sellers_stock',
-  'equipment_other',
-];
+/**
+ * `sellers_stock` is deliberately excluded here — Reception no longer
+ * accepts *new* entries in that category (redundant now that Seller
+ * Stock is its own dedicated feature/tab), but it's intentionally NOT
+ * removed from `ReceptionCategory` itself (reception.types.ts) or
+ * anywhere that only *reads* existing data — real historical
+ * `sellers_stock` receptions already exist in production and must keep
+ * displaying correctly.
+ */
+const CREATABLE_CATEGORIES: ReceptionCategory[] = ['return_parcels', 'packaging_stock', 'equipment_other'];
 
 /**
  * Deliberately loose: fields required vary by category (see
@@ -16,7 +20,7 @@ const CATEGORIES: ReceptionCategory[] = [
  * duplicate classes for not much benefit at this scale.
  */
 export class CreateReceptionDto {
-  @IsIn(CATEGORIES)
+  @IsIn(CREATABLE_CATEGORIES)
   category!: ReceptionCategory;
 
   @IsOptional()

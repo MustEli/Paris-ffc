@@ -4,7 +4,13 @@ import { randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { type CreatePalletDto } from './dto/create-pallet.dto';
-import { MAX_PHOTOS_PER_FIELD, OVERWEIGHT_THRESHOLD_KG, type SellerStockPallet } from './seller-stock.types';
+import {
+  DELIVERY_PROOF_PHOTOS_MAX,
+  DELIVERY_PROOF_PHOTOS_MIN,
+  MAX_PHOTOS_PER_FIELD,
+  OVERWEIGHT_THRESHOLD_KG,
+  type SellerStockPallet,
+} from './seller-stock.types';
 
 /**
  * Backed by Postgres via Prisma now — see users.service.ts for the
@@ -42,8 +48,10 @@ export class SellerStockService {
         'Damaged pallets require damageRemarks and at least one damageEvidencePhotoUrls entry',
       );
     }
-    if (dto.labelPhotoUrls.length > MAX_PHOTOS_PER_FIELD) {
-      throw new BadRequestException(`labelPhotoUrls cannot exceed ${MAX_PHOTOS_PER_FIELD} photos`);
+    if (dto.labelPhotoUrls.length < DELIVERY_PROOF_PHOTOS_MIN || dto.labelPhotoUrls.length > DELIVERY_PROOF_PHOTOS_MAX) {
+      throw new BadRequestException(
+        `labelPhotoUrls (Delivery Proof) requires between ${DELIVERY_PROOF_PHOTOS_MIN} and ${DELIVERY_PROOF_PHOTOS_MAX} photos`,
+      );
     }
     if ((dto.damageEvidencePhotoUrls?.length ?? 0) > MAX_PHOTOS_PER_FIELD) {
       throw new BadRequestException(`damageEvidencePhotoUrls cannot exceed ${MAX_PHOTOS_PER_FIELD} photos`);

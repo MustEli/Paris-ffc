@@ -5,8 +5,12 @@ export type SellerStockStatus = 'ready_for_putaway' | 'pending_admin_review' | '
 
 export const OVERWEIGHT_THRESHOLD_KG = 700;
 
-/** Cap on how many photos can be attached per photo field (label, damage evidence). */
+/** Cap on how many photos can be attached to damage evidence. */
 export const MAX_PHOTOS_PER_FIELD = 6;
+
+/** "Delivery Proof" (was "Shipping label photo") — mirrors packages/backend/src/seller-stock/seller-stock.types.ts. */
+export const DELIVERY_PROOF_PHOTOS_MIN = 2;
+export const DELIVERY_PROOF_PHOTOS_MAX = 3;
 
 export interface SellerStockPallet {
   id: string;

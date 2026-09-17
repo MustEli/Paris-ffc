@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
-import { MAX_PHOTOS_PER_FIELD } from '../src/seller-stock/seller-stock.types';
+import { DELIVERY_PROOF_PHOTOS_MAX, DELIVERY_PROOF_PHOTOS_MIN } from '../src/seller-stock/seller-stock.types';
 import { closeTestDb, resetDatabase } from './utils/db';
 
 // Covers intake only (Feature 3). Put-away assignment (Feature 4) — the
@@ -68,12 +68,13 @@ describe('Seller Stock (e2e)', () => {
   });
 
   it('rejects a damaged pallet without damage remarks/evidence', async () => {
-    const labelPhotoUrl = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     return request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        labelPhotoUrls: [labelPhotoUrl],
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
         boxNumber: 'B-1',
         sellerName: 'Acme Parts',
         weightKg: 50,
@@ -83,12 +84,13 @@ describe('Seller Stock (e2e)', () => {
   });
 
   it('auto-flags an overweight pallet even when marked good condition', async () => {
-    const labelPhotoUrl = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     const created = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        labelPhotoUrls: [labelPhotoUrl],
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
         boxNumber: 'B-2',
         sellerName: 'Acme Parts',
         weightKg: 750,
@@ -126,14 +128,15 @@ describe('Seller Stock (e2e)', () => {
   });
 
   it('runs the damaged path with evidence photos', async () => {
-    const labelPhotoUrl = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     const damagePhotoUrl = await uploadFakePhoto(app, staffToken);
 
     const created = await request(app.getHttpServer())
       .post('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        labelPhotoUrls: [labelPhotoUrl],
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
         boxNumber: 'B-5',
         sellerName: 'Acme Parts',
         weightKg: 200,
@@ -147,9 +150,9 @@ describe('Seller Stock (e2e)', () => {
     expect(created.body.damageEvidencePhotoUrls).toEqual([damagePhotoUrl]);
   });
 
-  it(`rejects more than ${MAX_PHOTOS_PER_FIELD} label photos`, async () => {
+  it(`rejects more than ${DELIVERY_PROOF_PHOTOS_MAX} Delivery Proof photos`, async () => {
     const tooMany = await Promise.all(
-      Array.from({ length: MAX_PHOTOS_PER_FIELD + 1 }, () => uploadFakePhoto(app, staffToken)),
+      Array.from({ length: DELIVERY_PROOF_PHOTOS_MAX + 1 }, () => uploadFakePhoto(app, staffToken)),
     );
 
     return request(app.getHttpServer())
@@ -158,6 +161,22 @@ describe('Seller Stock (e2e)', () => {
       .send({
         labelPhotoUrls: tooMany,
         boxNumber: 'B-6',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        condition: 'good',
+      })
+      .expect(400);
+  });
+
+  it(`rejects fewer than ${DELIVERY_PROOF_PHOTOS_MIN} Delivery Proof photos`, async () => {
+    const onlyOne = await uploadFakePhoto(app, staffToken);
+
+    return request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [onlyOne],
+        boxNumber: 'B-7',
         sellerName: 'Acme Parts',
         weightKg: 50,
         condition: 'good',
