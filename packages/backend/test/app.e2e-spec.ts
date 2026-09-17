@@ -79,6 +79,7 @@ describe('Warehouse HQ backend (e2e)', () => {
         breakType: null,
         shortBreakUsedMs: 0,
         shortBreakRemainingMs: 20 * 60_000,
+        lunchBreakRemainingMs: null,
       });
 
     const startResponse = await request(app.getHttpServer())
@@ -137,8 +138,12 @@ describe('Warehouse HQ backend (e2e)', () => {
       .get('/shifts/status')
       .set('Authorization', auth)
       .expect(200);
-    expect(statusWhileOnBreak.body).toMatchObject({ active: true, onBreak: true });
+    expect(statusWhileOnBreak.body).toMatchObject({ active: true, onBreak: true, breakType: 'lunch' });
     expect(statusWhileOnBreak.body.breakStartedAt).not.toBeNull();
+    // Purely a display target for lunch (not a real cap) — see
+    // LUNCH_BREAK_SUGGESTED_DURATION_MS's doc comment.
+    expect(statusWhileOnBreak.body.lunchBreakRemainingMs).toBeGreaterThan(0);
+    expect(statusWhileOnBreak.body.lunchBreakRemainingMs).toBeLessThanOrEqual(60 * 60_000);
 
     await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
 

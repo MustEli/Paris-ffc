@@ -5,7 +5,14 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import { UsersService } from '../users/users.service';
-import { SHORT_BREAK_LIMIT_MS, type Break, type BreakType, type Shift, type ShiftStatus } from './shift.types';
+import {
+  LUNCH_BREAK_SUGGESTED_DURATION_MS,
+  SHORT_BREAK_LIMIT_MS,
+  type Break,
+  type BreakType,
+  type Shift,
+  type ShiftStatus,
+} from './shift.types';
 
 const SHEET_TAB = 'Attendance';
 const SHEET_HEADER = ['User', 'Shift Start (Local)', 'Shift End (Local)', 'Break Minutes', 'Hours Worked (Net)'];
@@ -166,6 +173,10 @@ export class ShiftsService {
     const shift = await this.getEffectiveActiveShift(userId);
     const activeBreak = shift ? await this.findActiveBreak(shift.id) : undefined;
     const shortBreakUsedMs = shift ? await this.shortBreakUsedMs(shift.id, now) : 0;
+    const lunchBreakRemainingMs =
+      activeBreak?.type === 'lunch'
+        ? LUNCH_BREAK_SUGGESTED_DURATION_MS - (now.getTime() - activeBreak.startedAt.getTime())
+        : null;
 
     return {
       active: !!shift,
@@ -176,6 +187,7 @@ export class ShiftsService {
       breakType: activeBreak?.type ?? null,
       shortBreakUsedMs,
       shortBreakRemainingMs: Math.max(0, SHORT_BREAK_LIMIT_MS - shortBreakUsedMs),
+      lunchBreakRemainingMs,
     };
   }
 

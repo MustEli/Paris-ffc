@@ -331,6 +331,54 @@ describe('Reports (e2e)', () => {
     expect(staffRow.shiftStartedAt).not.toBeNull();
   });
 
+  it("admin dashboard's per-staff status includes which break type and when it started, not just a bare onBreak flag", async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ type: 'short' })
+      .expect(201);
+
+    const dashboard = await request(app.getHttpServer())
+      .get('/reports/admin-dashboard')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    const staffRow = dashboard.body.staff.find((s: { userId: string }) => s.userId === staff.id);
+    expect(staffRow.onBreak).toBe(true);
+    expect(staffRow.breakType).toBe('short');
+    expect(staffRow.breakStartedAt).not.toBeNull();
+    expect(staffRow.shortBreakRemainingMs).toBeGreaterThan(0);
+    expect(staffRow.shortBreakRemainingMs).toBeLessThanOrEqual(20 * 60_000);
+    expect(staffRow.lunchBreakRemainingMs).toBeNull();
+  });
+
+  it("admin dashboard's per-staff status reports lunchBreakRemainingMs (a display target, not a real cap) while on a lunch break", async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ type: 'lunch' })
+      .expect(201);
+
+    const dashboard = await request(app.getHttpServer())
+      .get('/reports/admin-dashboard')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    const staffRow = dashboard.body.staff.find((s: { userId: string }) => s.userId === staff.id);
+    expect(staffRow.breakType).toBe('lunch');
+    expect(staffRow.lunchBreakRemainingMs).toBeGreaterThan(0);
+    expect(staffRow.lunchBreakRemainingMs).toBeLessThanOrEqual(60 * 60_000);
+    expect(staffRow.shortBreakRemainingMs).toBeNull();
+  });
+
   it('excludes lunch break time from worked-hours totals', async () => {
     // Seeded directly with exact timestamps (bypassing the real-time
     // start/end endpoints) so the subtraction can be checked precisely:

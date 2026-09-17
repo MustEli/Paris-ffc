@@ -80,6 +80,14 @@ export interface StaffStatus {
   shiftStartedAt: string | null;
   /** Only meaningful when onShift is true. */
   onBreak: boolean;
+  /** null when onBreak is false. */
+  breakType: 'lunch' | 'short' | null;
+  /** null when onBreak is false. */
+  breakStartedAt: string | null;
+  /** null unless breakType is 'short' — same meaning as ShiftStatus.shortBreakRemainingMs. */
+  shortBreakRemainingMs: number | null;
+  /** null unless breakType is 'lunch' — same meaning as ShiftStatus.lunchBreakRemainingMs (not a real cap, can go negative). */
+  lunchBreakRemainingMs: number | null;
   shiftsToday: number;
   /** Net of break time, and only counts shifts that have already ended today — an in-progress shift's duration isn't known yet. */
   hoursWorkedToday: number;

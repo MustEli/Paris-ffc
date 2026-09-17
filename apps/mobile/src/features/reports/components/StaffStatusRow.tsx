@@ -11,6 +11,26 @@ function formatHours(hours: number): string {
   return `${hours}h`;
 }
 
+/** `ms` may be negative for lunch (no real cap — see LUNCH_BREAK_SUGGESTED_DURATION_MS on the backend). */
+function formatMinutesSeconds(ms: number): string {
+  const totalSeconds = Math.round(Math.abs(ms) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function breakLabel(staff: StaffStatus): string {
+  if (staff.breakType === 'short') {
+    const remaining = staff.shortBreakRemainingMs ?? 0;
+    return `On short break — ${formatMinutesSeconds(Math.max(0, remaining))} remaining`;
+  }
+  if (staff.breakType === 'lunch') {
+    const remaining = staff.lunchBreakRemainingMs ?? 0;
+    return `On lunch break — ${formatMinutesSeconds(remaining)} ${remaining >= 0 ? 'remaining' : 'over'}`;
+  }
+  return 'On break';
+}
+
 /** One row on Admin's "who's doing what right now" roster. */
 export function StaffStatusRow({ staff }: StaffStatusRowProps) {
   return (
@@ -26,7 +46,7 @@ export function StaffStatusRow({ staff }: StaffStatusRowProps) {
           >
             {staff.onShift && staff.shiftStartedAt
               ? staff.onBreak
-                ? 'On lunch break'
+                ? breakLabel(staff)
                 : `On shift since ${new Date(staff.shiftStartedAt).toLocaleTimeString([], {
                     hour: 'numeric',
                     minute: '2-digit',

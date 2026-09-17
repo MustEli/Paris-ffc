@@ -1,10 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { fetchAdminDashboard } from '../core/api/reports';
+import { fetchAdminDashboard, type AdminDashboardReport } from '../core/api/reports';
 import { useAuth } from '../core/auth/AuthContext';
 
 function formatLocalTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+/** `ms` may be negative for lunch (no real cap — see LUNCH_BREAK_SUGGESTED_DURATION_MS on the backend). */
+function formatMinutesSeconds(ms: number): string {
+  const totalSeconds = Math.round(Math.abs(ms) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function breakLabel(staff: AdminDashboardReport['staff'][number]): string {
+  if (staff.breakType === 'short') {
+    const remaining = staff.shortBreakRemainingMs ?? 0;
+    return `Short break — ${formatMinutesSeconds(Math.max(0, remaining))} remaining`;
+  }
+  if (staff.breakType === 'lunch') {
+    const remaining = staff.lunchBreakRemainingMs ?? 0;
+    return `Lunch break — ${formatMinutesSeconds(remaining)} ${remaining >= 0 ? 'remaining' : 'over'}`;
+  }
+  return 'On break';
 }
 
 /**
@@ -124,7 +144,7 @@ export function DashboardPage() {
                       )}
                       {s.onBreak && (
                         <span className="pill pill-amber" style={{ marginLeft: 6 }}>
-                          On break
+                          {breakLabel(s)}
                         </span>
                       )}
                     </td>

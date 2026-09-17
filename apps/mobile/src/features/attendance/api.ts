@@ -14,6 +14,9 @@ export type BreakType = 'lunch' | 'short';
 /** Mirrors the backend's SHORT_BREAK_LIMIT_MS (shift.types.ts) — 20 minutes. */
 export const SHORT_BREAK_LIMIT_MS = 20 * 60_000;
 
+/** Mirrors the backend's LUNCH_BREAK_SUGGESTED_DURATION_MS — a display target only, not a real cap (lunch is never blocked/auto-ended for going over). */
+export const LUNCH_BREAK_SUGGESTED_DURATION_MS = 60 * 60_000;
+
 export interface ShiftStatus {
   active: boolean;
   shiftId: string | null;
@@ -23,6 +26,8 @@ export interface ShiftStatus {
   breakType: BreakType | null;
   shortBreakUsedMs: number;
   shortBreakRemainingMs: number;
+  /** Only meaningful while onBreak && breakType === 'lunch'. Can go negative — see LUNCH_BREAK_SUGGESTED_DURATION_MS. */
+  lunchBreakRemainingMs: number | null;
 }
 
 export interface Break {

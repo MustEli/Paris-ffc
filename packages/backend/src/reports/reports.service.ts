@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { type ReceptionCategory } from '../receptions/reception.types';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
+import { LUNCH_BREAK_SUGGESTED_DURATION_MS, SHORT_BREAK_LIMIT_MS } from '../shifts/shift.types';
 import {
   type AdminDashboardReport,
   type AttendanceReport,
@@ -29,6 +30,17 @@ function sumBreakMsByShift(
   for (const b of breaks) {
     if (b.type !== 'lunch' || !b.endedAt) continue;
     const ms = b.endedAt.getTime() - b.startedAt.getTime();
+    map.set(b.shiftId, (map.get(b.shiftId) ?? 0) + ms);
+  }
+  return map;
+}
+
+/** Cumulative "short" break time per shiftId, including any currently in progress (counted up to `now`) — mirrors ShiftsService's own private method, kept local here rather than shared across modules for the same reason sumBreakMsByShift above is. */
+function sumShortBreakMsByShift(breaks: { shiftId: string; type: 'lunch' | 'short'; startedAt: Date; endedAt: Date | null }[], now: Date): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const b of breaks) {
+    if (b.type !== 'short') continue;
+    const ms = (b.endedAt ?? now).getTime() - b.startedAt.getTime();
     map.set(b.shiftId, (map.get(b.shiftId) ?? 0) + ms);
   }
   return map;
@@ -195,12 +207,17 @@ export class ReportsService {
 
     const activeShiftByUser = new Map(activeShifts.map((s) => [s.userId, s]));
 
-    const [breaksToday, activeBreaks] = await Promise.all([
+    // A separate query for *all* (not just open) breaks on currently-active
+    // shifts — needed to compute cumulative short-break usage, which isn't
+    // guaranteed to be covered by breaksToday alone (an active shift that
+    // started before today's UTC boundary wouldn't be in shiftsToday at all).
+    const [breaksToday, activeShiftBreaks] = await Promise.all([
       this.prisma.break.findMany({ where: { shiftId: { in: shiftsToday.map((s) => s.id) } } }),
-      this.prisma.break.findMany({ where: { shiftId: { in: activeShifts.map((s) => s.id) }, endedAt: null } }),
+      this.prisma.break.findMany({ where: { shiftId: { in: activeShifts.map((s) => s.id) } } }),
     ]);
     const breakMsByShift = sumBreakMsByShift(breaksToday);
-    const shiftIdsOnBreak = new Set(activeBreaks.map((b) => b.shiftId));
+    const shortBreakMsByShift = sumShortBreakMsByShift(activeShiftBreaks, now);
+    const activeBreakByShiftId = new Map(activeShiftBreaks.filter((b) => !b.endedAt).map((b) => [b.shiftId, b]));
 
     const shiftsTodayByUser = new Map<string, { count: number; totalMs: number }>();
     for (const shift of shiftsToday) {
@@ -226,12 +243,22 @@ export class ReportsService {
       .map((user) => {
         const activeShift = activeShiftByUser.get(user.id);
         const todayStats = shiftsTodayByUser.get(user.id);
+        const activeBreak = activeShift ? activeBreakByShiftId.get(activeShift.id) : undefined;
+        const shortBreakUsedMs = activeShift ? (shortBreakMsByShift.get(activeShift.id) ?? 0) : 0;
         return {
           userId: user.id,
           userName: user.name,
           onShift: !!activeShift,
           shiftStartedAt: activeShift ? activeShift.startedAt.toISOString() : null,
-          onBreak: activeShift ? shiftIdsOnBreak.has(activeShift.id) : false,
+          onBreak: !!activeBreak,
+          breakType: activeBreak?.type ?? null,
+          breakStartedAt: activeBreak ? activeBreak.startedAt.toISOString() : null,
+          shortBreakRemainingMs:
+            activeBreak?.type === 'short' ? Math.max(0, SHORT_BREAK_LIMIT_MS - shortBreakUsedMs) : null,
+          lunchBreakRemainingMs:
+            activeBreak?.type === 'lunch'
+              ? LUNCH_BREAK_SUGGESTED_DURATION_MS - (Date.now() - activeBreak.startedAt.getTime())
+              : null,
           shiftsToday: todayStats?.count ?? 0,
           hoursWorkedToday: todayStats ? Math.round((todayStats.totalMs / 3_600_000) * 10) / 10 : 0,
           putAwayCompletedToday: putAwayCountByUser.get(user.id) ?? 0,

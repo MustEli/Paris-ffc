@@ -8,8 +8,9 @@ function formatLocalTime(isoString: string): string {
   return new Date(isoString).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
+/** `ms` may be negative (lunch has no real cap, so it can go "over") — the sign is handled by the caller, this just formats the magnitude. */
 function formatMinutesSeconds(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const totalSeconds = Math.round(Math.abs(ms) / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -55,17 +56,26 @@ export function ShiftScreen() {
   const onShortBreak = !!status?.onBreak && status.breakType === 'short';
   const onLunchBreak = !!status?.onBreak && status.breakType === 'lunch';
 
-  // Ticks every second so the short-break countdown moves smoothly
-  // between the ~5s server polls (see useShiftStatus's refetchInterval)
-  // rather than jumping once every poll.
+  // Ticks every second so the countdown (short break's real one, or
+  // lunch's display-only target) moves smoothly between the ~5s server
+  // polls (see useShiftStatus's refetchInterval) rather than jumping
+  // once every poll. Short break floors at 0 for display (it's a real
+  // cap); lunch is allowed to go negative (no real cap — see
+  // LUNCH_BREAK_SUGGESTED_DURATION_MS) and is shown as "over" instead.
+  const rawActiveBreakRemainingMs = onShortBreak
+    ? (status?.shortBreakRemainingMs ?? 0)
+    : onLunchBreak
+      ? (status?.lunchBreakRemainingMs ?? 0)
+      : null;
+
   const [displayRemainingMs, setDisplayRemainingMs] = useState<number | null>(null);
   useEffect(() => {
-    setDisplayRemainingMs(onShortBreak ? (status?.shortBreakRemainingMs ?? 0) : null);
-  }, [onShortBreak, status?.shortBreakRemainingMs]);
+    setDisplayRemainingMs(rawActiveBreakRemainingMs);
+  }, [rawActiveBreakRemainingMs]);
   useEffect(() => {
     if (displayRemainingMs === null) return;
     const interval = setInterval(() => {
-      setDisplayRemainingMs((prev) => (prev !== null ? Math.max(0, prev - 1000) : null));
+      setDisplayRemainingMs((prev) => (prev !== null ? prev - 1000 : null));
     }, 1000);
     return () => clearInterval(interval);
     // Intentionally only restarts when we start/stop counting down, not
@@ -99,12 +109,15 @@ export function ShiftScreen() {
               ? `On shift since ${formatLocalTime(status.startedAt)}`
               : 'Not currently on shift'}
           </Text>
-          {onLunchBreak && status?.breakStartedAt && (
-            <Text style={styles.breakStatus}>On lunch break since {formatLocalTime(status.breakStartedAt)}</Text>
+          {onLunchBreak && (
+            <Text style={styles.breakStatus}>
+              On lunch break — {formatMinutesSeconds(displayRemainingMs ?? 0)}{' '}
+              {(displayRemainingMs ?? 0) >= 0 ? 'remaining' : 'over'}
+            </Text>
           )}
           {onShortBreak && (
             <Text style={styles.breakStatus}>
-              On short break — {formatMinutesSeconds(displayRemainingMs ?? 0)} remaining
+              On short break — {formatMinutesSeconds(Math.max(0, displayRemainingMs ?? 0))} remaining
             </Text>
           )}
         </>

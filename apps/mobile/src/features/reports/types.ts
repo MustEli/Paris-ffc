@@ -58,6 +58,12 @@ export interface StaffStatus {
   onShift: boolean;
   shiftStartedAt: string | null;
   onBreak: boolean;
+  breakType: 'lunch' | 'short' | null;
+  breakStartedAt: string | null;
+  /** Only meaningful while onBreak && breakType === 'short'. */
+  shortBreakRemainingMs: number | null;
+  /** Only meaningful while onBreak && breakType === 'lunch'. Display-only target, can go negative. */
+  lunchBreakRemainingMs: number | null;
   shiftsToday: number;
   hoursWorkedToday: number;
   putAwayCompletedToday: number;
