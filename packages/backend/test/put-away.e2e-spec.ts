@@ -173,6 +173,26 @@ describe('Put-Away (e2e)', () => {
       .expect(409);
   });
 
+  it('accepts priority and instructions at assignment time, defaulting priority to normal when omitted', async () => {
+    const palletWithPriority = await createReadyPallet(app, staff.token);
+    const withPriority = await request(app.getHttpServer())
+      .post('/put-away-tasks')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ palletId: palletWithPriority, assignedToUserId: staff.id, location: 'Aisle 1', priority: 'urgent', instructions: 'Fragile — handle with care' })
+      .expect(201);
+    expect(withPriority.body.priority).toBe('urgent');
+    expect(withPriority.body.instructions).toBe('Fragile — handle with care');
+
+    const palletWithoutPriority = await createReadyPallet(app, staff.token);
+    const withoutPriority = await request(app.getHttpServer())
+      .post('/put-away-tasks')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ palletId: palletWithoutPriority, assignedToUserId: staff.id, location: 'Aisle 2' })
+      .expect(201);
+    expect(withoutPriority.body.priority).toBe('normal');
+    expect(withoutPriority.body.instructions).toBeNull();
+  });
+
   it('rejects a second assignment while one is already active for the same pallet', async () => {
     const palletId = await createReadyPallet(app, staff.token);
     await request(app.getHttpServer())

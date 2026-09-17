@@ -48,6 +48,8 @@ export class OrderPrepService {
       startedAt: row.startedAt ? row.startedAt.toISOString() : null,
       completedAt: row.completedAt ? row.completedAt.toISOString() : null,
       durationMs: row.durationMs,
+      priority: row.priority,
+      instructions: row.instructions,
     };
   }
 
@@ -114,6 +116,8 @@ export class OrderPrepService {
         assignedToUserId: dto.assignedToUserId,
         status: 'assigned',
         assignedAt: new Date(),
+        priority: dto.priority ?? 'normal',
+        instructions: dto.instructions ?? null,
       },
     });
     return this.toTaskDomain(row);

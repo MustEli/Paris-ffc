@@ -87,6 +87,30 @@ describe('Order Prep (e2e)', () => {
       .expect(400);
   });
 
+  it('accepts priority and instructions at assignment time, defaulting priority to normal when omitted', async () => {
+    const session = await request(app.getHttpServer())
+      .post('/order-prep/sessions')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ totalParts: 100 })
+      .expect(201);
+
+    const withPriority = await request(app.getHttpServer())
+      .post(`/order-prep/sessions/${session.body.id}/tasks`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ assignedToUserId: staff.id, role: 'picker', priority: 'high', instructions: 'Rush order' })
+      .expect(201);
+    expect(withPriority.body.priority).toBe('high');
+    expect(withPriority.body.instructions).toBe('Rush order');
+
+    const withoutPriority = await request(app.getHttpServer())
+      .post(`/order-prep/sessions/${session.body.id}/tasks`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ assignedToUserId: staff.id, role: 'packer' })
+      .expect(201);
+    expect(withoutPriority.body.priority).toBe('normal');
+    expect(withoutPriority.body.instructions).toBeNull();
+  });
+
   it('rejects a packer starting before the computed delay has passed', async () => {
     const session = await request(app.getHttpServer())
       .post('/order-prep/sessions')

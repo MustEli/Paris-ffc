@@ -22,6 +22,8 @@ export const SHIFT_HOURS = 7;
  */
 export const PACKER_BUFFER_MINUTES = 20;
 
+import { type TaskPriority } from '../tasks/task-priority';
+
 export type OrderPrepTaskRole = 'picker' | 'packer';
 export type OrderPrepTaskStatus = 'assigned' | 'in_progress' | 'completed';
 
@@ -48,4 +50,7 @@ export interface OrderPrepTask {
   startedAt: string | null;
   completedAt: string | null;
   durationMs: number | null;
+  /** Set by Admin at assignment time (Task Board) — defaults to 'normal' when not given. */
+  priority: TaskPriority;
+  instructions: string | null;
 }

@@ -97,6 +97,13 @@ enum OrderPrepTaskStatus {
   completed
 }
 
+/** Set by Admin at assignment time (Task Board) — manual for now, per the user's own note that this will later be AI-assigned based on a ruleset. */
+enum TaskPriority {
+  normal
+  high
+  urgent
+}
+
 model User {
   id           String @id @default(uuid())
   name         String
@@ -226,6 +233,8 @@ model PutAwayTask {
   completedAt      DateTime?
   durationMs       Int?
   issueDescription String?
+  priority         TaskPriority      @default(normal)
+  instructions     String?
 
   @@index([palletId])
   @@index([assignedToUserId])
@@ -252,6 +261,8 @@ model OrderPrepTask {
   startedAt        DateTime?
   completedAt      DateTime?
   durationMs       Int?
+  priority         TaskPriority        @default(normal)
+  instructions     String?
 
   @@index([sessionId])
   @@index([assignedToUserId])

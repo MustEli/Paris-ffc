@@ -1,3 +1,5 @@
+import { type TaskPriority } from '../tasks/priority';
+
 /** Mirrors packages/backend/src/order-prep/order-prep.types.ts. */
 export type OrderPrepTaskRole = 'picker' | 'packer';
 export type OrderPrepTaskStatus = 'assigned' | 'in_progress' | 'completed';
@@ -27,6 +29,8 @@ export interface OrderPrepTask {
   startedAt: string | null;
   completedAt: string | null;
   durationMs: number | null;
+  priority: TaskPriority;
+  instructions: string | null;
 }
 
 export const STATUS_LABELS: Record<OrderPrepTaskStatus, string> = {

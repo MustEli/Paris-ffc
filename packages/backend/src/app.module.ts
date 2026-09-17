@@ -12,6 +12,7 @@ import { SheetsModule } from './sheets/sheets.module';
 import { ReceptionsModule } from './receptions/receptions.module';
 import { SellerStockModule } from './seller-stock/seller-stock.module';
 import { ShiftsModule } from './shifts/shifts.module';
+import { TasksModule } from './tasks/tasks.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 
@@ -37,6 +38,7 @@ import { UsersModule } from './users/users.module';
     OrderPrepModule,
     ReportsModule,
     ReferenceListsModule,
+    TasksModule,
   ],
   controllers: [AppController],
 })

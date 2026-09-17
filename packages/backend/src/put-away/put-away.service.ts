@@ -38,6 +38,8 @@ export class PutAwayService {
       completedAt: row.completedAt ? row.completedAt.toISOString() : null,
       durationMs: row.durationMs,
       issueDescription: row.issueDescription,
+      priority: row.priority,
+      instructions: row.instructions,
     };
   }
 
@@ -80,6 +82,8 @@ export class PutAwayService {
         location: dto.location,
         status: 'assigned',
         assignedAt: new Date(),
+        priority: dto.priority ?? 'normal',
+        instructions: dto.instructions ?? null,
       },
     });
     return this.toDomain(row);

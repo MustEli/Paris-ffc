@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
 import { type PutAwayStackParamList } from '../../../navigation/types';
+import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../tasks/priority';
 import {
   useCompleteTask,
   useReassignTask,
@@ -46,11 +47,23 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
 
   return (
     <KeyboardAwareScreen contentContainerStyle={styles.container}>
-      <Text style={styles.location}>{task.location}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.location}>{task.location}</Text>
+        <View style={[styles.priorityPill, { backgroundColor: PRIORITY_COLORS[task.priority] }]}>
+          <Text style={styles.priorityText}>{PRIORITY_LABELS[task.priority]}</Text>
+        </View>
+      </View>
       <Text style={styles.status}>{STATUS_LABELS[task.status]}</Text>
       <Text style={styles.meta}>Assigned: {new Date(task.assignedAt).toLocaleString()}</Text>
       {task.startedAt && <Text style={styles.meta}>Started: {new Date(task.startedAt).toLocaleString()}</Text>}
       {task.durationMs !== null && <Text style={styles.meta}>Took {formatDuration(task.durationMs)}</Text>}
+
+      {task.instructions && (
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsLabel}>Instructions</Text>
+          <Text style={styles.instructionsText}>{task.instructions}</Text>
+        </View>
+      )}
 
       {task.issueDescription && (
         <View style={styles.issueBox}>
@@ -154,10 +167,41 @@ const styles = StyleSheet.create({
   spinner: {
     marginTop: 40,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   location: {
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
+  },
+  priorityPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priorityText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  instructionsBox: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+  },
+  instructionsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 4,
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#1e293b',
   },
   status: {
     fontSize: 13,

@@ -433,3 +433,33 @@ textarea {
   max-height: 100%;
   border-radius: 6px;
 }
+
+.task-board-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.task-board-column {
+  min-height: 120px;
+}
+
+.task-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  cursor: grab;
+}
+
+.task-card:active {
+  cursor: grabbing;
+}
+
+.task-card-drag-over {
+  border-color: var(--brand-orange);
+  background: #fff7ed;
+}

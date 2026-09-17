@@ -25,7 +25,6 @@ export type OrderPrepStackParamList = {
   OrderPrepSessionList: undefined;
   NewOrderPrepSession: undefined;
   OrderPrepSessionDetail: { id: string };
-  OrderPrepTaskList: undefined;
   OrderPrepTaskDetail: { id: string };
 };
 
@@ -37,16 +36,18 @@ export type UserManagementStackParamList = {
 
 export type StaffStackParamList = ReceptionStackParamList &
   SellerStockStackParamList &
-  Omit<PutAwayStackParamList, 'AssignTask'> &
+  Omit<PutAwayStackParamList, 'AssignTask' | 'PutAwayTaskList'> &
   Omit<OrderPrepStackParamList, 'OrderPrepSessionList' | 'NewOrderPrepSession' | 'OrderPrepSessionDetail'> & {
     StaffHome: undefined;
     Attendance: undefined;
+    /** Merged Put-Away + Order-Prep list — see features/tasks/screens/MyTasksScreen.tsx. Replaces the two separate menu entries that used to link straight to PutAwayTaskList/OrderPrepTaskList. */
+    MyTasks: undefined;
   };
 
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
   Omit<SellerStockStackParamList, 'NewPallet'> &
   PutAwayStackParamList &
-  Omit<OrderPrepStackParamList, 'OrderPrepTaskList'> &
+  OrderPrepStackParamList &
   UserManagementStackParamList & {
     AdminHome: undefined;
   };
@@ -62,7 +63,7 @@ export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
 export type ManagementStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &
   Omit<SellerStockStackParamList, 'NewPallet'> &
   Omit<PutAwayStackParamList, 'AssignTask'> &
-  Omit<OrderPrepStackParamList, 'NewOrderPrepSession' | 'OrderPrepTaskList'> & {
+  Omit<OrderPrepStackParamList, 'NewOrderPrepSession'> & {
     ManagementHome: undefined;
     Dashboard: undefined;
   };

@@ -1,3 +1,5 @@
+import { type TaskPriority } from '../tasks/priority';
+
 /** Mirrors packages/backend/src/put-away/put-away.types.ts. */
 export type PutAwayTaskStatus = 'assigned' | 'in_progress' | 'completed' | 'issue_reported';
 
@@ -13,6 +15,8 @@ export interface PutAwayTask {
   completedAt: string | null;
   durationMs: number | null;
   issueDescription: string | null;
+  priority: TaskPriority;
+  instructions: string | null;
 }
 
 export const STATUS_LABELS: Record<PutAwayTaskStatus, string> = {

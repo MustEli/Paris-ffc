@@ -8,6 +8,8 @@
  * SellerStockController — those are gone; PutAwayService now owns that
  * transition internally via SellerStockService.
  */
+import { type TaskPriority } from '../tasks/task-priority';
+
 export type PutAwayTaskStatus = 'assigned' | 'in_progress' | 'completed' | 'issue_reported';
 
 export interface PutAwayTask {
@@ -22,4 +24,7 @@ export interface PutAwayTask {
   completedAt: string | null;
   durationMs: number | null;
   issueDescription: string | null;
+  /** Set by Admin at assignment time (Task Board) — defaults to 'normal' when not given. */
+  priority: TaskPriority;
+  instructions: string | null;
 }

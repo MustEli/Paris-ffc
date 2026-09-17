@@ -5,6 +5,7 @@ import { useAuth } from '../core/auth/AuthContext';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
+  { to: '/task-board', label: 'Task Board' },
   { to: '/receptions', label: 'Reception Instructions' },
   { to: '/seller-stock', label: 'Seller Stock Photos' },
   { to: '/reference-lists', label: 'Manage Lists' },

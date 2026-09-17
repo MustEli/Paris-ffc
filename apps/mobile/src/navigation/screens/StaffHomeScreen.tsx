@@ -47,18 +47,11 @@ export function StaffHomeScreen({ navigation }: Props) {
           onPress: () => navigation.navigate('SellerStockList'),
         },
         {
-          label: 'My Put-Away Tasks',
-          description: 'Start, complete, or report an issue on assigned tasks.',
+          label: 'My Tasks',
+          description: 'Start, complete, or report an issue on assigned put-away and order-prep tasks.',
           disabled: !onShift,
           disabledHint: LOCKED_HINT,
-          onPress: () => navigation.navigate('PutAwayTaskList'),
-        },
-        {
-          label: 'My Order Prep Tasks',
-          description: 'Start and complete your picking or packing tasks.',
-          disabled: !onShift,
-          disabledHint: LOCKED_HINT,
-          onPress: () => navigation.navigate('OrderPrepTaskList'),
+          onPress: () => navigation.navigate('MyTasks'),
         },
       ]}
     />

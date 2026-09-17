@@ -3,16 +3,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useShiftLifecycle } from '../features/attendance/hooks/useShiftLifecycle';
 import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
 import { OrderPrepTaskDetailScreen } from '../features/orderPrep/screens/OrderPrepTaskDetailScreen';
-import { OrderPrepTaskListScreen } from '../features/orderPrep/screens/OrderPrepTaskListScreen';
 import { useTaskAssignmentAlerts } from '../features/putAway/hooks/useTaskAssignmentAlerts';
 import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
-import { PutAwayTaskListScreen } from '../features/putAway/screens/PutAwayTaskListScreen';
 import { NewDeliveryScreen } from '../features/reception/screens/NewDeliveryScreen';
 import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDetailScreen';
 import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
 import { NewPalletScreen } from '../features/sellerStock/screens/NewPalletScreen';
 import { SellerStockDetailScreen } from '../features/sellerStock/screens/SellerStockDetailScreen';
 import { SellerStockListScreen } from '../features/sellerStock/screens/SellerStockListScreen';
+import { MyTasksScreen } from '../features/tasks/screens/MyTasksScreen';
 import { StaffHomeScreen } from './screens/StaffHomeScreen';
 import { type StaffStackParamList } from './types';
 
@@ -49,20 +48,11 @@ export function StaffNavigator() {
         component={SellerStockDetailScreen}
         options={{ title: 'Pallet' }}
       />
-      <Stack.Screen
-        name="PutAwayTaskList"
-        component={PutAwayTaskListScreen}
-        options={{ title: 'My Put-Away Tasks' }}
-      />
+      <Stack.Screen name="MyTasks" component={MyTasksScreen} options={{ title: 'My Tasks' }} />
       <Stack.Screen
         name="PutAwayTaskDetail"
         component={PutAwayTaskDetailScreen}
         options={{ title: 'Put-Away Task' }}
-      />
-      <Stack.Screen
-        name="OrderPrepTaskList"
-        component={OrderPrepTaskListScreen}
-        options={{ title: 'My Order Prep Tasks' }}
       />
       <Stack.Screen
         name="OrderPrepTaskDetail"
