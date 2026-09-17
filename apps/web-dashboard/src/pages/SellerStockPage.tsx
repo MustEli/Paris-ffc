@@ -30,6 +30,8 @@ export function SellerStockPage() {
   const [isZipping, setIsZipping] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
   const [zipProgress, setZipProgress] = useState<{ done: number; total: number } | null>(null);
+  const [galleryPallet, setGalleryPallet] = useState<SellerStockPallet | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const pallets = data ?? [];
 
@@ -156,20 +158,86 @@ export function SellerStockPage() {
                     <td>{STATUS_LABELS[pallet.status]}</td>
                     <td>{photoCount}</td>
                     <td>
-                      <button
-                        className="btn-danger-text"
-                        style={{ color: '#0f172a', textDecoration: 'underline' }}
-                        onClick={() => handleDownloadZip([pallet])}
-                        disabled={isZipping || photoCount === 0}
-                      >
-                        Download this one
-                      </button>
+                      <div className="flex-row">
+                        <button
+                          className="btn-danger-text"
+                          style={{ color: '#0f172a', textDecoration: 'underline' }}
+                          onClick={() => setGalleryPallet(pallet)}
+                          disabled={photoCount === 0}
+                        >
+                          View photos
+                        </button>
+                        <button
+                          className="btn-danger-text"
+                          style={{ color: '#0f172a', textDecoration: 'underline' }}
+                          onClick={() => handleDownloadZip([pallet])}
+                          disabled={isZipping || photoCount === 0}
+                        >
+                          Download this one
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {galleryPallet && (
+        <div className="modal-overlay" onClick={() => setGalleryPallet(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 style={{ margin: 0 }}>Pallet {galleryPallet.palletIndex}</h2>
+                <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{galleryPallet.sellerName}</p>
+              </div>
+              <button className="modal-close" onClick={() => setGalleryPallet(null)} aria-label="Close">
+                ✕
+              </button>
+            </div>
+
+            <h2>Delivery Proof ({galleryPallet.labelPhotoUrls.length})</h2>
+            {galleryPallet.labelPhotoUrls.length === 0 ? (
+              <p className="hint-text">No photos.</p>
+            ) : (
+              <div className="photo-grid">
+                {galleryPallet.labelPhotoUrls.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Delivery proof ${i + 1}`}
+                    className="photo-thumb"
+                    onClick={() => setLightboxUrl(url)}
+                  />
+                ))}
+              </div>
+            )}
+
+            <h2>Damage Evidence ({galleryPallet.damageEvidencePhotoUrls.length})</h2>
+            {galleryPallet.damageEvidencePhotoUrls.length === 0 ? (
+              <p className="hint-text">No photos.</p>
+            ) : (
+              <div className="photo-grid">
+                {galleryPallet.damageEvidencePhotoUrls.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Damage evidence ${i + 1}`}
+                    className="photo-thumb"
+                    onClick={() => setLightboxUrl(url)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {lightboxUrl && (
+        <div className="lightbox-overlay" onClick={() => setLightboxUrl(null)}>
+          <img src={lightboxUrl} alt="" className="lightbox-img" />
         </div>
       )}
     </div>
