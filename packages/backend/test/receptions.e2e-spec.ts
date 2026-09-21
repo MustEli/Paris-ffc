@@ -141,6 +141,29 @@ describe('Receptions (e2e)', () => {
     await request(app.getHttpServer()).get('/receptions').set('Authorization', `Bearer ${adminToken}`).expect(200);
   });
 
+  it('blocks Staff from this controller while on any break, and restores access once it ends', async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ type: 'lunch' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/shifts/break/end')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(200);
+  });
+
   it('applies bulk instructions independently per row, without aborting on a bad one', async () => {
     const first = await request(app.getHttpServer())
       .post('/receptions')

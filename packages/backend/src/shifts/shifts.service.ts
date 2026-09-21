@@ -12,6 +12,7 @@ import {
   type BreakType,
   type Shift,
   type ShiftStatus,
+  type WorkAvailability,
 } from './shift.types';
 
 const SHEET_TAB = 'Attendance';
@@ -191,9 +192,22 @@ export class ShiftsService {
     };
   }
 
-  /** Also used by ActiveShiftGuard — a no-op cost for non-staff callers, since it only ever runs for staff. */
-  async hasActiveShift(userId: string): Promise<boolean> {
-    return (await this.getEffectiveActiveShift(userId)) !== null;
+  /**
+   * Used by ActiveShiftGuard — a no-op cost for non-staff callers, since
+   * it only ever runs for staff. Blocks Reception/Seller Stock/Put-Away/
+   * Order-Prep both without an active shift AND while on any open break
+   * (lunch or short) — staff on break can't do any work activity until
+   * they end it, same as before starting a shift at all.
+   */
+  async checkWorkAvailability(userId: string): Promise<WorkAvailability> {
+    const shift = await this.getEffectiveActiveShift(userId);
+    if (!shift) {
+      return { available: false, reason: 'no_active_shift' };
+    }
+    if (await this.findActiveBreak(shift.id)) {
+      return { available: false, reason: 'on_break' };
+    }
+    return { available: true };
   }
 
   /** Refreshed every ~15 min by the app while a shift is active and the app is open — see HEARTBEAT_STALE_TOLERANCE_MS. */

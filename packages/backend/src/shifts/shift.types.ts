@@ -50,6 +50,9 @@ export interface ShiftStatus {
   lunchBreakRemainingMs: number | null;
 }
 
+/** See ShiftsService.checkWorkAvailability — used by ActiveShiftGuard to distinguish the two block reasons for a clearer error message. */
+export type WorkAvailability = { available: true } | { available: false; reason: 'no_active_shift' | 'on_break' };
+
 /**
  * A break within a shift — see schema.prisma's Break model doc comment
  * for why this is its own thing rather than pausing the shift, and for

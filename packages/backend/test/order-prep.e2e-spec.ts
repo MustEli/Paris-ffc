@@ -260,4 +260,27 @@ describe('Order Prep (e2e)', () => {
       .set('Authorization', `Bearer ${admin.token}`)
       .expect(200);
   });
+
+  it('blocks Staff from this controller while on any break, and restores access once it ends', async () => {
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ type: 'short' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/order-prep/tasks')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/shifts/break/end')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/order-prep/tasks')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+  });
 });
