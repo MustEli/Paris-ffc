@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useShiftLifecycle } from '../features/attendance/hooks/useShiftLifecycle';
 import { ShiftScreen } from '../features/attendance/screens/ShiftScreen';
 import { FloorTasksScreen } from '../features/floorTasks/screens/FloorTasksScreen';
+import { OpenPoolScreen } from '../features/openPool/screens/OpenPoolScreen';
 import { OrderPrepTaskDetailScreen } from '../features/orderPrep/screens/OrderPrepTaskDetailScreen';
 import { useTaskAssignmentAlerts } from '../features/putAway/hooks/useTaskAssignmentAlerts';
 import { PutAwayTaskDetailScreen } from '../features/putAway/screens/PutAwayTaskDetailScreen';
@@ -51,6 +52,7 @@ export function StaffNavigator() {
       />
       <Stack.Screen name="MyTasks" component={MyTasksScreen} options={{ title: 'My Tasks' }} />
       <Stack.Screen name="FloorTasks" component={FloorTasksScreen} options={{ title: 'Floor Tasks' }} />
+      <Stack.Screen name="OpenPool" component={OpenPoolScreen} options={{ title: 'Open Pool Tasks' }} />
       <Stack.Screen
         name="PutAwayTaskDetail"
         component={PutAwayTaskDetailScreen}

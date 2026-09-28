@@ -380,3 +380,36 @@ model FloorTaskLog {
 
   @@index([userId])
 }
+
+enum OpenPoolTaskStatus {
+  open
+  claimed
+  completed
+}
+
+/**
+ * Open Pool Tasks doc: Admin publishes a task with no specific assignee
+ * — any active staff member can claim it (first to succeed wins), at
+ * which point it locks to them. Deliberately its own model rather than
+ * a nullable-assignee variant of PutAwayTask/OrderPrepTask — those two
+ * are well-established, already-shipped systems with a lot of logic
+ * assuming an assignee always exists; retrofitting that would be a much
+ * bigger, riskier change than standing up a separate, simple model for
+ * a task type that's inherently generic (a title + description, not
+ * tied to a specific pallet or order-prep session).
+ */
+model OpenPoolTask {
+  id              String             @id @default(uuid())
+  title           String
+  description     String?
+  priority        TaskPriority       @default(normal)
+  createdByUserId String
+  claimedByUserId String?
+  status          OpenPoolTaskStatus @default(open)
+  createdAt       DateTime           @default(now())
+  claimedAt       DateTime?
+  completedAt     DateTime?
+
+  @@index([status])
+  @@index([claimedByUserId])
+}

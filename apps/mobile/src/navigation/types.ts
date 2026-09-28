@@ -44,6 +44,8 @@ export type StaffStackParamList = ReceptionStackParamList &
     MyTasks: undefined;
     /** Self-serve Pick/Pack/Return/Box Prep/Warehousing/Backup — see features/floorTasks/screens/FloorTasksScreen.tsx. */
     FloorTasks: undefined;
+    /** Open Pool Tasks — see features/openPool/screens/OpenPoolScreen.tsx. */
+    OpenPool: undefined;
   };
 
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &

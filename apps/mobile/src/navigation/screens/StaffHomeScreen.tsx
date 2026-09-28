@@ -65,6 +65,13 @@ export function StaffHomeScreen({ navigation }: Props) {
           disabledHint: lockedHint,
           onPress: () => navigation.navigate('FloorTasks'),
         },
+        {
+          label: 'Open Pool Tasks',
+          description: 'Claim an unassigned task before anyone else does.',
+          disabled: !canWork,
+          disabledHint: lockedHint,
+          onPress: () => navigation.navigate('OpenPool'),
+        },
       ]}
     />
   );

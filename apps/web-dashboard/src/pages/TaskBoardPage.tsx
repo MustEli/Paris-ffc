@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ApiError } from '../core/api/client';
+import { createOpenPoolTask, fetchAllOpenPoolTasks } from '../core/api/openPool';
 import {
   assignOrderPrep,
   assignPutAway,
@@ -185,6 +186,8 @@ export function TaskBoardPage() {
         </div>
       )}
 
+      <OpenPoolSection />
+
       {draft && (
         <div className="modal-overlay" onClick={() => !isSubmitting && setDraft(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
@@ -249,6 +252,121 @@ export function TaskBoardPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const STATUS_PILL_CLASS: Record<string, string> = {
+  open: 'pill-gray',
+  claimed: 'pill-amber',
+  completed: 'pill-green',
+};
+
+/**
+ * Open Pool Tasks doc: a task with no specific assignee — any active
+ * staff member can claim it. Deliberately separate from the drag-drop
+ * board above, since it's not "assign this pending item to that
+ * person" — it's "publish this for whoever gets there first."
+ */
+function OpenPoolSection() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: tasks, isPending, error } = useQuery({
+    queryKey: ['open-pool-tasks'],
+    queryFn: () => fetchAllOpenPoolTasks(token!),
+    enabled: !!token,
+    refetchInterval: 15_000,
+  });
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<TaskPriority>('normal');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handlePublish() {
+    if (!title.trim()) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createOpenPoolTask(token!, { title: title.trim(), description: description.trim() || undefined, priority });
+      setTitle('');
+      setDescription('');
+      setPriority('normal');
+      queryClient.invalidateQueries({ queryKey: ['open-pool-tasks'] });
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : 'Failed to publish task');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 24 }}>
+      <h2 style={{ marginTop: 0 }}>Open Pool Tasks</h2>
+      <p className="page-subtitle" style={{ marginBottom: 16 }}>
+        Publish a task for any active staff member to claim — first to tap wins, no specific assignment needed.
+      </p>
+
+      <div className="form-row">
+        <label className="form-label">Title</label>
+        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Recount aisle 4" />
+      </div>
+      <div className="form-row">
+        <label className="form-label">Description (optional)</label>
+        <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <div className="form-row">
+        <label className="form-label">Priority</label>
+        <div className="chip-row">
+          {TASK_PRIORITIES.map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`btn ${priority === p ? 'btn-primary' : 'btn-outline'}`}
+              style={priority === p ? undefined : { color: '#0f172a', borderColor: '#d1d5db' }}
+              onClick={() => setPriority(p)}
+            >
+              {PRIORITY_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+      {submitError && <p className="error-text">{submitError}</p>}
+      <button className="btn btn-accent" onClick={handlePublish} disabled={isSubmitting || !title.trim()}>
+        {isSubmitting ? 'Publishing…' : 'Publish to Open Pool'}
+      </button>
+
+      <h2 style={{ marginTop: 24 }}>Open Pool status</h2>
+      {isPending && <p>Loading…</p>}
+      {error && <p className="error-text">{error.message}</p>}
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks?.length === 0 && (
+            <tr>
+              <td colSpan={4}>No open pool tasks yet.</td>
+            </tr>
+          )}
+          {tasks?.map((t) => (
+            <tr key={t.id}>
+              <td>{t.title}</td>
+              <td>{PRIORITY_LABELS[t.priority]}</td>
+              <td>
+                <span className={`pill ${STATUS_PILL_CLASS[t.status]}`}>{t.status}</span>
+              </td>
+              <td>{new Date(t.createdAt).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
