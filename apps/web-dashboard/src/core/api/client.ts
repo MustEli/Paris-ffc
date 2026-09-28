@@ -1,3 +1,5 @@
+import { TOKEN_STORAGE_KEY, UNAUTHORIZED_EVENT, USER_STORAGE_KEY } from '../auth/storageKeys';
+
 /**
  * Mirrors apps/mobile/src/core/api/client.ts's shape (ApiError, apiRequest)
  * so the same mental model applies on both clients — this one just
@@ -47,6 +49,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       (payload && typeof payload === 'object' && 'message' in payload
         ? String((payload as { message: unknown }).message)
         : null) ?? `Request failed with status ${response.status}`;
+
+    // Only a request that WAS authenticated (had a token) counts as a
+    // session going stale — a failed login attempt also comes back 401
+    // but has no token, and that's an expected error the Login page
+    // already shows inline, not a reason to also wipe storage/redirect.
+    if (response.status === 401 && options.token) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(USER_STORAGE_KEY);
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+
     throw new ApiError(response.status, message);
   }
 

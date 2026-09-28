@@ -1,9 +1,7 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { login as apiLogin, type AuthUser } from '../api/auth';
-
-const TOKEN_STORAGE_KEY = 'elno-admin-token';
-const USER_STORAGE_KEY = 'elno-admin-user';
+import { TOKEN_STORAGE_KEY, UNAUTHORIZED_EVENT, USER_STORAGE_KEY } from './storageKeys';
 
 interface AuthContextValue {
   token: string | null;
@@ -65,6 +63,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
   }
+
+  // A stale/expired token (this dashboard persists it to localStorage —
+  // see the doc comment above) used to just leave every page showing a
+  // bare "Unauthorized" error forever. api/client.ts already clears the
+  // storage itself the moment any request comes back 401 (so a stale
+  // token can never look valid on the next reload either) and fires this
+  // event; this just needs to update React state so the app actually
+  // falls back to the login screen instead of staying stuck.
+  useEffect(() => {
+    function handleUnauthorized() {
+      logout();
+    }
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return <AuthContext.Provider value={{ token, user, status, error, login, logout }}>{children}</AuthContext.Provider>;
 }
