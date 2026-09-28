@@ -47,7 +47,13 @@ describe('Reference Lists (e2e)', () => {
       .get('/reference-lists')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
-    expect(response.body).toEqual({ transporter_company: [], packaging_type: [] });
+    expect(response.body).toEqual({
+      transporter_company: [],
+      packaging_type: [],
+      warehouse_zone: [],
+      issue_type: [],
+      color_tag: [],
+    });
   });
 
   it('lets Admin add a value, and Staff (read-only) can see it', async () => {

@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrderPrepModule } from './order-prep/order-prep.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PutAwayModule } from './put-away/put-away.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { ReferenceListsModule } from './reference-lists/reference-lists.module';
 import { ReportsModule } from './reports/reports.module';
 import { SheetsModule } from './sheets/sheets.module';
@@ -39,6 +40,7 @@ import { UsersModule } from './users/users.module';
     ReportsModule,
     ReferenceListsModule,
     TasksModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
 })

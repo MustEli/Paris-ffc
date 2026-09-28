@@ -1,7 +1,12 @@
 import { apiRequest } from './client';
 
 /** Mirrors packages/backend/src/reference-lists/reference-list.types.ts. */
-export type ReferenceListCategory = 'transporter_company' | 'packaging_type';
+export type ReferenceListCategory =
+  | 'transporter_company'
+  | 'packaging_type'
+  | 'warehouse_zone'
+  | 'issue_type'
+  | 'color_tag';
 
 export interface ReferenceListValue {
   id: string;

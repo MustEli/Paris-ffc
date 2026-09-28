@@ -41,6 +41,12 @@ enum Role {
 enum ReferenceListCategory {
   transporter_company
   packaging_type
+  /** Target locations for Putaway (e.g. "Zone A - Rack 04"). */
+  warehouse_zone
+  /** Admin-editable list of Report Issue types shown to staff. */
+  issue_type
+  /** Color tags used by Admin's multi-criteria batch assignment (e.g. Red/Blue). */
+  color_tag
 }
 
 /** One admin-managed value within a category — see ReferenceListCategory's doc comment. */

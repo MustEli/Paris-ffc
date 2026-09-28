@@ -4,9 +4,20 @@
  * nothing else. Everything in this module already works generically
  * for any category in this list.
  */
-export type ReferenceListCategory = 'transporter_company' | 'packaging_type';
+export type ReferenceListCategory =
+  | 'transporter_company'
+  | 'packaging_type'
+  | 'warehouse_zone'
+  | 'issue_type'
+  | 'color_tag';
 
-export const REFERENCE_LIST_CATEGORIES: ReferenceListCategory[] = ['transporter_company', 'packaging_type'];
+export const REFERENCE_LIST_CATEGORIES: ReferenceListCategory[] = [
+  'transporter_company',
+  'packaging_type',
+  'warehouse_zone',
+  'issue_type',
+  'color_tag',
+];
 
 export function isReferenceListCategory(value: string): value is ReferenceListCategory {
   return (REFERENCE_LIST_CATEGORIES as string[]).includes(value);
