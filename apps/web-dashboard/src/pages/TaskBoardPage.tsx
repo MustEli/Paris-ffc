@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ApiError } from '../core/api/client';
+import { createDirective, DIRECTIVE_TYPE_LABELS, DIRECTIVE_TYPES, fetchAllDirectives } from '../core/api/directives';
 import { createOpenPoolTask, fetchAllOpenPoolTasks } from '../core/api/openPool';
 import {
   assignOrderPrep,
@@ -186,6 +187,8 @@ export function TaskBoardPage() {
         </div>
       )}
 
+      <DirectivesSection onShiftStaff={onShiftStaff} />
+
       <OpenPoolSection />
 
       {draft && (
@@ -260,7 +263,131 @@ const STATUS_PILL_CLASS: Record<string, string> = {
   open: 'pill-gray',
   claimed: 'pill-amber',
   completed: 'pill-green',
+  pushed: 'pill-gray',
+  in_progress: 'pill-amber',
+  resolved: 'pill-green',
 };
+
+/**
+ * Admin to Staff doc: an urgent, real-time push to one staff member or
+ * "anyone available." Deliberately does not model a hard pause of the
+ * target's current activity — see the backend's Directive doc comment.
+ */
+function DirectivesSection({ onShiftStaff }: { onShiftStaff: OnShiftStaffMember[] }) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: directives, isPending, error } = useQuery({
+    queryKey: ['directives'],
+    queryFn: () => fetchAllDirectives(token!),
+    enabled: !!token,
+    refetchInterval: 10_000,
+  });
+
+  const [targetUserId, setTargetUserId] = useState<string>(''); // '' means "anyone available"
+  const [type, setType] = useState<(typeof DIRECTIVE_TYPES)[number]>('verify_location');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handlePush() {
+    if (!message.trim()) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createDirective(token!, { targetUserId: targetUserId || undefined, type, message: message.trim() });
+      setMessage('');
+      queryClient.invalidateQueries({ queryKey: ['directives'] });
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : 'Failed to push directive');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 24 }}>
+      <h2 style={{ marginTop: 0 }}>Admin Directives</h2>
+      <p className="page-subtitle" style={{ marginBottom: 16 }}>
+        Push an urgent demand to a specific on-shift staff member, or anyone available — they get a real-time alert with
+        sound.
+      </p>
+
+      <div className="form-row">
+        <label className="form-label">Target</label>
+        <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+          <option value="">Anyone available</option>
+          {onShiftStaff.map((s) => (
+            <option key={s.userId} value={s.userId}>
+              {s.userName}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="form-row">
+        <label className="form-label">Directive type</label>
+        <div className="chip-row">
+          {DIRECTIVE_TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`btn ${type === t ? 'btn-primary' : 'btn-outline'}`}
+              style={type === t ? undefined : { color: '#0f172a', borderColor: '#d1d5db' }}
+              onClick={() => setType(t)}
+            >
+              {DIRECTIVE_TYPE_LABELS[t]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="form-row">
+        <label className="form-label">Message</label>
+        <textarea
+          rows={2}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="e.g. Upload photo of missing item at Aisle 4B Rack 3 immediately"
+        />
+      </div>
+      {submitError && <p className="error-text">{submitError}</p>}
+      <button className="btn btn-accent" onClick={handlePush} disabled={isSubmitting || !message.trim()}>
+        {isSubmitting ? 'Sending…' : 'Send Alert to Staff'}
+      </button>
+
+      <h2 style={{ marginTop: 24 }}>Directive status</h2>
+      {isPending && <p>Loading…</p>}
+      {error && <p className="error-text">{error.message}</p>}
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Message</th>
+            <th>Target</th>
+            <th>Status</th>
+            <th>Pushed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {directives?.length === 0 && (
+            <tr>
+              <td colSpan={5}>No directives pushed yet.</td>
+            </tr>
+          )}
+          {directives?.map((d) => (
+            <tr key={d.id}>
+              <td>{DIRECTIVE_TYPE_LABELS[d.type]}</td>
+              <td>{d.message}</td>
+              <td>{d.targetUserId ? onShiftStaff.find((s) => s.userId === d.targetUserId)?.userName ?? d.targetUserId : 'Anyone'}</td>
+              <td>
+                <span className={`pill ${STATUS_PILL_CLASS[d.status]}`}>{d.status}</span>
+              </td>
+              <td>{new Date(d.pushedAt).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 /**
  * Open Pool Tasks doc: a task with no specific assignee — any active

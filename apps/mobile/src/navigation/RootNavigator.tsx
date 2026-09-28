@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 
 import { useAuthStore } from '../core/auth/authStore';
 import { useRealtimeConnection } from '../core/realtime/useRealtimeConnection';
+import { DirectiveOverlay } from '../features/directives/components/DirectiveOverlay';
 import { AdminNavigator } from './AdminNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ManagementNavigator } from './ManagementNavigator';
@@ -25,6 +26,7 @@ export function RootNavigator() {
       {user?.role === 'staff' && <StaffNavigator />}
       {user?.role === 'admin' && <AdminNavigator />}
       {user?.role === 'management' && <ManagementNavigator />}
+      <DirectiveOverlay />
     </NavigationContainer>
   );
 }

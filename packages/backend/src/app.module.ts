@@ -4,6 +4,7 @@ import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
+import { DirectivesModule } from './directives/directives.module';
 import { FloorTasksModule } from './floor-tasks/floor-tasks.module';
 import { OpenPoolModule } from './open-pool/open-pool.module';
 import { OrderPrepModule } from './order-prep/order-prep.module';
@@ -49,6 +50,7 @@ import { UsersModule } from './users/users.module';
     SchedulesModule,
     FloorTasksModule,
     OpenPoolModule,
+    DirectivesModule,
   ],
   controllers: [AppController],
 })

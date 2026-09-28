@@ -413,3 +413,46 @@ model OpenPoolTask {
   @@index([status])
   @@index([claimedByUserId])
 }
+
+enum DirectiveType {
+  photo_demand
+  clear_stalled_task
+  recount_inventory
+  verify_location
+  custom
+}
+
+enum DirectiveStatus {
+  pushed
+  in_progress
+  resolved
+}
+
+/**
+ * Admin to Staff doc: an urgent, real-time demand pushed to one staff
+ * member (targetUserId set) or "anyone available" (targetUserId null,
+ * first to acknowledge wins — same atomic-update pattern as
+ * OpenPoolTask.claim()). Deliberately does NOT model a hard pause of
+ * whatever the target is currently doing — that would mean unifying
+ * "what is this person doing right now" across three separate systems
+ * (FloorTaskLog, PutAwayTask, OrderPrepTask), a much bigger change than
+ * this pass covers. What this does deliver: an audible, real-time alert
+ * the staff member acknowledges ("I'm on it") and resolves (optionally
+ * with a photo) — pushed and resolved over Phase 0's WebSocket layer.
+ */
+model Directive {
+  id               String          @id @default(uuid())
+  targetUserId     String?
+  issuerUserId     String
+  type             DirectiveType
+  message          String
+  status           DirectiveStatus @default(pushed)
+  receivedByUserId String?
+  photoUrl         String?
+  pushedAt         DateTime        @default(now())
+  receivedAt       DateTime?
+  resolvedAt       DateTime?
+
+  @@index([targetUserId])
+  @@index([status])
+}
