@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { fetchActiveFloorTasks, FLOOR_TASK_CATEGORY_LABELS } from '../core/api/floorTasks';
 import { fetchAdminDashboard, type AdminDashboardReport } from '../core/api/reports';
 import { useAuth } from '../core/auth/AuthContext';
+
+function elapsedSince(iso: string): string {
+  const totalSeconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(minutes / 60);
+  return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+}
 
 function formatLocalTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
@@ -42,6 +50,16 @@ export function DashboardPage() {
     queryFn: () => fetchAdminDashboard(token!),
     enabled: !!token,
     refetchInterval: 30_000,
+  });
+
+  // Staff View / Integration docs: "not all items need Admin's
+  // instructions... she needs just to see who is on the task, duration
+  // since start, and declared counts so far" — read-only, no action here.
+  const { data: activeFloorTasks } = useQuery({
+    queryKey: ['floor-tasks-active'],
+    queryFn: () => fetchActiveFloorTasks(token!),
+    enabled: !!token,
+    refetchInterval: 15_000,
   });
 
   const today = new Date().toLocaleDateString(undefined, {
@@ -110,6 +128,35 @@ export function DashboardPage() {
                 <div className="stat-tile-value">{data.today.putAwayCompletedCount}</div>
               </div>
             </div>
+          </div>
+
+          <h2>Floor Tasks — Live</h2>
+          <div className="card">
+            <table>
+              <thead>
+                <tr>
+                  <th>Staff</th>
+                  <th>Task</th>
+                  <th>Started</th>
+                  <th>Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!activeFloorTasks || activeFloorTasks.length === 0) && (
+                  <tr>
+                    <td colSpan={4}>No one is on a floor task right now.</td>
+                  </tr>
+                )}
+                {activeFloorTasks?.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.userName}</td>
+                    <td>{FLOOR_TASK_CATEGORY_LABELS[t.category]}</td>
+                    <td>{formatLocalTime(t.startedAt)}</td>
+                    <td>{elapsedSince(t.startedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <h2>Staff</h2>

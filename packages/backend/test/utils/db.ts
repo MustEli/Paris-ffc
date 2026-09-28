@@ -21,6 +21,7 @@ export async function resetDatabase(): Promise<void> {
   // constraints between them (see schema.prisma's comment on why) — so
   // any order works, but deleting "leaf" data before Users keeps intent
   // readable.
+  await prisma.floorTaskLog.deleteMany();
   await prisma.orderPrepTask.deleteMany();
   await prisma.orderPrepSession.deleteMany();
   await prisma.putAwayTask.deleteMany();

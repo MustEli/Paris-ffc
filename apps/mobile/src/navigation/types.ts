@@ -42,6 +42,8 @@ export type StaffStackParamList = ReceptionStackParamList &
     Attendance: undefined;
     /** Merged Put-Away + Order-Prep list — see features/tasks/screens/MyTasksScreen.tsx. Replaces the two separate menu entries that used to link straight to PutAwayTaskList/OrderPrepTaskList. */
     MyTasks: undefined;
+    /** Self-serve Pick/Pack/Return/Box Prep/Warehousing/Backup — see features/floorTasks/screens/FloorTasksScreen.tsx. */
+    FloorTasks: undefined;
   };
 
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &

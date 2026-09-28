@@ -342,3 +342,41 @@ model OrderPrepTask {
   @@index([sessionId])
   @@index([assignedToUserId])
 }
+
+/**
+ * Staff View doc's self-serve floor tasks — deliberately separate from
+ * (not a replacement for) OrderPrepTask/PutAwayTask's admin-assigned
+ * flow: the doc explicitly frames these as "for now we trust the
+ * employees / self declaration," start/end as often as staff like, no
+ * admin assignment step at all. One category-agnostic model (same
+ * flattened-nullable-columns pattern as Reception) rather than a table
+ * per category — count/countSecondary are given category-specific
+ * meaning by the service layer (e.g. pick: picked/notFound, return:
+ * fulfillment/nonFulfillment, boxPrep: prepared/unused).
+ */
+enum FloorTaskCategory {
+  pick
+  pack
+  return_processing
+  box_prep
+  warehousing_inventory_check
+  warehousing_location_adjustment
+  backup_box
+  backup_shredder
+  backup_other
+}
+
+model FloorTaskLog {
+  id         String            @id @default(uuid())
+  userId     String
+  category   FloorTaskCategory
+  startedAt  DateTime
+  endedAt    DateTime?
+  count      Int?
+  countExtra Int?
+  zone       String?
+  comment    String?
+  photoUrls  String[]          @default([])
+
+  @@index([userId])
+}

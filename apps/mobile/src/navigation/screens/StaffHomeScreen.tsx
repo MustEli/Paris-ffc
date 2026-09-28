@@ -58,6 +58,13 @@ export function StaffHomeScreen({ navigation }: Props) {
           disabledHint: lockedHint,
           onPress: () => navigation.navigate('MyTasks'),
         },
+        {
+          label: 'Floor Tasks',
+          description: 'Pick, Pack, Return, Box Prep, Warehousing, and Backup — self-declared as you go.',
+          disabled: !canWork,
+          disabledHint: lockedHint,
+          onPress: () => navigation.navigate('FloorTasks'),
+        },
       ]}
     />
   );

@@ -1,0 +1,203 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
+import { App } from 'supertest/types';
+
+import { AppModule } from './../src/app.module';
+import { closeTestDb, resetDatabase } from './utils/db';
+
+async function loginAs(app: INestApplication<App>, email: string): Promise<{ token: string; id: string }> {
+  const response = await request(app.getHttpServer())
+    .post('/auth/login')
+    .send({ email, password: 'password123' })
+    .expect(201);
+  return { token: response.body.accessToken as string, id: response.body.user.id as string };
+}
+
+describe('Floor Tasks (e2e)', () => {
+  let app: INestApplication<App>;
+  let staff: { token: string; id: string };
+  let admin: { token: string; id: string };
+
+  beforeEach(async () => {
+    await resetDatabase();
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    await app.init();
+
+    staff = await loginAs(app, 'staff@warehousehq.dev');
+    admin = await loginAs(app, 'admin@warehousehq.dev');
+
+    await request(app.getHttpServer())
+      .post('/shifts/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  afterAll(async () => {
+    await closeTestDb();
+  });
+
+  it('runs the pick happy path: start -> end with counts', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+    expect(started.body.category).toBe('pick');
+    expect(started.body.endedAt).toBeNull();
+
+    const ended = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ count: 42, countExtra: 3 })
+      .expect(201);
+    expect(ended.body.count).toBe(42);
+    expect(ended.body.countExtra).toBe(3);
+    expect(ended.body.endedAt).not.toBeNull();
+  });
+
+  it('rejects ending a count-required category without a count', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pack' })
+      .expect(201);
+
+    return request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({})
+      .expect(400);
+  });
+
+  it('rejects ending a warehousing task without a zone', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'warehousing_inventory_check' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ count: 5 })
+      .expect(400);
+
+    const ended = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ count: 5, zone: 'Zone B - Rack 02', comment: 'All good' })
+      .expect(201);
+    expect(ended.body.zone).toBe('Zone B - Rack 02');
+  });
+
+  it('rejects ending backup_other without a comment', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'backup_other' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({})
+      .expect(400);
+
+    const ended = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ comment: 'Cleaned up aisle 4' })
+      .expect(201);
+    expect(ended.body.comment).toBe('Cleaned up aisle 4');
+  });
+
+  it('rejects starting a second floor task while one is already open', async () => {
+    await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    return request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pack' })
+      .expect(409);
+  });
+
+  it("rejects a staff member ending someone else's floor task", async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    const management = await loginAs(app, 'management@warehousehq.dev');
+    return request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${management.token}`)
+      .send({ count: 1 })
+      .expect(403);
+  });
+
+  it("lets Admin see the live active list with the staff member's name", async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    const active = await request(app.getHttpServer())
+      .get('/floor-tasks/active')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    expect(active.body).toHaveLength(1);
+    expect(active.body[0].id).toBe(started.body.id);
+    expect(active.body[0].userName).toBe('Sam Staff');
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ count: 1 })
+      .expect(201);
+
+    const afterEnd = await request(app.getHttpServer())
+      .get('/floor-tasks/active')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    expect(afterEnd.body).toHaveLength(0);
+  });
+
+  it('rejects a non-admin viewing the active list', () => {
+    return request(app.getHttpServer())
+      .get('/floor-tasks/active')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(403);
+  });
+
+  it('blocks Staff from this controller entirely without an active shift, but never blocks Admin', async () => {
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', `Bearer ${staff.token}`).expect(201);
+
+    await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .get('/floor-tasks/active')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+  });
+});
