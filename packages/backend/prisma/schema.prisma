@@ -150,7 +150,59 @@ model Shift {
    */
   lastHeartbeatAt DateTime?
 
+  /**
+   * One-shot flags set by ScheduleAlertsService's periodic check (see
+   * schedules.module.ts) so a pre-warning / completion alert fires at
+   * most once per shift, not on every tick of the scheduler.
+   */
+  paidBreakWarnedAt  DateTime?
+  lunchBreakWarnedAt DateTime?
+  hoursCompleteAt    DateTime?
+
   @@index([userId])
+}
+
+enum Weekday {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+/**
+ * Admin-configured per staff member (Admin Conf doc) — working days,
+ * shift hours, required daily hours, and scheduled break start times.
+ * Purely a target/reminder layer: it does NOT change how breaks are
+ * actually started/ended (still staff-initiated, see Break model) or
+ * enforce anything by itself — ScheduleAlertsService just uses it to
+ * fire a pre-warning before each scheduled break and a completion
+ * notice once required hours are reached, both over the RealtimeService
+ * socket layer. One row per staff member; absence of a row just means
+ * "no schedule configured yet" (no reminders fire, nothing else
+ * changes) rather than an error — matches how every other optional
+ * admin-configured feature in this app degrades.
+ */
+model StaffSchedule {
+  userId String @id
+
+  workingDays Weekday[]
+
+  /** "HH:MM", 24h, no timezone — see ScheduleAlertsService's doc comment for why this is treated as UTC, same simplification as ReportsService's "today". */
+  shiftStartTime String
+  shiftEndTime   String
+
+  requiredWorkingHours Float
+
+  /** Reminder anchor only — the paid break itself is still staff-started/stopped and stays capped at SHORT_BREAK_LIMIT_MS regardless of this time. */
+  paidBreakStartTime String?
+
+  lunchBreakStartTime       String?
+  lunchBreakDurationMinutes Int     @default(60)
+
+  updatedAt DateTime @updatedAt
 }
 
 enum BreakType {

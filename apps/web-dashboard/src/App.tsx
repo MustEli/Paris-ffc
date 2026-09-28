@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { ReceptionsPage } from './pages/ReceptionsPage';
 import { ReferenceListsPage } from './pages/ReferenceListsPage';
+import { SchedulesPage } from './pages/SchedulesPage';
 import { SellerStockPage } from './pages/SellerStockPage';
 import { TaskBoardPage } from './pages/TaskBoardPage';
 
@@ -25,6 +26,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/task-board" element={<TaskBoardPage />} />
+        <Route path="/schedules" element={<SchedulesPage />} />
         <Route path="/reference-lists" element={<ReferenceListsPage />} />
         <Route path="/receptions" element={<ReceptionsPage />} />
         <Route path="/seller-stock" element={<SellerStockPage />} />

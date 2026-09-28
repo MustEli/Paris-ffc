@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { useSocketEvent } from '../../../core/realtime/useSocketEvent';
+import { WEEKDAY_LABELS } from '../../schedule/api';
+import { useMySchedule } from '../../schedule/hooks/useMySchedule';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 
 function formatLocalTime(isoString: string): string {
@@ -95,10 +99,55 @@ export function ShiftScreen() {
 
   const shortBreakAvailable = (status?.shortBreakRemainingMs ?? 0) > 0;
 
+  const { data: schedule } = useMySchedule();
+
+  // Admin-configured reminders (Admin Conf doc) delivered over the
+  // real-time socket — purely informational, never blocks/auto-starts
+  // anything. Cleared automatically after a few seconds so it doesn't
+  // permanently occupy the screen.
+  const [scheduleAlert, setScheduleAlert] = useState<string | null>(null);
+  useEffect(() => {
+    if (!scheduleAlert) return;
+    const timeout = setTimeout(() => setScheduleAlert(null), 10_000);
+    return () => clearTimeout(timeout);
+  }, [scheduleAlert]);
+
+  useSocketEvent<{ type: 'lunch' | 'short'; scheduledAt: string }>('schedule:break_upcoming', (payload) => {
+    const label = payload.type === 'lunch' ? 'Lunch break' : 'Paid break';
+    setScheduleAlert(`${label} scheduled for ${payload.scheduledAt} — coming up soon.`);
+    Notifications.scheduleNotificationAsync({
+      content: { title: 'Break coming up', body: `${label} at ${payload.scheduledAt}`, sound: 'default' },
+      trigger: null,
+    });
+  });
+
+  useSocketEvent<{ requiredWorkingHours: number; isBeforeScheduledEnd: boolean; shiftEndTime: string }>(
+    'schedule:hours_complete',
+    (payload) => {
+      const message = payload.isBeforeScheduledEnd
+        ? `You've reached your ${payload.requiredWorkingHours}h target — your shift ends at ${payload.shiftEndTime}.`
+        : `You've reached your ${payload.requiredWorkingHours}h target for today.`;
+      setScheduleAlert(message);
+      Notifications.scheduleNotificationAsync({
+        content: { title: 'Shift hours complete', body: message, sound: 'default' },
+        trigger: null,
+      });
+    },
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.eyebrow}>Staff — {user?.name}</Text>
       <Text style={styles.title}>Shift Attendance</Text>
+
+      {schedule && (
+        <Text style={styles.scheduleInfo}>
+          Assigned shift: {schedule.shiftStartTime}–{schedule.shiftEndTime} ·{' '}
+          {schedule.workingDays.map((day) => WEEKDAY_LABELS[day]).join(', ')}
+        </Text>
+      )}
+
+      {scheduleAlert && <Text style={styles.scheduleAlert}>{scheduleAlert}</Text>}
 
       {isLoadingStatus ? (
         <ActivityIndicator style={styles.statusSpinner} />
@@ -211,6 +260,22 @@ const styles = StyleSheet.create({
   },
   statusSpinner: {
     marginBottom: 24,
+  },
+  scheduleInfo: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  scheduleAlert: {
+    fontSize: 13,
+    color: '#0f172a',
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   status: {
     fontSize: 15,

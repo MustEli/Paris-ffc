@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 
 import { useAuthStore } from '../core/auth/authStore';
+import { useRealtimeConnection } from '../core/realtime/useRealtimeConnection';
 import { AdminNavigator } from './AdminNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ManagementNavigator } from './ManagementNavigator';
@@ -14,6 +15,9 @@ import { StaffNavigator } from './StaffNavigator';
  */
 export function RootNavigator() {
   const user = useAuthStore((state) => state.user);
+  // Owns the shared real-time socket's teardown on logout — see its own
+  // doc comment for why it doesn't need to *create* the socket too.
+  useRealtimeConnection();
 
   return (
     <NavigationContainer>
