@@ -3,7 +3,7 @@ import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { useState } from 'react';
 
-import { fetchPallets, STATUS_LABELS, type SellerStockPallet } from '../core/api/sellerStock';
+import { CONDITION_FLAG_LABELS, fetchPallets, STATUS_LABELS, type SellerStockPallet } from '../core/api/sellerStock';
 import { useAuth } from '../core/auth/AuthContext';
 
 function extensionFromUrl(url: string): string {
@@ -136,6 +136,7 @@ export function SellerStockPage() {
                 <th></th>
                 <th>Pallet</th>
                 <th>Seller</th>
+                <th>Condition</th>
                 <th>Status</th>
                 <th>Photos</th>
                 <th></th>
@@ -155,6 +156,13 @@ export function SellerStockPage() {
                     </td>
                     <td>{pallet.palletIndex}</td>
                     <td>{pallet.sellerName}</td>
+                    <td>
+                      {pallet.conditionFlags.length > 0
+                        ? pallet.conditionFlags.map((f) => CONDITION_FLAG_LABELS[f]).join(', ')
+                        : pallet.condition === 'good'
+                          ? 'Good Condition'
+                          : 'Damaged'}
+                    </td>
                     <td>{STATUS_LABELS[pallet.status]}</td>
                     <td>{photoCount}</td>
                     <td>

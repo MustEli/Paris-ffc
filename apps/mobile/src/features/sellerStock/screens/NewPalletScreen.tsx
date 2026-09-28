@@ -6,7 +6,14 @@ import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScree
 import { type SellerStockStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../components/MultiPhotoCapture';
 import { useCreatePallet } from '../hooks/useSellerStock';
-import { DELIVERY_PROOF_PHOTOS_MAX, DELIVERY_PROOF_PHOTOS_MIN, OVERWEIGHT_THRESHOLD_KG, type PalletCondition } from '../types';
+import {
+  CONDITION_FLAG_LABELS,
+  CONDITION_FLAGS,
+  DELIVERY_PROOF_PHOTOS_MAX,
+  DELIVERY_PROOF_PHOTOS_MIN,
+  OVERWEIGHT_THRESHOLD_KG,
+  type PalletConditionFlag,
+} from '../types';
 
 interface Props {
   navigation: NativeStackNavigationProp<SellerStockStackParamList, 'NewPallet'>;
@@ -18,7 +25,7 @@ export function NewPalletScreen({ navigation }: Props) {
   const [boxNumber, setBoxNumber] = useState('');
   const [sellerName, setSellerName] = useState('');
   const [weightKg, setWeightKg] = useState('');
-  const [condition, setCondition] = useState<PalletCondition>('good');
+  const [conditionFlags, setConditionFlags] = useState<PalletConditionFlag[]>(['good']);
   const [damageRemarks, setDamageRemarks] = useState('');
   const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
 
@@ -26,6 +33,9 @@ export function NewPalletScreen({ navigation }: Props) {
 
   const weightValue = Number(weightKg);
   const isOverweight = !!weightKg && weightValue > OVERWEIGHT_THRESHOLD_KG;
+  // Exactly ['good'] is the only combination that skips Admin review —
+  // matches the backend's SellerStockService.create() exactly.
+  const isGoodOnly = conditionFlags.length === 1 && conditionFlags[0] === 'good';
 
   const isValid =
     labelPhotos.length >= DELIVERY_PROOF_PHOTOS_MIN &&
@@ -33,7 +43,12 @@ export function NewPalletScreen({ navigation }: Props) {
     !!sellerName &&
     !!weightKg &&
     weightValue > 0 &&
-    (condition === 'good' || (!!damageRemarks && damagePhotos.length > 0));
+    conditionFlags.length > 0 &&
+    (isGoodOnly || (!!damageRemarks && damagePhotos.length > 0));
+
+  function toggleFlag(flag: PalletConditionFlag) {
+    setConditionFlags((prev) => (prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag]));
+  }
 
   function handleSubmit() {
     submit(
@@ -42,9 +57,9 @@ export function NewPalletScreen({ navigation }: Props) {
         boxNumber,
         sellerName,
         weightKg: weightValue,
-        condition,
-        damageRemarks: condition === 'damaged' ? damageRemarks : undefined,
-        damageEvidencePhotoUrls: condition === 'damaged' ? damagePhotos : undefined,
+        conditionFlags,
+        damageRemarks: isGoodOnly ? undefined : damageRemarks,
+        damageEvidencePhotoUrls: isGoodOnly ? undefined : damagePhotos,
       },
       { onSuccess: () => navigation.navigate('SellerStockList') },
     );
@@ -77,21 +92,22 @@ export function NewPalletScreen({ navigation }: Props) {
       )}
 
       <Text style={styles.label}>Condition</Text>
+      <Text style={styles.hint}>Select every condition that applies — anything other than Good Condition alone requires remarks and photo evidence, and needs Admin review.</Text>
       <View style={styles.conditionRow}>
-        {(['good', 'damaged'] as PalletCondition[]).map((c) => (
+        {CONDITION_FLAGS.map((flag) => (
           <Pressable
-            key={c}
-            style={[styles.conditionChip, condition === c && styles.conditionChipSelected]}
-            onPress={() => setCondition(c)}
+            key={flag}
+            style={[styles.conditionChip, conditionFlags.includes(flag) && styles.conditionChipSelected]}
+            onPress={() => toggleFlag(flag)}
           >
-            <Text style={[styles.conditionText, condition === c && styles.conditionTextSelected]}>
-              {c === 'good' ? 'Good' : 'Damaged'}
+            <Text style={[styles.conditionText, conditionFlags.includes(flag) && styles.conditionTextSelected]}>
+              {CONDITION_FLAG_LABELS[flag]}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {condition === 'damaged' && (
+      {!isGoodOnly && (
         <>
           <Text style={styles.label}>Damage remarks</Text>
           <TextInput
@@ -153,6 +169,7 @@ const styles = StyleSheet.create({
   },
   conditionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   conditionChip: {

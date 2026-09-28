@@ -78,7 +78,7 @@ describe('Seller Stock (e2e)', () => {
         boxNumber: 'B-1',
         sellerName: 'Acme Parts',
         weightKg: 50,
-        condition: 'damaged',
+        conditionFlags: ['damaged'],
       })
       .expect(400);
   });
@@ -94,7 +94,7 @@ describe('Seller Stock (e2e)', () => {
         boxNumber: 'B-2',
         sellerName: 'Acme Parts',
         weightKg: 750,
-        condition: 'good',
+        conditionFlags: ['good'],
       })
       .expect(201);
 
@@ -113,7 +113,7 @@ describe('Seller Stock (e2e)', () => {
         boxNumber: 'B-3',
         sellerName: 'Acme Parts',
         weightKg: 120,
-        condition: 'good',
+        conditionFlags: ['good'],
       })
       .expect(201);
     expect(created.body.status).toBe('ready_for_putaway');
@@ -125,6 +125,88 @@ describe('Seller Stock (e2e)', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(200);
     expect(listed.body.some((p: { id: string }) => p.id === created.body.id)).toBe(true);
+  });
+
+  it('rejects a pallet flagged good + damaged together without damage remarks/evidence', async () => {
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
+    return request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-4',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        conditionFlags: ['good', 'damaged'],
+      })
+      .expect(400);
+  });
+
+  it('rejects an unknown condition flag', async () => {
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
+    return request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-4b',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        conditionFlags: ['not_a_real_flag'],
+      })
+      .expect(400);
+  });
+
+  it('lets Staff self-confirm put-away for a good-condition pallet with no Admin step, but not for a flagged one', async () => {
+    const goodLabel1 = await uploadFakePhoto(app, staffToken);
+    const goodLabel2 = await uploadFakePhoto(app, staffToken);
+    const good = await request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [goodLabel1, goodLabel2],
+        boxNumber: 'B-SELF-1',
+        sellerName: 'Acme Parts',
+        weightKg: 80,
+        conditionFlags: ['good'],
+      })
+      .expect(201);
+    expect(good.body.status).toBe('ready_for_putaway');
+
+    const putAway = await request(app.getHttpServer())
+      .post(`/seller-stock/${good.body.id}/self-putaway`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ zone: 'Zone A - Rack 04' })
+      .expect(201);
+    expect(putAway.body.status).toBe('put_away');
+    expect(putAway.body.putAwayLocation).toBe('Zone A - Rack 04');
+    expect(putAway.body.putAwayAt).not.toBeNull();
+
+    const damagedLabel1 = await uploadFakePhoto(app, staffToken);
+    const damagedLabel2 = await uploadFakePhoto(app, staffToken);
+    const damagedPhoto = await uploadFakePhoto(app, staffToken);
+    const flagged = await request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [damagedLabel1, damagedLabel2],
+        boxNumber: 'B-SELF-2',
+        sellerName: 'Acme Parts',
+        weightKg: 80,
+        conditionFlags: ['damaged'],
+        damageRemarks: 'Dented corner',
+        damageEvidencePhotoUrls: [damagedPhoto],
+      })
+      .expect(201);
+    expect(flagged.body.status).toBe('pending_admin_review');
+
+    await request(app.getHttpServer())
+      .post(`/seller-stock/${flagged.body.id}/self-putaway`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ zone: 'Zone A - Rack 04' })
+      .expect(409);
   });
 
   it('runs the damaged path with evidence photos', async () => {
@@ -140,7 +222,7 @@ describe('Seller Stock (e2e)', () => {
         boxNumber: 'B-5',
         sellerName: 'Acme Parts',
         weightKg: 200,
-        condition: 'damaged',
+        conditionFlags: ['damaged'],
         damageRemarks: 'Crushed corner, contents visible',
         damageEvidencePhotoUrls: [damagePhotoUrl],
       })
@@ -163,7 +245,7 @@ describe('Seller Stock (e2e)', () => {
         boxNumber: 'B-6',
         sellerName: 'Acme Parts',
         weightKg: 50,
-        condition: 'good',
+        conditionFlags: ['good'],
       })
       .expect(400);
   });
@@ -179,7 +261,7 @@ describe('Seller Stock (e2e)', () => {
         boxNumber: 'B-7',
         sellerName: 'Acme Parts',
         weightKg: 50,
-        condition: 'good',
+        conditionFlags: ['good'],
       })
       .expect(400);
   });

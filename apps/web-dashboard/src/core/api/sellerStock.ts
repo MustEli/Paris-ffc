@@ -2,7 +2,16 @@ import { apiRequest } from './client';
 
 /** Mirrors packages/backend/src/seller-stock/seller-stock.types.ts (and apps/mobile's copy of the same). */
 export type PalletCondition = 'good' | 'damaged';
+export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed';
 export type SellerStockStatus = 'ready_for_putaway' | 'pending_admin_review' | 'instructed' | 'put_away';
+
+export const CONDITION_FLAG_LABELS: Record<PalletConditionFlag, string> = {
+  good: 'Good Condition',
+  overweight: 'Over Weight',
+  overloaded: 'Over Loaded',
+  damaged: 'Damaged',
+  location_name_needed: 'Location Name Needed',
+};
 
 export interface SellerStockPallet {
   id: string;
@@ -12,6 +21,7 @@ export interface SellerStockPallet {
   weightKg: number;
   overweightFlag: boolean;
   condition: PalletCondition;
+  conditionFlags: PalletConditionFlag[];
   damageRemarks: string | null;
   damageEvidencePhotoUrls: string[];
   labelPhotoUrls: string[];

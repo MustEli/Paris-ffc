@@ -10,6 +10,23 @@
  */
 export type PalletCondition = 'good' | 'damaged';
 
+/**
+ * Staff's own multi-select report of what they observed on intake
+ * (Staff View doc). `condition` above stays a derived legacy value —
+ * see SellerStockService.create() — computed as 'good' only when this
+ * is exactly `['good']`, 'damaged' otherwise. Any flag other than a
+ * lone 'good' routes the pallet to Admin review, same as before.
+ */
+export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed';
+
+export const CONDITION_FLAGS: PalletConditionFlag[] = [
+  'good',
+  'overweight',
+  'overloaded',
+  'damaged',
+  'location_name_needed',
+];
+
 export type SellerStockStatus =
   | 'ready_for_putaway' // good condition, <= 700kg — normal path
   | 'pending_admin_review' // damaged and/or overweight — doc's Branch B
@@ -42,6 +59,7 @@ export interface SellerStockPallet {
   weightKg: number;
   overweightFlag: boolean;
   condition: PalletCondition;
+  conditionFlags: PalletConditionFlag[];
   damageRemarks: string | null;
   damageEvidencePhotoUrls: string[];
   labelPhotoUrls: string[];

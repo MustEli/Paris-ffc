@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { ActiveShiftGuard } from '../shifts/active-shift.guard';
 import { type PublicUser } from '../users/user.types';
 import { CreatePalletDto } from './dto/create-pallet.dto';
+import { SelfPutAwayDto } from './dto/self-put-away.dto';
 import { SellerStockService } from './seller-stock.service';
 
 /**
@@ -35,5 +36,11 @@ export class SellerStockController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.sellerStockService.findOne(id);
+  }
+
+  /** Good-condition, non-overweight pallets only — see SellerStockService.selfPutAway's doc comment. */
+  @Post(':id/self-putaway')
+  selfPutAway(@Param('id') id: string, @Body() dto: SelfPutAwayDto) {
+    return this.sellerStockService.selfPutAway(id, dto.zone);
   }
 }

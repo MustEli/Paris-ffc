@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsIn, IsNumber, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
 
-import { type PalletCondition } from '../seller-stock.types';
+import { CONDITION_FLAGS, type PalletConditionFlag } from '../seller-stock.types';
 
 export class CreatePalletDto {
   // Not @IsUrl(): POST /uploads returns a relative path ("/uploads/xyz.jpg"),
@@ -27,8 +27,11 @@ export class CreatePalletDto {
   @Type(() => Number)
   weightKg!: number;
 
-  @IsIn(['good', 'damaged'])
-  condition!: PalletCondition;
+  /** Multi-select (Staff View doc): e.g. ['good'], or ['overweight', 'damaged']. Exactly ['good'] is the only combination that skips Admin review. */
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsIn(CONDITION_FLAGS, { each: true })
+  conditionFlags!: PalletConditionFlag[];
 
   @IsOptional()
   @IsString()

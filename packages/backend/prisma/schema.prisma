@@ -259,6 +259,21 @@ model Reception {
   flaggedForReview     Boolean           @default(false)
 }
 
+/**
+ * Multi-select staff self-report of what they observed on intake
+ * (Staff View doc: "Multiple selections possible"). `condition`
+ * (single good/damaged) stays as a derived legacy column — computed
+ * from this and never removed, since it's still what needsReview/status
+ * branching reads — see SellerStockService.create().
+ */
+enum PalletConditionFlag {
+  good
+  overweight
+  overloaded
+  damaged
+  location_name_needed
+}
+
 model SellerStockPallet {
   id     String @id @default(uuid())
   /** Backs the human-readable "PLT-000001" index (was a service-level counter; now a real DB sequence). */
@@ -269,6 +284,8 @@ model SellerStockPallet {
   weightKg                Float
   overweightFlag          Boolean
   condition               PalletCondition
+  /** New multi-select capture — see this model's own doc comment. Empty for pallets logged before this field existed. */
+  conditionFlags          PalletConditionFlag[] @default([])
   damageRemarks           String?
   damageEvidencePhotoUrls String[]
   labelPhotoUrls          String[]

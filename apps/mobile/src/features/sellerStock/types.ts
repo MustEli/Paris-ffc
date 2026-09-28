@@ -1,6 +1,25 @@
 /** Mirrors packages/backend/src/seller-stock/seller-stock.types.ts. */
 export type PalletCondition = 'good' | 'damaged';
 
+/** Staff's own multi-select report — exactly ['good'] is the only combination that skips Admin review. */
+export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed';
+
+export const CONDITION_FLAGS: PalletConditionFlag[] = [
+  'good',
+  'overweight',
+  'overloaded',
+  'damaged',
+  'location_name_needed',
+];
+
+export const CONDITION_FLAG_LABELS: Record<PalletConditionFlag, string> = {
+  good: 'Good Condition',
+  overweight: 'Over Weight',
+  overloaded: 'Over Loaded',
+  damaged: 'Damaged',
+  location_name_needed: 'Location Name Needed',
+};
+
 export type SellerStockStatus = 'ready_for_putaway' | 'pending_admin_review' | 'instructed' | 'put_away';
 
 export const OVERWEIGHT_THRESHOLD_KG = 700;
@@ -20,6 +39,7 @@ export interface SellerStockPallet {
   weightKg: number;
   overweightFlag: boolean;
   condition: PalletCondition;
+  conditionFlags: PalletConditionFlag[];
   damageRemarks: string | null;
   damageEvidencePhotoUrls: string[];
   labelPhotoUrls: string[];

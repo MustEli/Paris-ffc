@@ -31,6 +31,7 @@ export class SellerStockService {
       weightKg: row.weightKg,
       overweightFlag: row.overweightFlag,
       condition: row.condition,
+      conditionFlags: row.conditionFlags,
       damageRemarks: row.damageRemarks,
       damageEvidencePhotoUrls: row.damageEvidencePhotoUrls,
       labelPhotoUrls: row.labelPhotoUrls,
@@ -43,9 +44,15 @@ export class SellerStockService {
   }
 
   async create(userId: string, dto: CreatePalletDto): Promise<SellerStockPallet> {
-    if (dto.condition === 'damaged' && (!dto.damageRemarks || !dto.damageEvidencePhotoUrls?.length)) {
+    // Exactly ['good'] is the only combination that skips review — any
+    // other flag present (even alongside 'good') routes to Admin, same
+    // as the old single-value 'damaged' condition did.
+    const isGoodOnly = dto.conditionFlags.length === 1 && dto.conditionFlags[0] === 'good';
+    const condition: 'good' | 'damaged' = isGoodOnly ? 'good' : 'damaged';
+
+    if (!isGoodOnly && (!dto.damageRemarks || !dto.damageEvidencePhotoUrls?.length)) {
       throw new BadRequestException(
-        'Damaged pallets require damageRemarks and at least one damageEvidencePhotoUrls entry',
+        'A pallet flagged as anything other than Good Condition requires damageRemarks and at least one damageEvidencePhotoUrls entry',
       );
     }
     if (dto.labelPhotoUrls.length < DELIVERY_PROOF_PHOTOS_MIN || dto.labelPhotoUrls.length > DELIVERY_PROOF_PHOTOS_MAX) {
@@ -58,7 +65,7 @@ export class SellerStockService {
     }
 
     const overweightFlag = dto.weightKg > OVERWEIGHT_THRESHOLD_KG;
-    const needsReview = dto.condition === 'damaged' || overweightFlag;
+    const needsReview = !isGoodOnly || overweightFlag;
 
     const row = await this.prisma.sellerStockPallet.create({
       data: {
@@ -67,7 +74,8 @@ export class SellerStockService {
         sellerName: dto.sellerName,
         weightKg: dto.weightKg,
         overweightFlag,
-        condition: dto.condition,
+        condition,
+        conditionFlags: dto.conditionFlags,
         damageRemarks: dto.damageRemarks ?? null,
         damageEvidencePhotoUrls: dto.damageEvidencePhotoUrls ?? [],
         labelPhotoUrls: dto.labelPhotoUrls,
@@ -119,6 +127,32 @@ export class SellerStockService {
     const row = await this.prisma.sellerStockPallet.update({
       where: { id },
       data: { status: 'put_away', putAwayAt: new Date() },
+    });
+    return this.toDomain(row);
+  }
+
+  /**
+   * Staff View / Integration docs: a pallet that reached
+   * 'ready_for_putaway' (Good Condition only, not overweight — see
+   * create()'s needsReview) never needed Admin's review to get there, so
+   * it doesn't need Admin's instruction to get put away either — staff
+   * picks their own target zone and confirms directly. Deliberately a
+   * separate, simpler path from PutAwayService's assign→start→complete
+   * flow (which stays exactly as-is for anything that DID need review):
+   * no PutAwayTask row, no per-staff task tracking, since Admin isn't
+   * meant to act on or monitor this path at all — just see the
+   * aggregate counts (Reports/Admin dashboard already do that).
+   */
+  async selfPutAway(id: string, zone: string): Promise<SellerStockPallet> {
+    const pallet = await this.findOneRow(id);
+    if (pallet.status !== 'ready_for_putaway') {
+      throw new ConflictException(
+        `Cannot self-confirm put-away for a pallet in status "${pallet.status}" — only a pallet that skipped admin review (Good Condition, not overweight) qualifies`,
+      );
+    }
+    const row = await this.prisma.sellerStockPallet.update({
+      where: { id },
+      data: { status: 'put_away', putAwayLocation: zone, putAwayAt: new Date() },
     });
     return this.toDomain(row);
   }

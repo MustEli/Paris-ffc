@@ -1,12 +1,12 @@
 import { apiRequest } from '../../core/api/client';
-import { type PalletCondition, type SellerStockPallet } from './types';
+import { type PalletConditionFlag, type SellerStockPallet } from './types';
 
 export interface CreatePalletInput {
   labelPhotoUrls: string[];
   boxNumber: string;
   sellerName: string;
   weightKg: number;
-  condition: PalletCondition;
+  conditionFlags: PalletConditionFlag[];
   damageRemarks?: string;
   damageEvidencePhotoUrls?: string[];
 }
@@ -26,4 +26,13 @@ export function getPallet(token: string, id: string) {
 
 export function createPallet(token: string, input: CreatePalletInput) {
   return apiRequest<SellerStockPallet>('/seller-stock', { method: 'POST', token, body: input });
+}
+
+/** Good-condition, non-overweight pallets only — see the backend's SellerStockService.selfPutAway doc comment. */
+export function selfPutAway(token: string, id: string, zone: string) {
+  return apiRequest<SellerStockPallet>(`/seller-stock/${id}/self-putaway`, {
+    method: 'POST',
+    token,
+    body: { zone },
+  });
 }

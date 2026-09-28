@@ -191,7 +191,7 @@ describe('Reports (e2e)', () => {
         boxNumber: 'B-1',
         sellerName: 'Acme',
         weightKg: 50,
-        condition: 'good',
+        conditionFlags: ['good'],
       })
       .expect(201);
 
@@ -291,7 +291,7 @@ describe('Reports (e2e)', () => {
         boxNumber: 'B-9',
         sellerName: 'Acme',
         weightKg: 40,
-        condition: 'good',
+        conditionFlags: ['good'],
       })
       .expect(201);
     const task = await request(app.getHttpServer())

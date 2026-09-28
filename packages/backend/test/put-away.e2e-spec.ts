@@ -34,7 +34,7 @@ async function createReadyPallet(app: INestApplication<App>, staffToken: string)
       boxNumber: 'B-100',
       sellerName: 'Acme Parts',
       weightKg: 100,
-      condition: 'good',
+      conditionFlags: ['good'],
     })
     .expect(201);
   return pallet.body.id as string;

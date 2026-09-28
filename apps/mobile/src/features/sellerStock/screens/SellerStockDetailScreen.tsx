@@ -1,12 +1,15 @@
 import { useNavigation, type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useState } from 'react';
 import { Image, ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 
+import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { useReferenceList } from '../../../core/hooks/useReferenceList';
 import { type PutAwayStackParamList, type SellerStockStackParamList } from '../../../navigation/types';
-import { usePallet } from '../hooks/useSellerStock';
-import { OVERWEIGHT_THRESHOLD_KG, STATUS_LABELS } from '../types';
+import { useSelfPutAway, usePallet } from '../hooks/useSellerStock';
+import { CONDITION_FLAG_LABELS, OVERWEIGHT_THRESHOLD_KG, STATUS_LABELS } from '../types';
 
 interface Props {
   route: RouteProp<SellerStockStackParamList, 'SellerStockDetail'>;
@@ -28,10 +31,20 @@ export function SellerStockDetailScreen({ route }: Props) {
   const { data: pallet, isPending, error } = usePallet(id);
   const navigation = useNavigation<NativeStackNavigationProp<PutAwayStackParamList>>();
 
+  const zones = useReferenceList('warehouse_zone');
+  const [selfPutAwayZone, setSelfPutAwayZone] = useState<string | null>(null);
+  const selfPutAway = useSelfPutAway(id);
+
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
   if (error || !pallet) {
     return <Text style={styles.error}>{error?.message ?? 'Not found'}</Text>;
   }
+
+  // Only a pallet that skipped Admin review (Good Condition only, not
+  // overweight) ever reaches this status — see the backend's
+  // SellerStockService.selfPutAway doc comment for why Admin isn't
+  // involved in this path at all.
+  const canSelfPutAway = role === 'staff' && pallet.status === 'ready_for_putaway';
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -50,7 +63,14 @@ export function SellerStockDetailScreen({ route }: Props) {
       {pallet.overweightFlag && (
         <Text style={styles.flag}>⚠ Overweight (over {OVERWEIGHT_THRESHOLD_KG}kg)</Text>
       )}
-      <Text style={styles.meta}>Condition: {pallet.condition === 'good' ? 'Good' : 'Damaged'}</Text>
+      <Text style={styles.meta}>
+        Condition:{' '}
+        {pallet.conditionFlags.length > 0
+          ? pallet.conditionFlags.map((f) => CONDITION_FLAG_LABELS[f]).join(', ')
+          : pallet.condition === 'good'
+            ? 'Good Condition'
+            : 'Damaged'}
+      </Text>
 
       {pallet.condition === 'damaged' && (
         <View style={styles.damageBox}>
@@ -68,6 +88,32 @@ export function SellerStockDetailScreen({ route }: Props) {
         <View style={styles.instructionsBox}>
           <Text style={styles.instructionsLabel}>Put-away location</Text>
           <Text style={styles.instructionsText}>{pallet.putAwayLocation}</Text>
+        </View>
+      )}
+
+      {canSelfPutAway && (
+        <View style={styles.selfPutAwayBox}>
+          <Text style={styles.label}>Ready for put-away — no admin instruction needed</Text>
+          <DropdownPicker
+            options={zones.data?.map((v) => v.value) ?? []}
+            value={selfPutAwayZone}
+            onChange={setSelfPutAwayZone}
+            isLoading={zones.isPending}
+            placeholder="Select target zone"
+            emptyLabel="No warehouse zones yet — ask an Admin to add some in the web dashboard."
+          />
+          {selfPutAway.error && <Text style={styles.error}>{selfPutAway.error.message}</Text>}
+          <Pressable
+            style={[styles.confirmButton, (!selfPutAwayZone || selfPutAway.isPending) && styles.buttonDisabled]}
+            disabled={!selfPutAwayZone || selfPutAway.isPending}
+            onPress={() => selfPutAwayZone && selfPutAway.mutate(selfPutAwayZone)}
+          >
+            {selfPutAway.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Confirm put-away</Text>
+            )}
+          </Pressable>
         </View>
       )}
 
@@ -169,12 +215,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1e3a8a',
   },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  selfPutAwayBox: {
+    marginTop: 28,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: '#f0fdf4',
+  },
   button: {
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 28,
+  },
+  confirmButton: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonText: {
     color: '#fff',
