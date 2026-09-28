@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { apiRequest } from '../api/client';
+import { onUnauthorized } from './authEvents';
 
 /**
  * Roles from the requirements doc (Feature 0 — Fundamentals):
@@ -61,3 +62,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => set({ status: 'idle', token: null, user: null, error: null }),
 }));
+
+// A session's JWT can go stale mid-use even though the token is
+// in-memory-only here (12h expiry — see the backend's AuthModule) — this
+// makes that behave the same as pressing Log out, instead of every
+// screen just showing a raw "Unauthorized" error forever. See
+// api/client.ts (the only place that ever calls emitUnauthorized) for
+// why a failed login attempt doesn't also trigger this.
+onUnauthorized(() => useAuthStore.getState().logout());

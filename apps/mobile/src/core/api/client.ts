@@ -1,5 +1,7 @@
 import Constants from 'expo-constants';
 
+import { emitUnauthorized } from '../auth/authEvents';
+
 const BACKEND_PORT = 3000;
 
 /**
@@ -75,6 +77,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const message = (payload && typeof payload === 'object' && 'message' in payload
       ? String((payload as { message: unknown }).message)
       : null) ?? `Request failed with status ${response.status}`;
+
+    // Only an *authenticated* request (had a token) going stale counts —
+    // a failed login attempt also comes back 401 with no token, and
+    // that's an expected error the Login screen already shows inline.
+    if (response.status === 401 && options.token) {
+      emitUnauthorized();
+    }
+
     throw new ApiError(response.status, message);
   }
 
