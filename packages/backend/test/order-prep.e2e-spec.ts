@@ -66,9 +66,9 @@ describe('Order Prep (e2e)', () => {
       .expect(201);
 
     // 350 parts / (25 parts/hr * 7hr shift) = 2 pickers.
-    // 350 parts / (20 parts/hr * 7hr shift) = 3 packers (ceil(2.5)).
+    // 350 parts / (15 parts/hr * 7hr shift) = 4 packers (ceil(3.33)).
     expect(created.body.pickersNeeded).toBe(2);
-    expect(created.body.packersNeeded).toBe(3);
+    expect(created.body.packersNeeded).toBe(4);
     expect(created.body.packingDelayMinutes).toBeGreaterThan(0);
     expect(created.body.pickingStartedAt).toBeNull();
   });

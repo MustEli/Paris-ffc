@@ -10,7 +10,8 @@
  * values from the doc itself.
  */
 export const PICKER_PARTS_PER_HOUR = 25;
-export const PACKER_PARTS_PER_HOUR = 20;
+/** Matches the customer's own stated estimate ("25 picks per hour and 15 packs per hour") — was 20, an earlier placeholder assumption from before that doc existed. */
+export const PACKER_PARTS_PER_HOUR = 15;
 
 /** Matches Feature 1's attendance shift length — "the day" the doc asks pickers/packers to be sized for. */
 export const SHIFT_HOURS = 7;

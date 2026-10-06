@@ -35,7 +35,7 @@ export function NewOrderPrepSessionScreen({ navigation }: Props) {
         placeholder="e.g. 350"
       />
       <Text style={styles.hint}>
-        Staffing is calculated from baseline throughput (25 parts/hr per picker, 20 per packer) over a
+        Staffing is calculated from baseline throughput (25 parts/hr per picker, 15 per packer) over a
         7-hour shift.
       </Text>
 

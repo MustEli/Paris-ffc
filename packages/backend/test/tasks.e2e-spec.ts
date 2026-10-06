@@ -131,7 +131,7 @@ describe('Task Board (e2e)', () => {
     const session = await request(app.getHttpServer())
       .post('/order-prep/sessions')
       .set('Authorization', `Bearer ${admin.token}`)
-      .send({ totalParts: 350 }) // 2 pickers, 3 packers needed
+      .send({ totalParts: 350 }) // 2 pickers, 4 packers needed
       .expect(201);
 
     const before = await request(app.getHttpServer())
@@ -147,7 +147,7 @@ describe('Task Board (e2e)', () => {
         i.type === 'order_prep' && i.sessionId === session.body.id && i.role === 'packer',
     );
     expect(pickerSlotsBefore).toHaveLength(2);
-    expect(packerSlotsBefore).toHaveLength(3);
+    expect(packerSlotsBefore).toHaveLength(4);
 
     await request(app.getHttpServer())
       .post(`/order-prep/sessions/${session.body.id}/tasks`)
