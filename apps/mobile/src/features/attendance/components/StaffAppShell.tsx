@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { navigationRef } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
+import { ActiveFloorTaskIndicator } from '../../floorTasks/components/ActiveFloorTaskIndicator';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 import { ShiftStatusBar } from './ShiftStatusBar';
 import { LockedGate } from '../../../core/components/LockedGate';
@@ -67,6 +68,8 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
             isBusy={isEndingBreak}
           />
         )}
+
+        {onShift && !onBreak && !isLoadingStatus && <ActiveFloorTaskIndicator />}
       </View>
     </View>
   );
