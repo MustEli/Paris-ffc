@@ -66,32 +66,28 @@ describe('Floor Tasks (e2e)', () => {
     expect(ended.body.endedAt).not.toBeNull();
   });
 
-  it('rejects ending a count-required category without a count', async () => {
+  it('ends a count-required category even with no count given — Stop must always succeed', async () => {
     const started = await request(app.getHttpServer())
       .post('/floor-tasks/start')
       .set('Authorization', `Bearer ${staff.token}`)
       .send({ category: 'pack' })
       .expect(201);
 
-    return request(app.getHttpServer())
+    const ended = await request(app.getHttpServer())
       .post(`/floor-tasks/${started.body.id}/end`)
       .set('Authorization', `Bearer ${staff.token}`)
       .send({})
-      .expect(400);
+      .expect(201);
+    expect(ended.body.count).toBeNull();
+    expect(ended.body.endedAt).not.toBeNull();
   });
 
-  it('rejects ending a warehousing task without a zone', async () => {
+  it('ends a warehousing task even with no zone given, and records one when given', async () => {
     const started = await request(app.getHttpServer())
       .post('/floor-tasks/start')
       .set('Authorization', `Bearer ${staff.token}`)
       .send({ category: 'warehousing_inventory_check' })
       .expect(201);
-
-    await request(app.getHttpServer())
-      .post(`/floor-tasks/${started.body.id}/end`)
-      .set('Authorization', `Bearer ${staff.token}`)
-      .send({ count: 5 })
-      .expect(400);
 
     const ended = await request(app.getHttpServer())
       .post(`/floor-tasks/${started.body.id}/end`)
@@ -101,18 +97,12 @@ describe('Floor Tasks (e2e)', () => {
     expect(ended.body.zone).toBe('Zone B - Rack 02');
   });
 
-  it('rejects ending backup_other without a comment', async () => {
+  it('ends backup_other even with no comment given, and records one when given', async () => {
     const started = await request(app.getHttpServer())
       .post('/floor-tasks/start')
       .set('Authorization', `Bearer ${staff.token}`)
       .send({ category: 'backup_other' })
       .expect(201);
-
-    await request(app.getHttpServer())
-      .post(`/floor-tasks/${started.body.id}/end`)
-      .set('Authorization', `Bearer ${staff.token}`)
-      .send({})
-      .expect(400);
 
     const ended = await request(app.getHttpServer())
       .post(`/floor-tasks/${started.body.id}/end`)

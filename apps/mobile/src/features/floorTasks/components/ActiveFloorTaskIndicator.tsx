@@ -35,7 +35,10 @@ export function ActiveFloorTaskIndicator() {
     return () => clearInterval(interval);
   }, [openTask, isPaused]);
 
-  if (!openTask || routeName === 'FloorTaskDetail') return null;
+  // 'FloorTasks' is included because it now renders this same task's
+  // page directly in place (see FloorTasksScreen) whenever one is open
+  // — showing the popup there would be redundant too.
+  if (!openTask || routeName === 'FloorTaskDetail' || routeName === 'FloorTasks') return null;
 
   const meta = CATEGORY_META.find((m) => m.category === openTask.category);
   const elapsedMs = now - new Date(openTask.startedAt).getTime() - openTask.totalPausedMs;

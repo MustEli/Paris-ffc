@@ -1,5 +1,5 @@
+import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { type StaffStackParamList } from '../../../navigation/types';
 import { useOrderPrepTasks } from '../../orderPrep/hooks/useOrderPrep';
 import { useMyOpenFloorTask } from '../hooks/useFloorTasks';
 import { CATEGORY_META } from '../types';
+import { FloorTaskDetailScreen } from './FloorTaskDetailScreen';
 
 interface Props {
   navigation: NativeStackNavigationProp<StaffStackParamList, 'FloorTasks'>;
@@ -36,22 +37,28 @@ export function FloorTasksScreen({ navigation }: Props) {
   const orderPrep = useOrderPrepTasks();
   const openOrderPrepTask = (orderPrep.data ?? []).find((t) => OPEN_ORDER_PREP_STATUSES.includes(t.status));
 
-  // Guarded to fire at most once per mount — this screen should only
-  // ever need to redirect once (react-query's structural sharing keeps
-  // `openTask`'s reference stable across a same-data refetch, so this
-  // guard is normally redundant, but a repeated `replace` call firing
-  // on every render is exactly the shape of a stuck-forever spinner, so
-  // it costs nothing to make that provably impossible rather than
-  // assumed impossible).
-  const hasRedirected = useRef(false);
-  useEffect(() => {
-    if (openTask && !hasRedirected.current) {
-      hasRedirected.current = true;
-      navigation.replace('FloorTaskDetail', { category: openTask.category });
-    }
-  }, [openTask, navigation]);
+  if (isPending) return <ActivityIndicator style={styles.spinner} color={colors.textSecondary} />;
 
-  if (isPending || openTask) return <ActivityIndicator style={styles.spinner} color={colors.textSecondary} />;
+  // Something's already open (started elsewhere, maybe paused) — render
+  // its page directly, in place, rather than asking React Navigation to
+  // transition to a new route for it. A `navigation.replace()` call
+  // from inside a useEffect here previously left the screen stuck on
+  // this very spinner indefinitely in some cases (never actually
+  // resolved to the detail screen) — plain React composition can't get
+  // stuck waiting on a navigation transition, because there isn't one.
+  if (openTask) {
+    const inlineRoute = {
+      key: 'floor-task-detail-inline',
+      name: 'FloorTaskDetail' as const,
+      params: { category: openTask.category },
+    } satisfies RouteProp<StaffStackParamList, 'FloorTaskDetail'>;
+    return (
+      <FloorTaskDetailScreen
+        navigation={navigation as unknown as NativeStackNavigationProp<StaffStackParamList, 'FloorTaskDetail'>}
+        route={inlineRoute}
+      />
+    );
+  }
 
   return (
     <ScrollView

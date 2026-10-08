@@ -7,19 +7,6 @@ import { type PublicUser } from '../users/user.types';
 import { type EndFloorTaskDto } from './dto/end-floor-task.dto';
 import { type ActiveFloorTask, type FloorTaskCategory, type FloorTaskLog } from './floor-task.types';
 
-/** Categories where `count` is mandatory to end the task — matches the Staff View doc's "mandatory to end task" counters. The two warehousing categories require both a count AND a zone (below). */
-const REQUIRES_COUNT: FloorTaskCategory[] = [
-  'pick',
-  'pack',
-  'return_processing',
-  'box_prep',
-  'warehousing_inventory_check',
-  'warehousing_location_adjustment',
-  'backup_box',
-  'backup_shredder',
-];
-const REQUIRES_ZONE: FloorTaskCategory[] = ['warehousing_inventory_check', 'warehousing_location_adjustment'];
-
 /**
  * Staff View doc's self-serve floor tasks — see schema.prisma's
  * FloorTaskLog and floor-task.types.ts doc comments. Deliberately
@@ -107,19 +94,17 @@ export class FloorTasksService {
     return this.toDomain(row);
   }
 
+  /**
+   * Deliberately no required-field validation — Stop must always
+   * succeed, whatever is or isn't filled in, full stop (an earlier
+   * version rejected this with 400s, which a real accidental-start
+   * couldn't actually get past; staff can always start a fresh one of
+   * the same category afterward if this one went out with incomplete
+   * data).
+   */
   async end(id: string, user: PublicUser, dto: EndFloorTaskDto): Promise<FloorTaskLog> {
     const task = await this.findOneRow(id);
     this.assertOwnedAndOpen(task, user);
-
-    if (REQUIRES_COUNT.includes(task.category) && dto.count === undefined) {
-      throw new BadRequestException(`count is required to end a "${task.category}" floor task`);
-    }
-    if (REQUIRES_ZONE.includes(task.category) && !dto.zone) {
-      throw new BadRequestException(`zone is required to end a "${task.category}" floor task`);
-    }
-    if (task.category === 'backup_other' && !dto.comment) {
-      throw new BadRequestException('comment is required to end a "backup_other" floor task');
-    }
 
     // Ending while still paused is allowed (no need to force a resume
     // first) — fold the open pause into totalPausedMs so it isn't lost.

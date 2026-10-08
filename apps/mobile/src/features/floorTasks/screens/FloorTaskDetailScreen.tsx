@@ -75,11 +75,6 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const needsComment = meta.category === 'backup_other' || meta.needsComment;
   const commentRequired = meta.category === 'backup_other';
 
-  const isValid =
-    (!meta.countLabel || count.trim() !== '') &&
-    (!meta.needsZone || zone.trim() !== '') &&
-    (!commentRequired || comment.trim() !== '');
-
   // Running (open and not paused) blocks leaving this page entirely —
   // only a Pause makes it safe to go elsewhere. Covers Home, Back, the
   // hardware/gesture back, all in one place, since all of them remove
@@ -93,6 +88,8 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     });
   }, [isRunning, navigation]);
 
+  // Stop always succeeds, whatever is or isn't filled in — no
+  // validation gate, no silent substitution of some other action.
   function handleStop() {
     const endInput = {
       count: meta.countLabel ? Number(count) : undefined,
@@ -101,21 +98,6 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
       comment: needsComment && comment.trim() ? comment.trim() : undefined,
       photoUrls: meta.needsPhotos ? photos : undefined,
     };
-
-    if (!isValid) {
-      // Nothing (or not enough) was entered — most likely an accidental
-      // start. Stop must always be pressable, so this pauses instead of
-      // failing: the record stays, restartable, until it's actually
-      // finished with the required fields filled in. Already paused?
-      // Nothing to do — just repeat why it can't finish yet.
-      const message = "This task needs its required fields before it can finish — it's paused for now, resume anytime to finish it.";
-      if (isPaused) {
-        Alert.alert('Still paused', message);
-      } else {
-        pause.mutate(undefined, { onSuccess: () => Alert.alert('Paused', message) });
-      }
-      return;
-    }
 
     Alert.alert(`Stop ${meta.label}?`, "This finishes the task — you won't be able to add more to it afterward.", [
       { text: 'Keep Going', style: 'cancel' },
@@ -320,7 +302,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryButton: {
-    flex: 1,
     backgroundColor: colors.brandOrange,
     paddingVertical: 16,
     borderRadius: 10,
@@ -329,9 +310,6 @@ const styles = StyleSheet.create({
   },
   buttonBusy: {
     opacity: 0.7,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
   },
   primaryButtonText: {
     color: '#1a1200',
