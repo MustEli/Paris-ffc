@@ -130,6 +130,45 @@ describe('Warehouse HQ backend (e2e)', () => {
     expect(row.pausedAt).toBeNull();
   });
 
+  it('starting a break pauses a still-running floor task, and is a no-op if already paused', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', auth)
+      .send({ category: 'pick' })
+      .expect(201);
+    expect(started.body.pausedAt).toBeNull();
+
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', auth)
+      .send({ type: 'short' })
+      .expect(201);
+
+    // /floor-tasks/* is gated by ActiveShiftGuard for Staff on break too
+    // (the break-lockout rule), so it's unreachable here — read the row
+    // directly instead.
+    const afterBreakStart = await rawPrisma.floorTaskLog.findUniqueOrThrow({ where: { id: started.body.id } });
+    expect(afterBreakStart.pausedAt).not.toBeNull();
+
+    // Already paused by the break starting — ending the break and
+    // taking another shouldn't try (and fail) to pause it again.
+    await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', auth)
+      .send({ type: 'lunch' })
+      .expect(201);
+    const stillPaused = await rawPrisma.floorTaskLog.findUniqueOrThrow({ where: { id: started.body.id } });
+    expect(stillPaused.pausedAt).not.toBeNull();
+  });
+
   it('lets staff take a lunch break without touching the shift, and blocks invalid transitions', async () => {
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
