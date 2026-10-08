@@ -6,7 +6,8 @@ export type ReferenceListCategory =
   | 'packaging_type'
   | 'warehouse_zone'
   | 'issue_type'
-  | 'color_tag';
+  | 'color_tag'
+  | 'seller_name';
 
 export const REFERENCE_LIST_LABELS: Record<ReferenceListCategory, string> = {
   transporter_company: 'Transporter Companies',
@@ -14,6 +15,7 @@ export const REFERENCE_LIST_LABELS: Record<ReferenceListCategory, string> = {
   warehouse_zone: 'Warehouse Zones / Racks',
   issue_type: 'Report Issue Types',
   color_tag: 'Color Tags',
+  seller_name: 'Sellers',
 };
 
 export interface ReferenceListValue {

@@ -13,6 +13,8 @@ export interface PackagingStockDetails {
   category: 'packaging_stock';
   parcelCount: number;
   packagingType: string;
+  sellerName: string;
+  invoicePhotoUrls: string[];
 }
 
 export interface SellersStockDetails {
@@ -24,6 +26,8 @@ export interface EquipmentOtherDetails {
   category: 'equipment_other';
   parcelCount: number;
   itemDescription: string;
+  photoUrls: string[];
+  invoicePhotoUrls: string[];
 }
 
 export type ReceptionDetails =

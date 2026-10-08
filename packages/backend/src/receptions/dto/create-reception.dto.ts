@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 import { type ReceptionCategory } from '../reception.types';
 
@@ -44,4 +44,18 @@ export class CreateReceptionDto {
   @IsOptional()
   @IsString()
   itemDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  sellerName?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photoUrls?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  invoicePhotoUrls?: string[];
 }

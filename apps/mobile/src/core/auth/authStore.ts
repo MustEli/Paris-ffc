@@ -17,6 +17,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
+  photoUrl: string | null;
 }
 
 interface LoginResponse {
@@ -31,6 +32,8 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Called right after a successful self-serve photo upload, so the shift-status bar updates immediately without needing a re-login. */
+  setPhotoUrl: (photoUrl: string) => void;
 }
 
 /**
@@ -61,6 +64,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => set({ status: 'idle', token: null, user: null, error: null }),
+
+  setPhotoUrl: (photoUrl) =>
+    set((state) => ({ user: state.user ? { ...state.user, photoUrl } : state.user })),
 }));
 
 // A session's JWT can go stale mid-use even though the token is

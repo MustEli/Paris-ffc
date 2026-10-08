@@ -58,6 +58,44 @@ describe('Receptions (e2e)', () => {
       .expect(400);
   });
 
+  it('requires at least one equipment photo for equipment_other, and accepts an optional invoice photo', async () => {
+    await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' }) // no photoUrls
+      .expect(400);
+
+    const created = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        category: 'equipment_other',
+        parcelCount: 1,
+        itemDescription: 'Pallet jack',
+        photoUrls: ['https://example.com/jack.jpg'],
+        invoicePhotoUrls: ['https://example.com/invoice.jpg'],
+      })
+      .expect(201);
+    expect(created.body.details.photoUrls).toEqual(['https://example.com/jack.jpg']);
+    expect(created.body.details.invoicePhotoUrls).toEqual(['https://example.com/invoice.jpg']);
+  });
+
+  it('requires sellerName for packaging_stock, and defaults invoicePhotoUrls to empty when omitted', async () => {
+    await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes' }) // no sellerName
+      .expect(400);
+
+    const created = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', sellerName: 'Acme Supplies' })
+      .expect(201);
+    expect(created.body.details.sellerName).toBe('Acme Supplies');
+    expect(created.body.details.invoicePhotoUrls).toEqual([]);
+  });
+
   it('rejects a non-admin trying to give instructions', async () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
@@ -84,7 +122,7 @@ describe('Receptions (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' })
+      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack', photoUrls: ['https://example.com/jack.jpg'] })
       .expect(201);
 
     return request(app.getHttpServer())
@@ -97,7 +135,7 @@ describe('Receptions (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 10, packagingType: 'Cardboard boxes' })
+      .send({ category: 'packaging_stock', parcelCount: 10, packagingType: 'Cardboard boxes', sellerName: 'Acme Supplies' })
       .expect(201);
     expect(created.body.status).toBe('arrived');
 
@@ -134,7 +172,7 @@ describe('Receptions (e2e)', () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes' })
+      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes', sellerName: 'Acme Supplies' })
       .expect(403);
 
     // Admin has no shift at all, ever — never gated by this.
@@ -168,12 +206,12 @@ describe('Receptions (e2e)', () => {
     const first = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 2, itemDescription: 'Shelving' })
+      .send({ category: 'equipment_other', parcelCount: 2, itemDescription: 'Shelving', photoUrls: ['https://example.com/shelving.jpg'] })
       .expect(201);
     const second = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 5, itemDescription: 'Forklift parts' })
+      .send({ category: 'equipment_other', parcelCount: 5, itemDescription: 'Forklift parts', photoUrls: ['https://example.com/forklift.jpg'] })
       .expect(201);
 
     const result = await request(app.getHttpServer())

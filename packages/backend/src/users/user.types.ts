@@ -16,6 +16,8 @@ export interface User {
   loginLimit: number | null;
   loginCount: number;
   canCreateUsers: boolean;
+  /** Self-serve selfie, taken on first shift start — see users.service.ts#setPhoto. Null until then. */
+  photoUrl: string | null;
 }
 
 /** User shape safe to send to clients — never includes passwordHash. */

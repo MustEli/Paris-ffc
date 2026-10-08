@@ -1,12 +1,18 @@
 import { NavigationContainer } from '@react-navigation/native';
 
 import { useAuthStore } from '../core/auth/authStore';
+import { useCurrentRouteStore } from '../core/navigation/currentRouteStore';
+import { navigationRef } from '../core/navigation/navigationRef';
 import { useRealtimeConnection } from '../core/realtime/useRealtimeConnection';
 import { DirectiveOverlay } from '../features/directives/components/DirectiveOverlay';
 import { AdminNavigator } from './AdminNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ManagementNavigator } from './ManagementNavigator';
 import { StaffNavigator } from './StaffNavigator';
+
+function syncCurrentRoute(): void {
+  useCurrentRouteStore.getState().setRouteName(navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name ?? null : null);
+}
 
 /**
  * Routes to a role-specific stack once actually logged in (real JWT from
@@ -21,7 +27,7 @@ export function RootNavigator() {
   useRealtimeConnection();
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={syncCurrentRoute} onStateChange={syncCurrentRoute}>
       {user === null && <AuthNavigator />}
       {user?.role === 'staff' && <StaffNavigator />}
       {user?.role === 'admin' && <AdminNavigator />}

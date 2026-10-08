@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { DirectivesModule } from './directives/directives.module';
 import { FloorTasksModule } from './floor-tasks/floor-tasks.module';
+import { IssueReportsModule } from './issue-reports/issue-reports.module';
 import { OpenPoolModule } from './open-pool/open-pool.module';
 import { OrderPrepModule } from './order-prep/order-prep.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -51,6 +52,7 @@ import { UsersModule } from './users/users.module';
     FloorTasksModule,
     OpenPoolModule,
     DirectivesModule,
+    IssueReportsModule,
   ],
   controllers: [AppController],
 })

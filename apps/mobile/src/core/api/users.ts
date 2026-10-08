@@ -6,6 +6,7 @@ export interface PublicUser {
   name: string;
   email: string;
   role: 'staff' | 'admin' | 'management';
+  photoUrl: string | null;
 }
 
 export interface CreateUserInput {
@@ -38,4 +39,9 @@ export function removeUser(token: string, id: string) {
 /** Admin only on the backend. 400 if it's the sole admin demoting themselves. */
 export function changeUserRole(token: string, id: string, role: PublicUser['role']) {
   return apiRequest<PublicUser>(`/users/${id}/role`, { method: 'POST', token, body: { role } });
+}
+
+/** Self-serve selfie capture (Staff-view redesign) — any role may set their own, always acts on the caller. */
+export function setMyPhoto(token: string, photoUrl: string) {
+  return apiRequest<PublicUser>('/users/me/photo', { method: 'PATCH', token, body: { photoUrl } });
 }

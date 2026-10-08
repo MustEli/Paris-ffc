@@ -53,6 +53,7 @@ describe('Reference Lists (e2e)', () => {
       warehouse_zone: [],
       issue_type: [],
       color_tag: [],
+      seller_name: [],
     });
   });
 

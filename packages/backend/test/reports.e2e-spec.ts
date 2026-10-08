@@ -147,7 +147,7 @@ describe('Reports (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes' })
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', sellerName: 'Acme Supplies' })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/receptions/${created.body.id}/instructions`)
@@ -269,7 +269,7 @@ describe('Reports (e2e)', () => {
     const reception = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ category: 'equipment_other', parcelCount: 3, itemDescription: 'Pallet racking' })
+      .send({ category: 'equipment_other', parcelCount: 3, itemDescription: 'Pallet racking', photoUrls: ['https://example.com/racking.jpg'] })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/receptions/${reception.body.id}/instructions`)

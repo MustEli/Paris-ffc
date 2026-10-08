@@ -73,6 +73,11 @@ export class UsersService {
     await this.prisma.user.update({ where: { id }, data: { loginCount: { increment: 1 } } });
   }
 
+  /** Self-serve selfie capture — see UsersController's PATCH /users/me/photo. Any role may set their own; there's no moderation step. */
+  async setPhoto(id: string, photoUrl: string): Promise<User> {
+    return this.prisma.user.update({ where: { id }, data: { photoUrl } });
+  }
+
   /**
    * currentUserId guards against an admin locking everyone out:
    * can't remove yourself, and can't remove the last remaining admin

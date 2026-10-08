@@ -23,6 +23,10 @@ export interface PackagingStockDetails {
   category: 'packaging_stock';
   parcelCount: number;
   packagingType: string;
+  /** Picked from the `seller_name` reference list. */
+  sellerName: string;
+  /** "If there are any" — optional, unlike equipment_other's required equipment photo. */
+  invoicePhotoUrls: string[];
 }
 
 /**
@@ -37,16 +41,13 @@ export interface SellersStockDetails {
   palletCount: number;
 }
 
-/**
- * Doc also requires "photo of what received" for this category. Photo
- * capture (expo-camera/image-picker + upload handling) is deliberately
- * deferred — same kind of scope cut as Attendance's geofencing/breaks
- * ("Future developments" in the doc). Text fields only for now.
- */
+/** Doc's "photo of what received" — photo of the equipment itself is required; an invoice photo is optional ("if there are any"). */
 export interface EquipmentOtherDetails {
   category: 'equipment_other';
   parcelCount: number;
   itemDescription: string;
+  photoUrls: string[];
+  invoicePhotoUrls: string[];
 }
 
 export type ReceptionDetails =

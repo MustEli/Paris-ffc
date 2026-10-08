@@ -26,6 +26,16 @@ export class FloorTasksController {
     return this.floorTasksService.end(id, user, dto);
   }
 
+  @Post(':id/pause')
+  pause(@Param('id') id: string, @CurrentUser() user: PublicUser) {
+    return this.floorTasksService.pause(id, user);
+  }
+
+  @Post(':id/resume')
+  resume(@Param('id') id: string, @CurrentUser() user: PublicUser) {
+    return this.floorTasksService.resume(id, user);
+  }
+
   @Get('mine')
   findMine(@CurrentUser() user: PublicUser) {
     return this.floorTasksService.findMine(user.id);

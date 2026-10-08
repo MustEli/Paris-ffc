@@ -47,6 +47,8 @@ enum ReferenceListCategory {
   issue_type
   /** Color tags used by Admin's multi-criteria batch assignment (e.g. Red/Blue). */
   color_tag
+  /** Sellers, picked from a dropdown on Packaging Stock reception (Sellers Stock still uses a free-text name — see seller-stock.types.ts). */
+  seller_name
 }
 
 /** One admin-managed value within a category — see ReferenceListCategory's doc comment. */
@@ -128,6 +130,9 @@ model User {
   loginLimit     Int?
   loginCount     Int     @default(0)
   canCreateUsers Boolean @default(true)
+
+  /** Staff-view redesign: staff take their own selfie on first shift start, shown in the persistent shift-status bar. Null until they do. */
+  photoUrl String?
 }
 
 model Shift {
@@ -252,6 +257,12 @@ model Reception {
   packagingType        String?
   palletCount          Int?
   itemDescription      String?
+  /** equipment_other's photo of the equipment itself (required for that category). */
+  photoUrls            String[]          @default([])
+  /** equipment_other and packaging_stock's optional invoice photo(s), "if there are any". */
+  invoicePhotoUrls     String[]          @default([])
+  /** packaging_stock's seller, picked from the admin-managed `seller_name` reference list. */
+  sellerName           String?
   arrivedAt            DateTime
   instructions         String?
   putAwayAt            DateTime?
@@ -377,6 +388,10 @@ model FloorTaskLog {
   zone       String?
   comment    String?
   photoUrls  String[]          @default([])
+  /** Set while paused (e.g. pulled away for ad-hoc work mid-task), null otherwise — see FloorTasksService.pause/resume. */
+  pausedAt     DateTime?
+  /** Cumulative paused time across every pause/resume cycle this task has had, so a duration computed from startedAt/endedAt can subtract it back out. */
+  totalPausedMs Int              @default(0)
 
   @@index([userId])
 }
@@ -455,4 +470,44 @@ model Directive {
 
   @@index([targetUserId])
   @@index([status])
+}
+
+enum IssueReportCategory {
+  non_traceable_return_parcel
+  non_fulfillment_return_parcel
+  no_return_request_generated
+  shipment_label_not_generatable
+  item_found_out_of_location
+  empty_crate
+  part_broken_in_location
+  heavy_crate
+  other
+}
+
+/**
+ * Staff-view redesign's "Issue Reporting" main-menu entry — one-tap
+ * floor-blocker capture, each category with its own fixed set of
+ * fields (see issue-report.types.ts for which fields apply to which
+ * category — same "flattened nullable columns" pattern as Reception
+ * and FloorTaskLog, rather than 9 near-identical tables). `alertsAdmin`
+ * is computed and stored at creation time (not derived from category
+ * on every read) so a later change to which categories alert never
+ * rewrites the meaning of historical rows.
+ */
+model IssueReport {
+  id          String              @id @default(uuid())
+  userId      String
+  category    IssueReportCategory
+  photoUrls   String[]            @default([])
+  trackingId  String?
+  orderNumber String?
+  errorNo     String?
+  idNumber    String?
+  locationId  String?
+  comment     String?
+  alertsAdmin Boolean
+  createdAt   DateTime            @default(now())
+
+  @@index([userId])
+  @@index([alertsAdmin])
 }

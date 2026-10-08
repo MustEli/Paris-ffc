@@ -47,7 +47,7 @@ export class ReceptionsService {
       case 'return_parcels':
         return `${details.parcelCount} parcel(s) via ${details.transporterCompany}`;
       case 'packaging_stock':
-        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType}`;
+        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType} — seller: ${details.sellerName}`;
       case 'sellers_stock':
         return `${details.palletCount} pallet(s)`;
       case 'equipment_other':
@@ -64,10 +64,16 @@ export class ReceptionsService {
         return { category: 'return_parcels', parcelCount: dto.parcelCount, transporterCompany: dto.transporterCompany };
 
       case 'packaging_stock':
-        if (!dto.parcelCount || !dto.packagingType) {
-          throw new BadRequestException('packaging_stock requires parcelCount and packagingType');
+        if (!dto.parcelCount || !dto.packagingType || !dto.sellerName) {
+          throw new BadRequestException('packaging_stock requires parcelCount, packagingType, and sellerName');
         }
-        return { category: 'packaging_stock', parcelCount: dto.parcelCount, packagingType: dto.packagingType };
+        return {
+          category: 'packaging_stock',
+          parcelCount: dto.parcelCount,
+          packagingType: dto.packagingType,
+          sellerName: dto.sellerName,
+          invoicePhotoUrls: dto.invoicePhotoUrls ?? [],
+        };
 
       case 'sellers_stock':
         if (!dto.palletCount) {
@@ -76,47 +82,51 @@ export class ReceptionsService {
         return { category: 'sellers_stock', palletCount: dto.palletCount };
 
       case 'equipment_other':
-        if (!dto.parcelCount || !dto.itemDescription) {
-          throw new BadRequestException('equipment_other requires parcelCount and itemDescription');
+        if (!dto.parcelCount || !dto.itemDescription || !dto.photoUrls?.length) {
+          throw new BadRequestException('equipment_other requires parcelCount, itemDescription, and at least one photo');
         }
-        return { category: 'equipment_other', parcelCount: dto.parcelCount, itemDescription: dto.itemDescription };
+        return {
+          category: 'equipment_other',
+          parcelCount: dto.parcelCount,
+          itemDescription: dto.itemDescription,
+          photoUrls: dto.photoUrls,
+          invoicePhotoUrls: dto.invoicePhotoUrls ?? [],
+        };
     }
   }
 
   /** The inverse of toDomain's details reconstruction — only the columns matching `category` are populated. */
   private buildDetailsColumns(details: ReceptionDetails) {
+    const empty = {
+      parcelCount: null,
+      transporterCompany: null,
+      packagingType: null,
+      palletCount: null,
+      itemDescription: null,
+      photoUrls: [] as string[],
+      invoicePhotoUrls: [] as string[],
+      sellerName: null,
+    };
     switch (details.category) {
       case 'return_parcels':
-        return {
-          parcelCount: details.parcelCount,
-          transporterCompany: details.transporterCompany,
-          packagingType: null,
-          palletCount: null,
-          itemDescription: null,
-        };
+        return { ...empty, parcelCount: details.parcelCount, transporterCompany: details.transporterCompany };
       case 'packaging_stock':
         return {
+          ...empty,
           parcelCount: details.parcelCount,
           packagingType: details.packagingType,
-          transporterCompany: null,
-          palletCount: null,
-          itemDescription: null,
+          sellerName: details.sellerName,
+          invoicePhotoUrls: details.invoicePhotoUrls,
         };
       case 'sellers_stock':
-        return {
-          palletCount: details.palletCount,
-          parcelCount: null,
-          transporterCompany: null,
-          packagingType: null,
-          itemDescription: null,
-        };
+        return { ...empty, palletCount: details.palletCount };
       case 'equipment_other':
         return {
+          ...empty,
           parcelCount: details.parcelCount,
           itemDescription: details.itemDescription,
-          transporterCompany: null,
-          packagingType: null,
-          palletCount: null,
+          photoUrls: details.photoUrls,
+          invoicePhotoUrls: details.invoicePhotoUrls,
         };
     }
   }
@@ -128,13 +138,26 @@ export class ReceptionsService {
         details = { category: 'return_parcels', parcelCount: row.parcelCount!, transporterCompany: row.transporterCompany! };
         break;
       case 'packaging_stock':
-        details = { category: 'packaging_stock', parcelCount: row.parcelCount!, packagingType: row.packagingType! };
+        details = {
+          category: 'packaging_stock',
+          parcelCount: row.parcelCount!,
+          packagingType: row.packagingType!,
+          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
+          sellerName: row.sellerName ?? '(not recorded)',
+          invoicePhotoUrls: row.invoicePhotoUrls,
+        };
         break;
       case 'sellers_stock':
         details = { category: 'sellers_stock', palletCount: row.palletCount! };
         break;
       case 'equipment_other':
-        details = { category: 'equipment_other', parcelCount: row.parcelCount!, itemDescription: row.itemDescription! };
+        details = {
+          category: 'equipment_other',
+          parcelCount: row.parcelCount!,
+          itemDescription: row.itemDescription!,
+          photoUrls: row.photoUrls,
+          invoicePhotoUrls: row.invoicePhotoUrls,
+        };
         break;
     }
     return {

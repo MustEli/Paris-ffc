@@ -4,8 +4,9 @@
  * types without importing a specific navigator).
  */
 export type ReceptionStackParamList = {
-  ReceptionList: undefined;
-  NewDelivery: undefined;
+  /** `categoryFilter` scopes the list (and its "+ New Delivery" button) to one of Reception's 4 categories — set when arriving from the new Reception menu's boxes. Omitted shows everything (unused now that each category has its own box, kept for flexibility). */
+  ReceptionList: { categoryFilter?: import('../features/reception/types').ReceptionCategory } | undefined;
+  NewDelivery: { presetCategory?: import('../features/reception/types').ReceptionCategory } | undefined;
   ReceptionDetail: { id: string };
 };
 
@@ -38,14 +39,23 @@ export type StaffStackParamList = ReceptionStackParamList &
   SellerStockStackParamList &
   Omit<PutAwayStackParamList, 'AssignTask' | 'PutAwayTaskList'> &
   Omit<OrderPrepStackParamList, 'OrderPrepSessionList' | 'NewOrderPrepSession' | 'OrderPrepSessionDetail'> & {
+    /** Main menu — 4 boxes (Reception, Floor Tasks, Open Pool Tasks, Issue Reporting). The one screen the Home icon is hidden on. */
     StaffHome: undefined;
-    Attendance: undefined;
-    /** Merged Put-Away + Order-Prep list — see features/tasks/screens/MyTasksScreen.tsx. Replaces the two separate menu entries that used to link straight to PutAwayTaskList/OrderPrepTaskList. */
-    MyTasks: undefined;
-    /** Self-serve Pick/Pack/Return/Box Prep/Warehousing/Backup — see features/floorTasks/screens/FloorTasksScreen.tsx. */
+    /** Once-ever selfie capture, triggered right after the first-ever Start Shift — see StaffAppShell. */
+    SelfieCapture: undefined;
+    /** Reception's 4-category split — see features/reception/screens/ReceptionMenuScreen.tsx. */
+    ReceptionMenu: undefined;
+    /** Self-serve Pick/Pack/Return/Warehousing/Backup, plus the Putaway and assigned-Order-Prep entry points — see features/floorTasks/screens/FloorTasksScreen.tsx. */
     FloorTasks: undefined;
+    /** Preview for one category before it's actually started — see features/floorTasks/screens/FloorTaskDetailScreen.tsx. Nothing is created on the backend until its Start button is pressed. */
+    FloorTaskDetail: { category: import('../features/floorTasks/types').FloorTaskCategory };
+    /** Unifies Admin-assigned Put-Away Tasks with self-serve ready pallets — see features/putAway/screens/PutawayUnifiedScreen.tsx. */
+    PutawayUnified: undefined;
     /** Open Pool Tasks — see features/openPool/screens/OpenPoolScreen.tsx. */
     OpenPool: undefined;
+    /** Issue Reporting's 9-category list — see features/issueReports/screens/IssueReportingMenuScreen.tsx. */
+    IssueReportingMenu: undefined;
+    IssueReportForm: { category: import('../features/issueReports/types').IssueReportCategory };
   };
 
 export type AdminStackParamList = Omit<ReceptionStackParamList, 'NewDelivery'> &

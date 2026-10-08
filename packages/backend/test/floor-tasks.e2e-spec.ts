@@ -122,6 +122,86 @@ describe('Floor Tasks (e2e)', () => {
     expect(ended.body.comment).toBe('Cleaned up aisle 4');
   });
 
+  it('pauses and resumes an open task, accumulating totalPausedMs', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+    expect(started.body.pausedAt).toBeNull();
+    expect(started.body.totalPausedMs).toBe(0);
+
+    const paused = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/pause`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+    expect(paused.body.pausedAt).not.toBeNull();
+
+    const resumed = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/resume`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+    expect(resumed.body.pausedAt).toBeNull();
+    expect(resumed.body.totalPausedMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('rejects pausing an already-paused task, and resuming one that is not paused', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/resume`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/pause`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    return request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/pause`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(409);
+  });
+
+  it("rejects pausing someone else's open floor task", async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    const management = await loginAs(app, 'management@warehousehq.dev');
+    return request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/pause`)
+      .set('Authorization', `Bearer ${management.token}`)
+      .expect(403);
+  });
+
+  it('allows ending a task while still paused, folding the open pause into totalPausedMs', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/pause`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const ended = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ count: 3 })
+      .expect(201);
+    expect(ended.body.pausedAt).toBeNull();
+    expect(ended.body.totalPausedMs).toBeGreaterThanOrEqual(0);
+  });
+
   it('rejects starting a second floor task while one is already open', async () => {
     await request(app.getHttpServer())
       .post('/floor-tasks/start')
@@ -134,6 +214,14 @@ describe('Floor Tasks (e2e)', () => {
       .set('Authorization', `Bearer ${staff.token}`)
       .send({ category: 'pack' })
       .expect(409);
+  });
+
+  it('rejects starting a floor task with the merged-away "box_prep" category', () => {
+    return request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'box_prep' })
+      .expect(400);
   });
 
   it("rejects a staff member ending someone else's floor task", async () => {

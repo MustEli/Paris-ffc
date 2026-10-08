@@ -1,7 +1,8 @@
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { type ReceptionStackParamList } from '../../../navigation/types';
@@ -45,6 +46,29 @@ export function ReceptionDetailScreen({ route }: Props) {
       <Text style={styles.summary}>{summarizeDetails(reception)}</Text>
       <Text style={styles.status}>{STATUS_LABELS[reception.status]}</Text>
       <Text style={styles.meta}>Arrived: {new Date(reception.arrivedAt).toLocaleString()}</Text>
+
+      {reception.details.category === 'equipment_other' && reception.details.photoUrls.length > 0 && (
+        <View style={styles.photoBlock}>
+          <Text style={styles.label}>Equipment photo(s)</Text>
+          <View style={styles.photoRow}>
+            {reception.details.photoUrls.map((url) => (
+              <Image key={url} source={{ uri: resolvePhotoUrl(url) }} style={styles.photo} />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {(reception.details.category === 'equipment_other' || reception.details.category === 'packaging_stock') &&
+        reception.details.invoicePhotoUrls.length > 0 && (
+          <View style={styles.photoBlock}>
+            <Text style={styles.label}>Invoice photo(s)</Text>
+            <View style={styles.photoRow}>
+              {reception.details.invoicePhotoUrls.map((url) => (
+                <Image key={url} source={{ uri: resolvePhotoUrl(url) }} style={styles.photo} />
+              ))}
+            </View>
+          </View>
+        )}
 
       {reception.instructions && (
         <View style={styles.instructionsBox}>
@@ -145,6 +169,21 @@ const styles = StyleSheet.create({
     color: '#b45309',
     marginTop: 8,
     fontWeight: '600',
+  },
+  photoBlock: {
+    marginTop: 16,
+  },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  photo: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
   },
   instructionsBox: {
     marginTop: 20,

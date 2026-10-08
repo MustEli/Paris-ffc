@@ -1,6 +1,9 @@
+import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { colors } from '../../../core/theme/colors';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useReceptions } from '../hooks/useReceptions';
@@ -9,6 +12,7 @@ import { STATUS_LABELS, summarizeDetails } from '../utils';
 
 interface Props {
   navigation: NativeStackNavigationProp<ReceptionStackParamList, 'ReceptionList'>;
+  route: RouteProp<ReceptionStackParamList, 'ReceptionList'>;
 }
 
 function statusColor(status: Reception['status']): string {
@@ -18,24 +22,34 @@ function statusColor(status: Reception['status']): string {
     case 'ready_for_putaway':
       return '#2563eb';
     case 'completed':
-      return '#16a34a';
+      return colors.success;
   }
 }
 
-/** Doc: "Admin ... view a real-time log of what is received." Staff sees the same log, plus a way to log new deliveries. */
-export function ReceptionListScreen({ navigation }: Props) {
+/** Doc: "Admin ... view a real-time log of what is received." Staff sees the same log, plus a way to log new deliveries — optionally scoped to one category via the Reception menu's boxes. */
+export function ReceptionListScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
   const role = useAuthStore((state) => state.user?.role);
-  const { data: receptions, isPending, error, refetch, isRefetching } = useReceptions();
+  const categoryFilter = route.params?.categoryFilter;
+  const { data: allReceptions, isPending, error, refetch, isRefetching } = useReceptions();
+  const receptions = categoryFilter
+    ? allReceptions?.filter((r) => r.details.category === categoryFilter)
+    : allReceptions;
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>{categoryFilter ? CATEGORY_LABELS[categoryFilter] : 'Reception'}</Text>
+
       {role === 'staff' && (
-        <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewDelivery')}>
+        <Pressable
+          style={styles.newButton}
+          onPress={() => navigation.navigate('NewDelivery', { presetCategory: categoryFilter })}
+        >
           <Text style={styles.newButtonText}>+ New Delivery</Text>
         </Pressable>
       )}
 
-      {isPending && <ActivityIndicator style={styles.spinner} />}
+      {isPending && <ActivityIndicator style={styles.spinner} color={colors.textSecondary} />}
       {error && <Text style={styles.error}>{error.message}</Text>}
 
       <FlatList
@@ -43,13 +57,10 @@ export function ReceptionListScreen({ navigation }: Props) {
         keyExtractor={(item) => item.id}
         onRefresh={refetch}
         refreshing={isRefetching}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={!isPending ? <Text style={styles.empty}>No receptions logged yet.</Text> : null}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
+        ListEmptyComponent={!isPending ? <Text style={styles.empty}>No deliveries logged yet.</Text> : null}
         renderItem={({ item }) => (
-          <Pressable
-            style={styles.row}
-            onPress={() => navigation.navigate('ReceptionDetail', { id: item.id })}
-          >
+          <Pressable style={styles.row} onPress={() => navigation.navigate('ReceptionDetail', { id: item.id })}>
             <View style={styles.rowHeader}>
               <Text style={styles.category}>{CATEGORY_LABELS[item.details.category]}</Text>
               <View style={[styles.statusPill, { backgroundColor: statusColor(item.status) }]}>
@@ -68,30 +79,37 @@ export function ReceptionListScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   newButton: {
     margin: 16,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.brandOrange,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
   },
   newButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: '#1a1200',
+    fontWeight: '700',
   },
   spinner: {
     marginTop: 24,
   },
   error: {
-    color: '#dc2626',
+    color: colors.alert,
     textAlign: 'center',
     marginTop: 16,
   },
   empty: {
     textAlign: 'center',
-    color: '#9ca3af',
+    color: colors.textMuted,
     marginTop: 40,
   },
   list: {
@@ -101,9 +119,10 @@ const styles = StyleSheet.create({
   },
   row: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
+    backgroundColor: colors.surface,
   },
   rowHeader: {
     flexDirection: 'row',
@@ -114,7 +133,7 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.textPrimary,
   },
   statusPill: {
     paddingHorizontal: 10,
@@ -128,11 +147,11 @@ const styles = StyleSheet.create({
   },
   summary: {
     fontSize: 13,
-    color: '#4b5563',
+    color: colors.textSecondary,
   },
   flag: {
     fontSize: 12,
-    color: '#b45309',
+    color: '#f59e0b',
     marginTop: 6,
   },
 });

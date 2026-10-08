@@ -7,7 +7,7 @@ export function summarizeDetails(reception: Reception): string {
     case 'return_parcels':
       return `${details.parcelCount} parcel(s) from ${details.transporterCompany}`;
     case 'packaging_stock':
-      return `${details.parcelCount} parcel(s) — ${details.packagingType}`;
+      return `${details.parcelCount} parcel(s) — ${details.packagingType} — seller: ${details.sellerName}`;
     case 'sellers_stock':
       return `${details.palletCount} pallet(s)`;
     case 'equipment_other':

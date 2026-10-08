@@ -13,6 +13,8 @@ export interface PackagingStockDetails {
   category: 'packaging_stock';
   parcelCount: number;
   packagingType: string;
+  sellerName: string;
+  invoicePhotoUrls: string[];
 }
 export interface SellersStockDetails {
   category: 'sellers_stock';
@@ -22,6 +24,8 @@ export interface EquipmentOtherDetails {
   category: 'equipment_other';
   parcelCount: number;
   itemDescription: string;
+  photoUrls: string[];
+  invoicePhotoUrls: string[];
 }
 export type ReceptionDetails = ReturnParcelsDetails | PackagingStockDetails | SellersStockDetails | EquipmentOtherDetails;
 
@@ -56,7 +60,7 @@ export function summarizeDetails(reception: Reception): string {
     case 'return_parcels':
       return `${details.parcelCount} parcel(s) from ${details.transporterCompany}`;
     case 'packaging_stock':
-      return `${details.parcelCount} parcel(s) — ${details.packagingType}`;
+      return `${details.parcelCount} parcel(s) — ${details.packagingType} — seller: ${details.sellerName}`;
     case 'sellers_stock':
       return `${details.palletCount} pallet(s)`;
     case 'equipment_other':

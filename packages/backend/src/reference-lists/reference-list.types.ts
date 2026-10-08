@@ -9,7 +9,8 @@ export type ReferenceListCategory =
   | 'packaging_type'
   | 'warehouse_zone'
   | 'issue_type'
-  | 'color_tag';
+  | 'color_tag'
+  | 'seller_name';
 
 export const REFERENCE_LIST_CATEGORIES: ReferenceListCategory[] = [
   'transporter_company',
@@ -17,6 +18,7 @@ export const REFERENCE_LIST_CATEGORIES: ReferenceListCategory[] = [
   'warehouse_zone',
   'issue_type',
   'color_tag',
+  'seller_name',
 ];
 
 export function isReferenceListCategory(value: string): value is ReferenceListCategory {

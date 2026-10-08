@@ -8,6 +8,9 @@ export interface CreateReceptionInput {
   transporterCompany?: string;
   packagingType?: string;
   itemDescription?: string;
+  sellerName?: string;
+  photoUrls?: string[];
+  invoicePhotoUrls?: string[];
 }
 
 export function listReceptions(token: string) {

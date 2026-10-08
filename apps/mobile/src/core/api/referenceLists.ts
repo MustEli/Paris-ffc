@@ -6,7 +6,8 @@ export type ReferenceListCategory =
   | 'packaging_type'
   | 'warehouse_zone'
   | 'issue_type'
-  | 'color_tag';
+  | 'color_tag'
+  | 'seller_name';
 
 export interface ReferenceListValue {
   id: string;

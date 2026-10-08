@@ -43,10 +43,18 @@ export class FloorTasksService {
       zone: row.zone,
       comment: row.comment,
       photoUrls: row.photoUrls,
+      pausedAt: row.pausedAt ? row.pausedAt.toISOString() : null,
+      totalPausedMs: row.totalPausedMs,
     };
   }
 
   async start(userId: string, category: FloorTaskCategory): Promise<FloorTaskLog> {
+    // 'box_prep' was merged into 'backup_box' (see floor-task.types.ts) —
+    // kept in the type/enum for historical rows, but no new one may be
+    // created under it even if an old client still sends it.
+    if (category === 'box_prep') {
+      throw new BadRequestException('"box_prep" has been merged into "backup_box" — use that category instead');
+    }
     const existingOpen = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null } });
     if (existingOpen) {
       throw new ConflictException('Already have an open floor task — end it before starting another');
@@ -65,14 +73,43 @@ export class FloorTasksService {
     return row;
   }
 
-  async end(id: string, user: PublicUser, dto: EndFloorTaskDto): Promise<FloorTaskLog> {
-    const task = await this.findOneRow(id);
+  private assertOwnedAndOpen(task: PrismaFloorTaskLog, user: PublicUser): void {
     if (task.userId !== user.id) {
       throw new ForbiddenException('This floor task is not yours');
     }
     if (task.endedAt) {
       throw new ConflictException('This floor task has already ended');
     }
+  }
+
+  /** Pulled away for ad-hoc work mid-task — pausing (not ending) keeps duration reporting honest, see totalPausedMs. */
+  async pause(id: string, user: PublicUser): Promise<FloorTaskLog> {
+    const task = await this.findOneRow(id);
+    this.assertOwnedAndOpen(task, user);
+    if (task.pausedAt) {
+      throw new ConflictException('This floor task is already paused');
+    }
+    const row = await this.prisma.floorTaskLog.update({ where: { id }, data: { pausedAt: new Date() } });
+    return this.toDomain(row);
+  }
+
+  async resume(id: string, user: PublicUser): Promise<FloorTaskLog> {
+    const task = await this.findOneRow(id);
+    this.assertOwnedAndOpen(task, user);
+    if (!task.pausedAt) {
+      throw new ConflictException('This floor task is not paused');
+    }
+    const pausedMs = Date.now() - task.pausedAt.getTime();
+    const row = await this.prisma.floorTaskLog.update({
+      where: { id },
+      data: { pausedAt: null, totalPausedMs: { increment: pausedMs } },
+    });
+    return this.toDomain(row);
+  }
+
+  async end(id: string, user: PublicUser, dto: EndFloorTaskDto): Promise<FloorTaskLog> {
+    const task = await this.findOneRow(id);
+    this.assertOwnedAndOpen(task, user);
 
     if (REQUIRES_COUNT.includes(task.category) && dto.count === undefined) {
       throw new BadRequestException(`count is required to end a "${task.category}" floor task`);
@@ -84,6 +121,10 @@ export class FloorTasksService {
       throw new BadRequestException('comment is required to end a "backup_other" floor task');
     }
 
+    // Ending while still paused is allowed (no need to force a resume
+    // first) — fold the open pause into totalPausedMs so it isn't lost.
+    const stillOpenPauseMs = task.pausedAt ? Date.now() - task.pausedAt.getTime() : 0;
+
     const row = await this.prisma.floorTaskLog.update({
       where: { id },
       data: {
@@ -93,6 +134,8 @@ export class FloorTasksService {
         zone: dto.zone ?? null,
         comment: dto.comment ?? null,
         photoUrls: dto.photoUrls ?? [],
+        pausedAt: null,
+        totalPausedMs: { increment: stillOpenPauseMs },
       },
     });
     return this.toDomain(row);

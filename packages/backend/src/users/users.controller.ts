@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,6 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ChangeRoleDto } from './dto/change-role.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { SetPhotoDto } from './dto/set-photo.dto';
 import { toPublicUser, type PublicUser, type Role } from './user.types';
 import { UsersService } from './users.service';
 
@@ -22,6 +23,18 @@ import { UsersService } from './users.service';
 @Roles('admin', 'management')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  /**
+   * Self-serve selfie capture (Staff-view redesign) — overrides the
+   * class-level @Roles('admin', 'management') since every role may set
+   * their own photo. Always acts on the caller, never :id, so there's
+   * no need for an ownership check.
+   */
+  @Patch('me/photo')
+  @Roles('admin', 'management', 'staff')
+  async setMyPhoto(@Body() dto: SetPhotoDto, @CurrentUser() user: PublicUser) {
+    return toPublicUser(await this.usersService.setPhoto(user.id, dto.photoUrl));
+  }
 
   @Get()
   async findAll(@Query('role') role?: Role) {

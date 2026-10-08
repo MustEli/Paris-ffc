@@ -1,4 +1,9 @@
-/** Mirrors packages/backend/src/floor-tasks/floor-task.types.ts. */
+/**
+ * Mirrors packages/backend/src/floor-tasks/floor-task.types.ts.
+ * 'box_prep' stays in the type (historical rows may use it) but is
+ * excluded from CATEGORY_META below — merged into 'backup_box' in the
+ * Staff-view redesign (see the backend's doc comment).
+ */
 export type FloorTaskCategory =
   | 'pick'
   | 'pack'
@@ -23,6 +28,8 @@ export interface FloorTaskLog {
   zone: string | null;
   comment: string | null;
   photoUrls: string[];
+  pausedAt: string | null;
+  totalPausedMs: number;
 }
 
 export interface CategoryMeta {
@@ -33,17 +40,24 @@ export interface CategoryMeta {
   needsZone?: boolean;
   needsComment?: boolean;
   needsPhotos?: boolean;
+  /** A visibly stronger divider below this row — see the Staff-view redesign's Floor Tasks clustering: [Pick,Pack] / [Return] / [Inventory,Location] / [Backup x3]. */
+  strongDividerBelow?: boolean;
 }
 
-/** Order and grouping matches the Staff View doc's Floor Tasks Module. */
+/**
+ * Staff-view redesign's Floor Tasks clustering (box_prep excluded —
+ * merged into backup_box, see FloorTaskCategory's doc comment above).
+ * 'Putaway' and 'Open Pool Tasks' are NOT in this list — they're plain
+ * navigation rows handled directly in FloorTasksMenuScreen, not real
+ * FloorTaskCategory values.
+ */
 export const CATEGORY_META: CategoryMeta[] = [
   { category: 'pick', label: 'Pick', countLabel: '# Picked', countExtraLabel: '# Not Found' },
-  { category: 'pack', label: 'Pack', countLabel: '# Packed' },
-  { category: 'return_processing', label: 'Return', countLabel: '# Non-Fulfillment', countExtraLabel: '# Fulfillment' },
-  { category: 'box_prep', label: 'Box Prep', countLabel: '# Prepared' },
+  { category: 'pack', label: 'Pack', countLabel: '# Packed', strongDividerBelow: true },
+  { category: 'return_processing', label: 'Return Processing', countLabel: '# Non-Fulfillment', countExtraLabel: '# Fulfillment', strongDividerBelow: true },
   {
     category: 'warehousing_inventory_check',
-    label: 'Warehousing — Inventory Check',
+    label: 'Inventory Check',
     countLabel: '# Locations Checked',
     needsZone: true,
     needsComment: true,
@@ -51,11 +65,12 @@ export const CATEGORY_META: CategoryMeta[] = [
   },
   {
     category: 'warehousing_location_adjustment',
-    label: 'Warehousing — Location Adjustment',
+    label: 'Location Adjustment',
     countLabel: '# Locations Processed',
     needsZone: true,
     needsComment: true,
     needsPhotos: true,
+    strongDividerBelow: true,
   },
   { category: 'backup_box', label: 'Backup — Box', countLabel: '# Prepared Boxes' },
   { category: 'backup_shredder', label: 'Backup — Shredder', countLabel: '# Prepared Containers' },
