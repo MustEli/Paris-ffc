@@ -137,6 +137,21 @@ export class ShiftsService {
       await this.prisma.break.update({ where: { id: openBreak.id }, data: { endedAt } });
     }
 
+    // Same for a still-open Floor Task — direct Prisma access rather
+    // than importing FloorTasksModule, which already imports this
+    // module (for ActiveShiftGuard) and would make it circular. Folds
+    // any open pause into totalPausedMs exactly like a normal Stop
+    // would, via the same force-close path, not FloorTasksService's
+    // validated end() — there's no form left open to validate against.
+    const openFloorTask = await this.prisma.floorTaskLog.findFirst({ where: { userId: shift.userId, endedAt: null } });
+    if (openFloorTask) {
+      const stillOpenPauseMs = openFloorTask.pausedAt ? endedAt.getTime() - openFloorTask.pausedAt.getTime() : 0;
+      await this.prisma.floorTaskLog.update({
+        where: { id: openFloorTask.id },
+        data: { endedAt, pausedAt: null, totalPausedMs: { increment: stillOpenPauseMs } },
+      });
+    }
+
     const updated = await this.prisma.shift.update({ where: { id: shift.id }, data: { endedAt } });
 
     // Doc's Feature 1: "documented in a Google Sheet." Fire-and-forget

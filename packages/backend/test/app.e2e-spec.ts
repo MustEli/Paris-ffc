@@ -103,6 +103,33 @@ describe('Warehouse HQ backend (e2e)', () => {
     await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(404);
   });
 
+  it('ending a shift force-stops a still-open floor task, folding any open pause into totalPausedMs', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', auth)
+      .send({ category: 'pick' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/pause`)
+      .set('Authorization', auth)
+      .expect(201);
+
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(201);
+
+    // /floor-tasks/* is gated by ActiveShiftGuard for Staff, so it's
+    // unreachable right after ending the shift — read the row directly.
+    const row = await rawPrisma.floorTaskLog.findUniqueOrThrow({ where: { id: started.body.id } });
+    expect(row.endedAt).not.toBeNull();
+    expect(row.pausedAt).toBeNull();
+  });
+
   it('lets staff take a lunch break without touching the shift, and blocks invalid transitions', async () => {
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')

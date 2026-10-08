@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
@@ -79,21 +80,46 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     (!meta.needsZone || zone.trim() !== '') &&
     (!commentRequired || comment.trim() !== '');
 
+  // Running (open and not paused) blocks leaving this page entirely —
+  // only a Pause makes it safe to go elsewhere. Covers Home, Back, the
+  // hardware/gesture back, all in one place, since all of them remove
+  // this screen from the stack the same way.
+  const isRunning = !!openTask && !isPaused;
+  useEffect(() => {
+    if (!isRunning) return;
+    return navigation.addListener('beforeRemove', (e) => {
+      e.preventDefault();
+      Alert.alert('Pause first', 'Pause this task before leaving its page.');
+    });
+  }, [isRunning, navigation]);
+
   function handleStop() {
-    Alert.alert(`Stop ${meta.label}?`, "This ends the task — you won't be able to add more to it afterward.", [
+    const endInput = {
+      count: meta.countLabel ? Number(count) : undefined,
+      countExtra: meta.countExtraLabel ? Number(countExtra) : undefined,
+      zone: meta.needsZone ? zone.trim() : undefined,
+      comment: needsComment && comment.trim() ? comment.trim() : undefined,
+      photoUrls: meta.needsPhotos ? photos : undefined,
+    };
+
+    if (!isValid) {
+      // Nothing (or not enough) was entered — most likely an accidental
+      // start. Stop must always be pressable, so this pauses instead of
+      // failing: the record stays, restartable, until it's actually
+      // finished with the required fields filled in. Already paused?
+      // Nothing to do — just repeat why it can't finish yet.
+      const message = "This task needs its required fields before it can finish — it's paused for now, resume anytime to finish it.";
+      if (isPaused) {
+        Alert.alert('Still paused', message);
+      } else {
+        pause.mutate(undefined, { onSuccess: () => Alert.alert('Paused', message) });
+      }
+      return;
+    }
+
+    Alert.alert(`Stop ${meta.label}?`, "This finishes the task — you won't be able to add more to it afterward.", [
       { text: 'Keep Going', style: 'cancel' },
-      {
-        text: 'Stop',
-        style: 'destructive',
-        onPress: () =>
-          end.mutate({
-            count: meta.countLabel ? Number(count) : undefined,
-            countExtra: meta.countExtraLabel ? Number(countExtra) : undefined,
-            zone: meta.needsZone ? zone.trim() : undefined,
-            comment: needsComment && comment.trim() ? comment.trim() : undefined,
-            photoUrls: meta.needsPhotos ? photos : undefined,
-          }),
-      },
+      { text: 'Stop', style: 'destructive', onPress: () => end.mutate(endInput) },
     ]);
   }
 
@@ -194,24 +220,31 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
         </Pressable>
       ) : (
         <View style={styles.actionRow}>
-          <Pressable
-            style={[styles.secondaryButton, (pause.isPending || resume.isPending) && styles.buttonBusy]}
-            disabled={pause.isPending || resume.isPending}
-            onPress={() => (isPaused ? resume.mutate() : pause.mutate())}
-          >
-            {pause.isPending || resume.isPending ? (
-              <ActivityIndicator color={colors.brandOrange} />
-            ) : (
-              <Text style={styles.secondaryButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
-            )}
-          </Pressable>
-          <Pressable
-            style={[styles.primaryButton, styles.stopButton, (!isValid || end.isPending) && styles.buttonDisabled]}
-            disabled={!isValid || end.isPending}
-            onPress={handleStop}
-          >
-            {end.isPending ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.primaryButtonText}>Stop</Text>}
-          </Pressable>
+          <View style={styles.iconButtonGroup}>
+            <Pressable
+              style={[styles.iconButton, styles.pauseIconButton, (pause.isPending || resume.isPending) && styles.buttonBusy]}
+              disabled={pause.isPending || resume.isPending}
+              onPress={() => (isPaused ? resume.mutate() : pause.mutate())}
+            >
+              {pause.isPending || resume.isPending ? (
+                <ActivityIndicator color={colors.brandOrange} />
+              ) : (
+                <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color={colors.brandOrange} />
+              )}
+            </Pressable>
+            <Text style={styles.iconButtonLabel}>{isPaused ? 'Resume' : 'Pause'}</Text>
+          </View>
+
+          <View style={styles.iconButtonGroup}>
+            <Pressable
+              style={[styles.iconButton, styles.stopIconButton, end.isPending && styles.buttonBusy]}
+              disabled={end.isPending}
+              onPress={handleStop}
+            >
+              {end.isPending ? <ActivityIndicator color="#fff" /> : <Ionicons name="stop" size={28} color="#fff" />}
+            </Pressable>
+            <Text style={styles.iconButtonLabel}>Stop</Text>
+          </View>
         </View>
       )}
     </KeyboardAwareScreen>
@@ -294,9 +327,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 28,
   },
-  stopButton: {
-    marginTop: 0,
-  },
   buttonBusy: {
     opacity: 0.7,
   },
@@ -310,20 +340,32 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 28,
+    justifyContent: 'center',
+    gap: 40,
+    marginTop: 32,
   },
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: colors.brandOrange,
-    paddingVertical: 16,
-    borderRadius: 10,
+  iconButtonGroup: {
     alignItems: 'center',
+    gap: 6,
   },
-  secondaryButtonText: {
-    color: colors.brandOrange,
-    fontSize: 15,
-    fontWeight: '700',
+  iconButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pauseIconButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.brandOrange,
+  },
+  stopIconButton: {
+    backgroundColor: colors.alert,
+  },
+  iconButtonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });

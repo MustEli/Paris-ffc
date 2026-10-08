@@ -1,5 +1,5 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,8 +36,17 @@ export function FloorTasksScreen({ navigation }: Props) {
   const orderPrep = useOrderPrepTasks();
   const openOrderPrepTask = (orderPrep.data ?? []).find((t) => OPEN_ORDER_PREP_STATUSES.includes(t.status));
 
+  // Guarded to fire at most once per mount — this screen should only
+  // ever need to redirect once (react-query's structural sharing keeps
+  // `openTask`'s reference stable across a same-data refetch, so this
+  // guard is normally redundant, but a repeated `replace` call firing
+  // on every render is exactly the shape of a stuck-forever spinner, so
+  // it costs nothing to make that provably impossible rather than
+  // assumed impossible).
+  const hasRedirected = useRef(false);
   useEffect(() => {
-    if (openTask) {
+    if (openTask && !hasRedirected.current) {
+      hasRedirected.current = true;
       navigation.replace('FloorTaskDetail', { category: openTask.category });
     }
   }, [openTask, navigation]);
