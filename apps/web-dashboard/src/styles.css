@@ -474,7 +474,7 @@ textarea {
 }
 
 .top-header-stripe {
-  height: 4px;
+  height: 8px;
   background: linear-gradient(
     to right,
     var(--header-stripe-navy) 0% 33.33%,
@@ -491,6 +491,10 @@ textarea {
 }
 
 .top-header-logo {
+  /* Fixed to exactly line up the search box (which follows it, after
+     the row's 24px gap) with the sidebar's right edge: 24px left
+     padding + 192px here + 24px gap = 240px, matching .sidebar's width. */
+  width: 192px;
   flex-shrink: 0;
   font-size: 18px;
   font-weight: 700;
@@ -516,7 +520,6 @@ textarea {
 .top-header-search {
   position: relative;
   flex: 1;
-  max-width: 560px;
 }
 
 .top-header-search input[type='text'] {
