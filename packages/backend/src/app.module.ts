@@ -15,6 +15,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { ReferenceListsModule } from './reference-lists/reference-lists.module';
 import { ReportsModule } from './reports/reports.module';
 import { SchedulesModule } from './schedules/schedules.module';
+import { SearchModule } from './search/search.module';
 import { SheetsModule } from './sheets/sheets.module';
 import { ReceptionsModule } from './receptions/receptions.module';
 import { SellerStockModule } from './seller-stock/seller-stock.module';
@@ -53,6 +54,7 @@ import { UsersModule } from './users/users.module';
     OpenPoolModule,
     DirectivesModule,
     IssueReportsModule,
+    SearchModule,
   ],
   controllers: [AppController],
 })

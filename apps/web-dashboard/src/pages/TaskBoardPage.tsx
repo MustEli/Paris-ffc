@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../core/api/client';
 import { createDirective, DIRECTIVE_TYPE_LABELS, DIRECTIVE_TYPES, fetchAllDirectives } from '../core/api/directives';
@@ -56,6 +57,9 @@ export function TaskBoardPage() {
     enabled: !!token,
     refetchInterval: 15_000,
   });
+
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
 
   const [draggedOverKey, setDraggedOverKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<AssignDraft | null>(null);
@@ -187,9 +191,9 @@ export function TaskBoardPage() {
         </div>
       )}
 
-      <DirectivesSection onShiftStaff={onShiftStaff} />
+      <DirectivesSection onShiftStaff={onShiftStaff} highlightId={highlightId} />
 
-      <OpenPoolSection />
+      <OpenPoolSection highlightId={highlightId} />
 
       {draft && (
         <div className="modal-overlay" onClick={() => !isSubmitting && setDraft(null)}>
@@ -273,7 +277,13 @@ const STATUS_PILL_CLASS: Record<string, string> = {
  * "anyone available." Deliberately does not model a hard pause of the
  * target's current activity — see the backend's Directive doc comment.
  */
-function DirectivesSection({ onShiftStaff }: { onShiftStaff: OnShiftStaffMember[] }) {
+function DirectivesSection({
+  onShiftStaff,
+  highlightId,
+}: {
+  onShiftStaff: OnShiftStaffMember[];
+  highlightId: string | null;
+}) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const { data: directives, isPending, error } = useQuery({
@@ -282,6 +292,13 @@ function DirectivesSection({ onShiftStaff }: { onShiftStaff: OnShiftStaffMember[
     enabled: !!token,
     refetchInterval: 10_000,
   });
+
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, directives]);
 
   const [targetUserId, setTargetUserId] = useState<string>(''); // '' means "anyone available"
   const [type, setType] = useState<(typeof DIRECTIVE_TYPES)[number]>('verify_location');
@@ -373,7 +390,11 @@ function DirectivesSection({ onShiftStaff }: { onShiftStaff: OnShiftStaffMember[
             </tr>
           )}
           {directives?.map((d) => (
-            <tr key={d.id}>
+            <tr
+              key={d.id}
+              ref={d.id === highlightId ? highlightRef : undefined}
+              className={d.id === highlightId ? 'highlight-row' : undefined}
+            >
               <td>{DIRECTIVE_TYPE_LABELS[d.type]}</td>
               <td>{d.message}</td>
               <td>{d.targetUserId ? onShiftStaff.find((s) => s.userId === d.targetUserId)?.userName ?? d.targetUserId : 'Anyone'}</td>
@@ -395,7 +416,7 @@ function DirectivesSection({ onShiftStaff }: { onShiftStaff: OnShiftStaffMember[
  * board above, since it's not "assign this pending item to that
  * person" — it's "publish this for whoever gets there first."
  */
-function OpenPoolSection() {
+function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const { data: tasks, isPending, error } = useQuery({
@@ -404,6 +425,13 @@ function OpenPoolSection() {
     enabled: !!token,
     refetchInterval: 15_000,
   });
+
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, tasks]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -483,7 +511,11 @@ function OpenPoolSection() {
             </tr>
           )}
           {tasks?.map((t) => (
-            <tr key={t.id}>
+            <tr
+              key={t.id}
+              ref={t.id === highlightId ? highlightRef : undefined}
+              className={t.id === highlightId ? 'highlight-row' : undefined}
+            >
               <td>{t.title}</td>
               <td>{PRIORITY_LABELS[t.priority]}</td>
               <td>

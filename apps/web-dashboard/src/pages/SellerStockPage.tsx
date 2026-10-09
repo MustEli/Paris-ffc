@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { CONDITION_FLAG_LABELS, fetchPallets, STATUS_LABELS, type SellerStockPallet } from '../core/api/sellerStock';
 import { useAuth } from '../core/auth/AuthContext';
@@ -25,6 +26,16 @@ export function SellerStockPage() {
     queryFn: () => fetchPallets(token!),
     enabled: !!token,
   });
+
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, data]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isZipping, setIsZipping] = useState(false);
@@ -146,7 +157,11 @@ export function SellerStockPage() {
               {pallets.map((pallet) => {
                 const photoCount = pallet.labelPhotoUrls.length + pallet.damageEvidencePhotoUrls.length;
                 return (
-                  <tr key={pallet.id}>
+                  <tr
+                    key={pallet.id}
+                    ref={pallet.id === highlightId ? highlightRef : undefined}
+                    className={pallet.id === highlightId ? 'highlight-row' : undefined}
+                  >
                     <td>
                       <input
                         type="checkbox"

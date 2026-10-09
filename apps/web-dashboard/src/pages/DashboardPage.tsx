@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { fetchActiveFloorTasks, FLOOR_TASK_CATEGORY_LABELS } from '../core/api/floorTasks';
 import { fetchAdminDashboard, type AdminDashboardReport } from '../core/api/reports';
@@ -61,6 +63,16 @@ export function DashboardPage() {
     enabled: !!token,
     refetchInterval: 15_000,
   });
+
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, data, activeFloorTasks]);
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -148,7 +160,11 @@ export function DashboardPage() {
                   </tr>
                 )}
                 {activeFloorTasks?.map((t) => (
-                  <tr key={t.id}>
+                  <tr
+                    key={t.id}
+                    ref={t.id === highlightId ? highlightRef : undefined}
+                    className={t.id === highlightId ? 'highlight-row' : undefined}
+                  >
                     <td>{t.userName}</td>
                     <td>{FLOOR_TASK_CATEGORY_LABELS[t.category]}</td>
                     <td>{formatLocalTime(t.startedAt)}</td>
@@ -179,7 +195,11 @@ export function DashboardPage() {
                   </tr>
                 )}
                 {data.staff.map((s) => (
-                  <tr key={s.userId}>
+                  <tr
+                    key={s.userId}
+                    ref={s.userId === highlightId ? highlightRef : undefined}
+                    className={s.userId === highlightId ? 'highlight-row' : undefined}
+                  >
                     <td>{s.userName}</td>
                     <td>
                       {s.onShift ? (

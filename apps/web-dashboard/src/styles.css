@@ -1,6 +1,12 @@
 :root {
   /* Sampled directly from the ELNO logo's actual letters, not picked freehand. */
   --brand-orange: #fd8c1e;
+  /* Top header tricolor stripe — exact hex values from the customer's
+     spec. Deliberately distinct from the mobile app's own tricolor
+     values; not meant to reconcile the two. */
+  --header-stripe-navy: #052370;
+  --header-stripe-white: #ffffff;
+  --header-stripe-red: #e1000f;
 }
 
 * {
@@ -15,9 +21,15 @@ body {
   color: #0f172a;
 }
 
+.app-shell-outer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  flex: 1;
 }
 
 .sidebar {
@@ -28,14 +40,6 @@ body {
   display: flex;
   flex-direction: column;
   padding: 24px 16px;
-}
-
-.brand {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 32px;
-  padding: 0 8px;
-  color: var(--brand-orange);
 }
 
 .sidebar nav {
@@ -462,4 +466,258 @@ textarea {
 .task-card-drag-over {
   border-color: var(--brand-orange);
   background: #fff7ed;
+}
+
+.top-header {
+  background: #0f172a;
+  flex-shrink: 0;
+}
+
+.top-header-stripe {
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    var(--header-stripe-navy) 0% 33.33%,
+    var(--header-stripe-white) 33.33% 66.66%,
+    var(--header-stripe-red) 66.66% 100%
+  );
+}
+
+.top-header-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+}
+
+.top-header-logo {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.top-header-logo-elno {
+  color: #fff;
+}
+
+.top-header-logo-x {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.top-header-logo-ovoko {
+  color: var(--brand-orange);
+}
+
+.top-header-search {
+  position: relative;
+  flex: 1;
+  max-width: 560px;
+}
+
+.top-header-search input[type='text'] {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.top-header-search input[type='text']::placeholder {
+  color: #94a3b8;
+}
+
+.top-header-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 40;
+  padding: 6px;
+}
+
+.top-header-search-empty {
+  padding: 14px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.top-header-search-group {
+  padding: 6px 0;
+}
+
+.top-header-search-group + .top-header-search-group {
+  border-top: 1px solid #f1f5f9;
+}
+
+.top-header-search-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+  padding: 6px 10px 2px;
+}
+
+.top-header-search-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.top-header-search-result:hover {
+  background: #f1f5f9;
+}
+
+.top-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.top-header-lang {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-header-lang:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.top-header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.top-header-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.top-header-status-label {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.top-header-bell {
+  position: relative;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.top-header-bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--header-stripe-red);
+}
+
+.top-header-profile {
+  position: relative;
+}
+
+.top-header-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.top-header-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--brand-orange);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-header-profile-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.top-header-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  min-width: 140px;
+  z-index: 40;
+}
+
+.top-header-profile-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.top-header-profile-dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.highlight-row {
+  animation: highlight-row-fade 2.5s ease-out;
+}
+
+@keyframes highlight-row-fade {
+  0% {
+    background: #fff7ed;
+  }
+  100% {
+    background: transparent;
+  }
 }
