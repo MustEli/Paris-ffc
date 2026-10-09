@@ -59,7 +59,7 @@ async function parseUploadedFile(file: File): Promise<{ id: string; instructions
  * once. Both end up calling the same backend logic (addInstructions /
  * bulkAddInstructions), just batched differently.
  */
-export function ReceptionsPage() {
+export function ReceptionInstructionsSection() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +120,7 @@ export function ReceptionsPage() {
 
   return (
     <div>
-      <h1>Reception Instructions</h1>
+      <h2>Reception Instructions</h2>
       <p className="page-subtitle">
         Give instructions one at a time below, or handle many at once with the Excel template.
       </p>

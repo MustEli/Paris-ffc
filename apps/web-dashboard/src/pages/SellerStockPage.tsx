@@ -19,7 +19,7 @@ function extensionFromUrl(url: string): string {
  * ever stops sending permissive CORS headers, the fallback would be a
  * small backend proxy endpoint; not needed for now.
  */
-export function SellerStockPage() {
+export function SellerStockSection() {
   const { token } = useAuth();
   const { data, isPending, error } = useQuery({
     queryKey: ['seller-stock'],
@@ -104,7 +104,7 @@ export function SellerStockPage() {
 
   return (
     <div>
-      <h1>Seller Stock Photos</h1>
+      <h2>Seller Stock Photos</h2>
       <p className="page-subtitle">Select one or more pallets and download all their photos as a single zip file.</p>
 
       {isPending && <p>Loading…</p>}

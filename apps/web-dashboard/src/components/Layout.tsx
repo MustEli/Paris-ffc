@@ -4,13 +4,21 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../core/auth/AuthContext';
 import { TopHeader } from './TopHeader';
 
+// Labels/order follow the customer's requested sidebar spec, with
+// "Task Board" kept as-is (it wasn't in that spec, but has no other
+// home). Put-Away/Order Prep/Return Processing/Issue Queue link to
+// PlaceholderPage.tsx's "coming soon" pages — nothing is built for
+// them yet.
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', end: true },
+  { to: '/', label: 'Dashboard / Operations Overview', end: true },
   { to: '/task-board', label: 'Task Board' },
-  { to: '/schedules', label: 'Staff Schedules' },
-  { to: '/receptions', label: 'Reception Instructions' },
-  { to: '/seller-stock', label: 'Seller Stock Photos' },
-  { to: '/reference-lists', label: 'Manage Lists' },
+  { to: '/schedules', label: 'Attendance & Shift Roster' },
+  { to: '/reception-intake', label: 'Reception & Intake' },
+  { to: '/put-away', label: 'Put-Away & Location Assignment' },
+  { to: '/order-prep', label: 'Order Prep (Pick & Pack)' },
+  { to: '/return-processing', label: 'Return Processing' },
+  { to: '/issue-queue', label: 'Exceptions & Issue Queue' },
+  { to: '/reference-lists', label: 'User & Access Management' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

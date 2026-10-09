@@ -58,7 +58,7 @@ export function TopHeader() {
   function goToPallet(pallet: PalletSearchResult) {
     setIsOpen(false);
     setQuery('');
-    navigate(`/seller-stock?highlight=${pallet.id}`);
+    navigate(`/reception-intake?highlight=${pallet.id}`);
   }
 
   function goToStaff(staff: StaffSearchResult) {
