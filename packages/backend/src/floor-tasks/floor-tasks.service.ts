@@ -40,11 +40,17 @@ export class FloorTasksService {
     // kept in the type/enum for historical rows, but no new one may be
     // created under it even if an old client still sends it.
     if (category === 'box_prep') {
-      throw new BadRequestException('"box_prep" has been merged into "backup_box" — use that category instead');
+      throw new BadRequestException({
+        message: '"box_prep" has been merged into "backup_box" — use that category instead',
+        code: 'floor_task.box_prep_merged',
+      });
     }
     const existingOpen = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null } });
     if (existingOpen) {
-      throw new ConflictException('Already have an open floor task — end it before starting another');
+      throw new ConflictException({
+        message: 'Already have an open floor task — end it before starting another',
+        code: 'floor_task.already_open',
+      });
     }
     const row = await this.prisma.floorTaskLog.create({
       data: { id: randomUUID(), userId, category, startedAt: new Date(), endedAt: null },
@@ -62,10 +68,10 @@ export class FloorTasksService {
 
   private assertOwnedAndOpen(task: PrismaFloorTaskLog, user: PublicUser): void {
     if (task.userId !== user.id) {
-      throw new ForbiddenException('This floor task is not yours');
+      throw new ForbiddenException({ message: 'This floor task is not yours', code: 'floor_task.not_yours' });
     }
     if (task.endedAt) {
-      throw new ConflictException('This floor task has already ended');
+      throw new ConflictException({ message: 'This floor task has already ended', code: 'floor_task.already_ended' });
     }
   }
 
@@ -74,7 +80,7 @@ export class FloorTasksService {
     const task = await this.findOneRow(id);
     this.assertOwnedAndOpen(task, user);
     if (task.pausedAt) {
-      throw new ConflictException('This floor task is already paused');
+      throw new ConflictException({ message: 'This floor task is already paused', code: 'floor_task.already_paused' });
     }
     const row = await this.prisma.floorTaskLog.update({ where: { id }, data: { pausedAt: new Date() } });
     return this.toDomain(row);
@@ -84,7 +90,7 @@ export class FloorTasksService {
     const task = await this.findOneRow(id);
     this.assertOwnedAndOpen(task, user);
     if (!task.pausedAt) {
-      throw new ConflictException('This floor task is not paused');
+      throw new ConflictException({ message: 'This floor task is not paused', code: 'floor_task.not_paused' });
     }
     const pausedMs = Date.now() - task.pausedAt.getTime();
     const row = await this.prisma.floorTaskLog.update({

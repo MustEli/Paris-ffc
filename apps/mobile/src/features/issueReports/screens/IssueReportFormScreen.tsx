@@ -1,10 +1,12 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type RouteProp } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { useUnsavedChangesStore } from '../../../core/navigation/unsavedChangesStore';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
@@ -23,6 +25,7 @@ const LOCATION_ID_PATTERN = /^[A-Za-z0-9]+$/;
 
 /** One screen for all 9 categories, driven by CATEGORY_META — see issue-report.types.ts on the backend for why these are fixed fields rather than an Admin-editable form builder. */
 export function IssueReportFormScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const meta = metaFor(route.params.category);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -83,34 +86,34 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
 
   return (
     <KeyboardAwareScreen contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32 }]}>
-      <Text style={styles.title}>{meta.label}</Text>
+      <Text style={styles.title}>{t(meta.label)}</Text>
 
       {meta.photos && (
         <View style={styles.field}>
-          <MultiPhotoCapture label={meta.photos.label} photos={photos} onChange={setPhotos} maxPhotos={meta.photos.max} />
+          <MultiPhotoCapture label={t(meta.photos.label)} photos={photos} onChange={setPhotos} maxPhotos={meta.photos.max} />
         </View>
       )}
 
       {meta.trackingId && (
         <View style={styles.field}>
-          <Text style={styles.label}>{meta.trackingId.label}</Text>
+          <Text style={styles.label}>{t(meta.trackingId.label)}</Text>
           <TextInput
             style={styles.input}
             value={trackingId}
             onChangeText={setTrackingId}
             autoCapitalize="characters"
-            placeholder="e.g. ABC123"
+            placeholder={t('issueReports.trackingIdPlaceholder')}
             placeholderTextColor={colors.textMuted}
           />
           {trackingId.length > 0 && !trackingIdValid && (
-            <Text style={styles.fieldError}>Capital letters and numbers only, no spaces.</Text>
+            <Text style={styles.fieldError}>{t('issueReports.trackingIdInvalid')}</Text>
           )}
         </View>
       )}
 
       {meta.orderNumber && (
         <View style={styles.field}>
-          <Text style={styles.label}>{meta.orderNumber.label}</Text>
+          <Text style={styles.label}>{t(meta.orderNumber.label)}</Text>
           <TextInput
             style={styles.input}
             value={orderNumber}
@@ -118,20 +121,20 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
             keyboardType="number-pad"
             placeholderTextColor={colors.textMuted}
           />
-          {orderNumber.length > 0 && !orderNumberValid && <Text style={styles.fieldError}>Numbers only.</Text>}
+          {orderNumber.length > 0 && !orderNumberValid && <Text style={styles.fieldError}>{t('issueReports.numbersOnly')}</Text>}
         </View>
       )}
 
       {meta.errorNo && (
         <View style={styles.field}>
-          <Text style={styles.label}>{meta.errorNo.label}</Text>
+          <Text style={styles.label}>{t(meta.errorNo.label)}</Text>
           <TextInput style={styles.input} value={errorNo} onChangeText={setErrorNo} placeholderTextColor={colors.textMuted} />
         </View>
       )}
 
       {meta.idNumber && (
         <View style={styles.field}>
-          <Text style={styles.label}>{meta.idNumber.label}</Text>
+          <Text style={styles.label}>{t(meta.idNumber.label)}</Text>
           <TextInput
             style={styles.input}
             value={idNumber}
@@ -139,13 +142,13 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
             keyboardType="number-pad"
             placeholderTextColor={colors.textMuted}
           />
-          {idNumber.length > 0 && !idNumberValid && <Text style={styles.fieldError}>Numbers only.</Text>}
+          {idNumber.length > 0 && !idNumberValid && <Text style={styles.fieldError}>{t('issueReports.numbersOnly')}</Text>}
         </View>
       )}
 
       {meta.locationId && (
         <View style={styles.field}>
-          <Text style={styles.label}>{meta.locationId.label}</Text>
+          <Text style={styles.label}>{t(meta.locationId.label)}</Text>
           <TextInput
             style={styles.input}
             value={locationId}
@@ -154,15 +157,15 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
             placeholderTextColor={colors.textMuted}
           />
           {locationId.length > 0 && !locationIdValid && (
-            <Text style={styles.fieldError}>Letters and numbers only, no spaces.</Text>
+            <Text style={styles.fieldError}>{t('issueReports.locationIdInvalid')}</Text>
           )}
         </View>
       )}
 
       {meta.comment && (
         <View style={styles.field}>
-          <Text style={styles.label}>{meta.comment.label}</Text>
-          {meta.comment.hint && <Text style={styles.hint}>{meta.comment.hint}</Text>}
+          <Text style={styles.label}>{t(meta.comment.label)}</Text>
+          {meta.comment.hint && <Text style={styles.hint}>{t(meta.comment.hint)}</Text>}
           <TextInput
             style={[styles.input, styles.multiline]}
             value={comment}
@@ -173,14 +176,14 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
         </View>
       )}
 
-      {create.error && <Text style={styles.fieldError}>{create.error.message}</Text>}
+      {create.error && <Text style={styles.fieldError}>{translateError(create.error, t)}</Text>}
 
       <Pressable
         style={[styles.submitButton, (!isValid || create.isPending) && styles.submitButtonDisabled]}
         disabled={!isValid || create.isPending}
         onPress={handleSubmit}
       >
-        {create.isPending ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.submitText}>Submit</Text>}
+        {create.isPending ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.submitText}>{t('issueReports.submit')}</Text>}
       </Pressable>
     </KeyboardAwareScreen>
   );

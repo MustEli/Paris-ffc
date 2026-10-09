@@ -146,9 +146,10 @@ export class SellerStockService {
   async selfPutAway(id: string, zone: string): Promise<SellerStockPallet> {
     const pallet = await this.findOneRow(id);
     if (pallet.status !== 'ready_for_putaway') {
-      throw new ConflictException(
-        `Cannot self-confirm put-away for a pallet in status "${pallet.status}" — only a pallet that skipped admin review (Good Condition, not overweight) qualifies`,
-      );
+      throw new ConflictException({
+        message: `Cannot self-confirm put-away for a pallet in status "${pallet.status}" — only a pallet that skipped admin review (Good Condition, not overweight) qualifies`,
+        code: 'seller_stock.not_ready_for_self_putaway',
+      });
     }
     const row = await this.prisma.sellerStockPallet.update({
       where: { id },

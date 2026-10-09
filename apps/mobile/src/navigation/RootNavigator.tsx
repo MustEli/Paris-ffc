@@ -1,6 +1,8 @@
 import { NavigationContainer } from '@react-navigation/native';
+import { useEffect } from 'react';
 
 import { useAuthStore } from '../core/auth/authStore';
+import { useLanguageStore } from '../core/i18n/languageStore'; // importing this also initializes the i18next instance (see languageStore.ts's own import of i18n.ts) before anything calls useTranslation()
 import { useCurrentRouteStore } from '../core/navigation/currentRouteStore';
 import { navigationRef } from '../core/navigation/navigationRef';
 import { useRealtimeConnection } from '../core/realtime/useRealtimeConnection';
@@ -25,6 +27,15 @@ export function RootNavigator() {
   // Owns the shared real-time socket's teardown on logout — see its own
   // doc comment for why it doesn't need to *create* the socket too.
   useRealtimeConnection();
+
+  // Loads the staff member's saved language choice (if any) once, on
+  // launch — see languageStore.ts. Defaults to English until this
+  // resolves, which is deliberately not gated on with a loading screen:
+  // the saved preference, if any, almost always resolves well before
+  // anyone's actually reading text (right as the splash screen clears).
+  useEffect(() => {
+    void useLanguageStore.getState().loadSaved();
+  }, []);
 
   return (
     <NavigationContainer ref={navigationRef} onReady={syncCurrentRoute} onStateChange={syncCurrentRoute}>

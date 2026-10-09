@@ -59,13 +59,19 @@ export class ReceptionsService {
     switch (dto.category) {
       case 'return_parcels':
         if (!dto.parcelCount || !dto.transporterCompany) {
-          throw new BadRequestException('return_parcels requires parcelCount and transporterCompany');
+          throw new BadRequestException({
+            message: 'return_parcels requires parcelCount and transporterCompany',
+            code: 'reception.missing_required_fields',
+          });
         }
         return { category: 'return_parcels', parcelCount: dto.parcelCount, transporterCompany: dto.transporterCompany };
 
       case 'packaging_stock':
         if (!dto.parcelCount || !dto.packagingType || !dto.sellerName) {
-          throw new BadRequestException('packaging_stock requires parcelCount, packagingType, and sellerName');
+          throw new BadRequestException({
+            message: 'packaging_stock requires parcelCount, packagingType, and sellerName',
+            code: 'reception.missing_required_fields',
+          });
         }
         return {
           category: 'packaging_stock',
@@ -77,13 +83,19 @@ export class ReceptionsService {
 
       case 'sellers_stock':
         if (!dto.palletCount) {
-          throw new BadRequestException('sellers_stock requires palletCount');
+          throw new BadRequestException({
+            message: 'sellers_stock requires palletCount',
+            code: 'reception.missing_required_fields',
+          });
         }
         return { category: 'sellers_stock', palletCount: dto.palletCount };
 
       case 'equipment_other':
         if (!dto.parcelCount || !dto.itemDescription || !dto.photoUrls?.length) {
-          throw new BadRequestException('equipment_other requires parcelCount, itemDescription, and at least one photo');
+          throw new BadRequestException({
+            message: 'equipment_other requires parcelCount, itemDescription, and at least one photo',
+            code: 'reception.missing_required_fields',
+          });
         }
         return {
           category: 'equipment_other',

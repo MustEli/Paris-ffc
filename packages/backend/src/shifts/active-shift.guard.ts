@@ -31,8 +31,8 @@ export class ActiveShiftGuard implements CanActivate {
     if (!availability.available) {
       throw new ForbiddenException(
         availability.reason === 'on_break'
-          ? 'End your break before using this feature.'
-          : 'Start your shift before using this feature.',
+          ? { message: 'End your break before using this feature.', code: 'shift.on_break' }
+          : { message: 'Start your shift before using this feature.', code: 'shift.not_active' },
       );
     }
     return true;

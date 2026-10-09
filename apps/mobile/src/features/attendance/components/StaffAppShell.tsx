@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
@@ -20,6 +21,7 @@ import { LockedGate } from '../../../core/components/LockedGate';
  * gate covers the full screen instead.
  */
 export function StaffAppShell({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
   const { status, isLoadingStatus, start, isStarting, endBreak, isEndingBreak } = useShiftStatus();
 
@@ -49,21 +51,21 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
 
         {!isLoadingStatus && !onShift && (
           <LockedGate
-            title="Ready when you are"
-            subtitle="Start your shift to unlock the rest of the app."
-            buttonLabel="Start Shift"
+            title={t('shiftGate.readyTitle')}
+            subtitle={t('shiftGate.readySubtitle')}
+            buttonLabel={t('shiftGate.startShift')}
             onPress={handleStartShift}
             isBusy={isStarting}
-            secondaryLabel="Log out"
+            secondaryLabel={t('shiftGate.logOut')}
             onSecondaryPress={logout}
           />
         )}
 
         {!isLoadingStatus && onShift && onBreak && (
           <LockedGate
-            title={status?.breakType === 'lunch' ? 'On Lunch Break' : 'On Short Break'}
-            subtitle="Everything else is locked until you end your break."
-            buttonLabel="End Break"
+            title={status?.breakType === 'lunch' ? t('shiftGate.onLunchBreak') : t('shiftGate.onShortBreak')}
+            subtitle={t('shiftGate.onBreakSubtitle')}
+            buttonLabel={t('shiftGate.endBreak')}
             onPress={() => endBreak()}
             isBusy={isEndingBreak}
           />

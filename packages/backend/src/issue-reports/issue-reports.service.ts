@@ -73,26 +73,27 @@ export class IssueReportsService {
   }
 
   private validateFieldsForCategory(dto: CreateIssueReportDto): void {
+    const code = 'issue_report.missing_required_fields';
     if (REQUIRES_PHOTO.includes(dto.category) && !dto.photoUrls?.length) {
-      throw new BadRequestException(`At least one photo is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `At least one photo is required for "${dto.category}"`, code });
     }
     if (REQUIRES_TRACKING_ID.includes(dto.category) && !dto.trackingId) {
-      throw new BadRequestException(`trackingId is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `trackingId is required for "${dto.category}"`, code });
     }
     if (REQUIRES_ORDER_NUMBER.includes(dto.category) && !dto.orderNumber) {
-      throw new BadRequestException(`orderNumber is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `orderNumber is required for "${dto.category}"`, code });
     }
     if (REQUIRES_ERROR_NO.includes(dto.category) && !dto.errorNo) {
-      throw new BadRequestException(`errorNo is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `errorNo is required for "${dto.category}"`, code });
     }
     if (REQUIRES_ID_NUMBER.includes(dto.category) && !dto.idNumber) {
-      throw new BadRequestException(`idNumber is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `idNumber is required for "${dto.category}"`, code });
     }
     if (REQUIRES_LOCATION_ID.includes(dto.category) && !dto.locationId) {
-      throw new BadRequestException(`locationId is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `locationId is required for "${dto.category}"`, code });
     }
     if (REQUIRES_COMMENT.includes(dto.category) && !dto.comment) {
-      throw new BadRequestException(`comment is required for "${dto.category}"`);
+      throw new BadRequestException({ message: `comment is required for "${dto.category}"`, code });
     }
   }
 

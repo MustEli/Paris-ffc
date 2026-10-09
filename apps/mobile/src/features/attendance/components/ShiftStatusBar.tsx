@@ -1,16 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { APP_LANGUAGES, type AppLanguage } from '../../../core/i18n/i18n';
+import { useLanguageStore } from '../../../core/i18n/languageStore';
 import { useCurrentRouteStore } from '../../../core/navigation/currentRouteStore';
 import { navigationRef } from '../../../core/navigation/navigationRef';
 import { useUnsavedChangesStore } from '../../../core/navigation/unsavedChangesStore';
 import { colors } from '../../../core/theme/colors';
 import { useMySchedule } from '../../schedule/hooks/useMySchedule';
 import { useShiftStatus } from '../hooks/useShiftStatus';
+
+const LANGUAGE_NATIVE_NAME: Record<AppLanguage, string> = { en: 'English', fr: 'Français' };
 
 /** "H:MM:SS", counting up — ticking seconds reads as "alive" rather than a static number that only changes once a minute. */
 function formatElapsed(ms: number): string {
@@ -21,8 +26,8 @@ function formatElapsed(ms: number): string {
   return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+function formatDate(date: Date, locale: AppLanguage): string {
+  return date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 /** The main-menu route — the one screen that never shows the Home icon. */
@@ -36,6 +41,9 @@ const MAIN_MENU_ROUTE = 'StaffHome';
  * actions, it doesn't render the lock itself).
  */
 export function ShiftStatusBar() {
+  const { t } = useTranslation();
+  const language = useLanguageStore((state) => state.language);
+  const setLanguage = useLanguageStore((state) => state.setLanguage);
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
@@ -73,10 +81,10 @@ export function ShiftStatusBar() {
   /** Confirms before discarding an in-progress form (same guard for both Back and Home), then runs `action`. */
   function withUnsavedGuard(action: () => void) {
     if (useUnsavedChangesStore.getState().hasUnsavedChanges) {
-      Alert.alert('Discard unsaved entry?', "What you've entered on this screen hasn't been submitted yet.", [
-        { text: 'Keep Editing', style: 'cancel' },
+      Alert.alert(t('shiftBar.discardTitle'), t('shiftBar.discardMessage'), [
+        { text: t('shiftBar.keepEditing'), style: 'cancel' },
         {
-          text: 'Discard',
+          text: t('shiftBar.discard'),
           style: 'destructive',
           onPress: () => {
             useUnsavedChangesStore.getState().setHasUnsavedChanges(false);
@@ -108,10 +116,10 @@ export function ShiftStatusBar() {
   }
 
   function confirmEndShift() {
-    Alert.alert('End shift?', "This ends your shift for the day — you'll need to start a new one to work again.", [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('shiftBar.confirmEndShiftTitle'), t('shiftBar.confirmEndShiftMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'End Shift',
+        text: t('shiftBar.endShift'),
         style: 'destructive',
         onPress: () => {
           setIsOpen(false);
@@ -119,6 +127,11 @@ export function ShiftStatusBar() {
         },
       },
     ]);
+  }
+
+  function toggleLanguage() {
+    const next = APP_LANGUAGES.find((l) => l !== language) ?? 'en';
+    setLanguage(next);
   }
 
   return (
@@ -157,13 +170,15 @@ export function ShiftStatusBar() {
           <View style={styles.statusColumn}>
             <Text style={styles.elapsed}>{formatElapsed(elapsedMs)}</Text>
             <Text style={styles.subline}>
-              {schedule ? `Ends ${schedule.shiftEndTime} · ` : ''}
-              {formatDate(now)}
+              {schedule ? `${t('shiftBar.ends', { time: schedule.shiftEndTime })} · ` : ''}
+              {formatDate(now, language)}
             </Text>
           </View>
         </View>
 
-        {onBreak && <Text style={styles.breakBanner}>{onLunchBreak ? 'On Lunch Break' : 'On Short Break'}</Text>}
+        {onBreak && (
+          <Text style={styles.breakBanner}>{onLunchBreak ? t('shiftGate.onLunchBreak') : t('shiftGate.onShortBreak')}</Text>
+        )}
 
         <Pressable
           style={styles.chevronButton}
@@ -188,7 +203,7 @@ export function ShiftStatusBar() {
                     startBreak('lunch');
                   }}
                 >
-                  <Text style={styles.dropdownLabel}>Lunch Break</Text>
+                  <Text style={styles.dropdownLabel}>{t('shiftBar.lunchBreak')}</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.dropdownRow, !shortBreakAvailable && styles.dropdownRowDisabled]}
@@ -199,7 +214,7 @@ export function ShiftStatusBar() {
                   }}
                 >
                   <Text style={[styles.dropdownLabel, !shortBreakAvailable && styles.dropdownLabelDisabled]}>
-                    {shortBreakAvailable ? 'Short Break' : 'Short Break Used Up'}
+                    {shortBreakAvailable ? t('shiftBar.shortBreak') : t('shiftBar.shortBreakUsedUp')}
                   </Text>
                 </Pressable>
               </>
@@ -213,11 +228,19 @@ export function ShiftStatusBar() {
                   endBreak();
                 }}
               >
-                <Text style={styles.dropdownLabel}>{onLunchBreak ? 'End Lunch Break' : 'End Short Break'}</Text>
+                <Text style={styles.dropdownLabel}>
+                  {onLunchBreak ? t('shiftBar.endLunchBreak') : t('shiftBar.endShortBreak')}
+                </Text>
               </Pressable>
             )}
+            <Pressable style={styles.dropdownRow} onPress={toggleLanguage}>
+              <View style={styles.dropdownRowBetween}>
+                <Text style={styles.dropdownLabel}>{t('shiftBar.language')}</Text>
+                <Text style={styles.dropdownLanguageValue}>{LANGUAGE_NATIVE_NAME[language]}</Text>
+              </View>
+            </Pressable>
             <Pressable style={styles.dropdownRow} disabled={isEnding} onPress={confirmEndShift}>
-              <Text style={styles.dropdownLabelDanger}>End Shift</Text>
+              <Text style={styles.dropdownLabelDanger}>{t('shiftBar.endShift')}</Text>
             </Pressable>
           </View>
         </>
@@ -349,6 +372,16 @@ const styles = StyleSheet.create({
   },
   dropdownLabelDisabled: {
     color: colors.textMuted,
+  },
+  dropdownRowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownLanguageValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.brandOrange,
   },
   dropdownLabelDanger: {
     fontSize: 15,

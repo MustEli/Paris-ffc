@@ -39,6 +39,8 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** Stable identifier for known errors (e.g. "floor_task.already_open") — see core/i18n/errorCodes.ts. Undefined for errors the backend hasn't been given a code for, or network-level failures. */
+    public readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -77,6 +79,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const message = (payload && typeof payload === 'object' && 'message' in payload
       ? String((payload as { message: unknown }).message)
       : null) ?? `Request failed with status ${response.status}`;
+    const code =
+      payload && typeof payload === 'object' && 'code' in payload
+        ? String((payload as { code: unknown }).code)
+        : undefined;
 
     // Only an *authenticated* request (had a token) going stale counts —
     // a failed login attempt also comes back 401 with no token, and
@@ -85,7 +91,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       emitUnauthorized();
     }
 
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, code);
   }
 
   return payload as T;

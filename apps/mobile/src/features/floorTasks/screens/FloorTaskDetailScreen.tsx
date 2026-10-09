@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
@@ -48,6 +50,7 @@ function formatElapsed(ms: number): string {
  * relies on.
  */
 export function FloorTaskDetailScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { data: openTask, isPending } = useMyOpenFloorTask();
   const activeCategory = openTask?.category ?? route.params.category;
@@ -84,7 +87,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     if (!isRunning) return;
     return navigation.addListener('beforeRemove', (e) => {
       e.preventDefault();
-      Alert.alert('Pause first', 'Pause this task before leaving its page.');
+      Alert.alert(t('floorTasks.pauseFirstTitle'), t('floorTasks.pauseFirstMessage'));
     });
   }, [isRunning, navigation]);
 
@@ -99,9 +102,9 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
       photoUrls: meta.needsPhotos ? photos : undefined,
     };
 
-    Alert.alert(`Stop ${meta.label}?`, "This finishes the task — you won't be able to add more to it afterward.", [
-      { text: 'Keep Going', style: 'cancel' },
-      { text: 'Stop', style: 'destructive', onPress: () => end.mutate(endInput) },
+    Alert.alert(t('floorTasks.stopConfirmTitle', { label: t(meta.label) }), t('floorTasks.stopConfirmMessage'), [
+      { text: t('floorTasks.keepGoing'), style: 'cancel' },
+      { text: t('floorTasks.stop'), style: 'destructive', onPress: () => end.mutate(endInput) },
     ]);
   }
 
@@ -111,26 +114,28 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
 
   return (
     <KeyboardAwareScreen contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
-      <Text style={styles.title}>{meta.label}</Text>
+      <Text style={styles.title}>{t(meta.label)}</Text>
 
       {openTask ? (
         <>
           <Text style={isPaused ? styles.pausedBanner : styles.elapsed}>
-            {isPaused ? 'Paused' : formatElapsed(elapsedMs)}
+            {isPaused ? t('floorTasks.paused') : formatElapsed(elapsedMs)}
           </Text>
-          <Text style={styles.startedAt}>Started {new Date(openTask.startedAt).toLocaleTimeString()}</Text>
+          <Text style={styles.startedAt}>
+            {t('floorTasks.started', { time: new Date(openTask.startedAt).toLocaleTimeString() })}
+          </Text>
         </>
       ) : (
-        <Text style={styles.subtitle}>Nothing starts until you press Start.</Text>
+        <Text style={styles.subtitle}>{t('floorTasks.nothingStartsUntilStart')}</Text>
       )}
 
-      {start.error && <Text style={styles.error}>{start.error.message}</Text>}
-      {pause.error && <Text style={styles.error}>{pause.error.message}</Text>}
-      {resume.error && <Text style={styles.error}>{resume.error.message}</Text>}
+      {start.error && <Text style={styles.error}>{translateError(start.error, t)}</Text>}
+      {pause.error && <Text style={styles.error}>{translateError(pause.error, t)}</Text>}
+      {resume.error && <Text style={styles.error}>{translateError(resume.error, t)}</Text>}
 
       {meta.countLabel && (
         <>
-          <Text style={styles.label}>{meta.countLabel}</Text>
+          <Text style={styles.label}>{t(meta.countLabel)}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -143,7 +148,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
 
       {meta.countExtraLabel && (
         <>
-          <Text style={styles.label}>{meta.countExtraLabel}</Text>
+          <Text style={styles.label}>{t(meta.countExtraLabel)}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -156,12 +161,12 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
 
       {meta.needsZone && (
         <>
-          <Text style={styles.label}>Zone / Location</Text>
+          <Text style={styles.label}>{t('floorTasks.zoneLocation')}</Text>
           <TextInput
             style={styles.input}
             value={zone}
             onChangeText={setZone}
-            placeholder="e.g. Zone A, Racks 1-10"
+            placeholder={t('floorTasks.zonePlaceholder')}
             placeholderTextColor={colors.textMuted}
           />
         </>
@@ -169,7 +174,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
 
       {needsComment && (
         <>
-          <Text style={styles.label}>Comment{commentRequired ? '' : ' (optional)'}</Text>
+          <Text style={styles.label}>{commentRequired ? t('floorTasks.comment') : t('floorTasks.commentOptional')}</Text>
           <TextInput
             style={[styles.input, styles.multiline]}
             multiline
@@ -182,11 +187,11 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
 
       {meta.needsPhotos && (
         <View style={styles.photoSection}>
-          <MultiPhotoCapture label="Photos" photos={photos} onChange={setPhotos} maxPhotos={FLOOR_TASK_MAX_PHOTOS} />
+          <MultiPhotoCapture label={t('floorTasks.photos')} photos={photos} onChange={setPhotos} maxPhotos={FLOOR_TASK_MAX_PHOTOS} />
         </View>
       )}
 
-      {end.error && <Text style={styles.error}>{end.error.message}</Text>}
+      {end.error && <Text style={styles.error}>{translateError(end.error, t)}</Text>}
 
       {!openTask ? (
         <Pressable
@@ -197,7 +202,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
           {start.isPending ? (
             <ActivityIndicator color="#1a1200" />
           ) : (
-            <Text style={styles.primaryButtonText}>Start {meta.label}</Text>
+            <Text style={styles.primaryButtonText}>{t('floorTasks.startCategory', { label: t(meta.label) })}</Text>
           )}
         </Pressable>
       ) : (
@@ -214,7 +219,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
                 <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color={colors.brandOrange} />
               )}
             </Pressable>
-            <Text style={styles.iconButtonLabel}>{isPaused ? 'Resume' : 'Pause'}</Text>
+            <Text style={styles.iconButtonLabel}>{isPaused ? t('floorTasks.resume') : t('floorTasks.pause')}</Text>
           </View>
 
           <View style={styles.iconButtonGroup}>
@@ -225,7 +230,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             >
               {end.isPending ? <ActivityIndicator color="#fff" /> : <Ionicons name="stop" size={28} color="#fff" />}
             </Pressable>
-            <Text style={styles.iconButtonLabel}>Stop</Text>
+            <Text style={styles.iconButtonLabel}>{t('floorTasks.stop')}</Text>
           </View>
         </View>
       )}

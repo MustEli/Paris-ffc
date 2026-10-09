@@ -49,30 +49,38 @@ export interface CategoryMeta {
  * merged into backup_box, see FloorTaskCategory's doc comment above).
  * 'Putaway' and 'Open Pool Tasks' are NOT in this list — they're plain
  * navigation rows handled directly in FloorTasksMenuScreen, not real
- * FloorTaskCategory values.
+ * FloorTaskCategory values. `label`/`countLabel`/`countExtraLabel` are
+ * i18n keys (see core/i18n/translations/en.ts's `floorTasks` namespace),
+ * not display text — callers must wrap with t().
  */
 export const CATEGORY_META: CategoryMeta[] = [
-  { category: 'pick', label: 'Pick', countLabel: '# Picked', countExtraLabel: '# Not Found' },
-  { category: 'pack', label: 'Pack', countLabel: '# Packed', strongDividerBelow: true },
-  { category: 'return_processing', label: 'Return Processing', countLabel: '# Non-Fulfillment', countExtraLabel: '# Fulfillment', strongDividerBelow: true },
+  { category: 'pick', label: 'floorTasks.category.pick', countLabel: 'floorTasks.field.picked', countExtraLabel: 'floorTasks.field.notFound' },
+  { category: 'pack', label: 'floorTasks.category.pack', countLabel: 'floorTasks.field.packed', strongDividerBelow: true },
+  {
+    category: 'return_processing',
+    label: 'floorTasks.category.return_processing',
+    countLabel: 'floorTasks.field.nonFulfillment',
+    countExtraLabel: 'floorTasks.field.fulfillment',
+    strongDividerBelow: true,
+  },
   {
     category: 'warehousing_inventory_check',
-    label: 'Inventory Check',
-    countLabel: '# Locations Checked',
+    label: 'floorTasks.category.warehousing_inventory_check',
+    countLabel: 'floorTasks.field.locationsChecked',
     needsZone: true,
     needsComment: true,
     needsPhotos: true,
   },
   {
     category: 'warehousing_location_adjustment',
-    label: 'Location Adjustment',
-    countLabel: '# Locations Processed',
+    label: 'floorTasks.category.warehousing_location_adjustment',
+    countLabel: 'floorTasks.field.locationsProcessed',
     needsZone: true,
     needsComment: true,
     needsPhotos: true,
     strongDividerBelow: true,
   },
-  { category: 'backup_box', label: 'Backup — Box', countLabel: '# Prepared Boxes' },
-  { category: 'backup_shredder', label: 'Backup — Shredder', countLabel: '# Prepared Containers' },
-  { category: 'backup_other', label: 'Backup — Other', needsComment: true },
+  { category: 'backup_box', label: 'floorTasks.category.backup_box', countLabel: 'floorTasks.field.preparedBoxes' },
+  { category: 'backup_shredder', label: 'floorTasks.category.backup_shredder', countLabel: 'floorTasks.field.preparedContainers' },
+  { category: 'backup_other', label: 'floorTasks.category.backup_other', needsComment: true },
 ];

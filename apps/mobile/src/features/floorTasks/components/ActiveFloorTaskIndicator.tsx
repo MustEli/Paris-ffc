@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,6 +24,7 @@ function formatElapsed(ms: number): string {
  * it jumps straight back to that task's page.
  */
 export function ActiveFloorTaskIndicator() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { data: openTask } = useMyOpenFloorTask();
   const routeName = useCurrentRouteStore((state) => state.routeName);
@@ -53,10 +55,10 @@ export function ActiveFloorTaskIndicator() {
       }}
     >
       <Text style={styles.label} numberOfLines={1}>
-        {meta?.label ?? openTask.category}
+        {meta ? t(meta.label) : openTask.category}
       </Text>
       <Text style={isPaused ? styles.pausedStatus : styles.status}>
-        {isPaused ? 'Paused' : formatElapsed(elapsedMs)}
+        {isPaused ? t('floorTasks.paused') : formatElapsed(elapsedMs)}
       </Text>
     </Pressable>
   );

@@ -1,12 +1,14 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { translateError } from '../../../core/i18n/errorCodes';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { usePallets } from '../../sellerStock/hooks/useSellerStock';
 import { useTasks } from '../hooks/usePutAwayTasks';
-import { STATUS_LABELS } from '../types';
+import { type PutAwayTaskStatus } from '../types';
 
 interface Props {
   navigation: NativeStackNavigationProp<StaffStackParamList, 'PutawayUnified'>;
@@ -15,12 +17,27 @@ interface Props {
 const OPEN_STATUSES = ['assigned', 'in_progress', 'issue_reported'];
 
 /**
+ * A local mapping rather than reusing putAway/types.ts's shared
+ * STATUS_LABELS — that constant is also consumed by several screens
+ * this pass doesn't translate (PutAwayTaskDetailScreen,
+ * PutAwayTaskListScreen), so turning its values into i18n keys would
+ * make those render raw key strings instead of text.
+ */
+const STATUS_LABEL_KEYS: Record<PutAwayTaskStatus, string> = {
+  assigned: 'putaway.status.assigned',
+  in_progress: 'putaway.status.inProgress',
+  completed: 'putaway.status.completed',
+  issue_reported: 'putaway.status.issueReported',
+};
+
+/**
  * "Putaway" on the new Floor Tasks menu — unifies two previously
  * separate places staff had to check: Admin-assigned Put-Away Tasks,
  * and good-condition pallets they can put away themselves straight
  * from Seller Stock. One list of "everything put-away-able right now."
  */
 export function PutawayUnifiedScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const tasks = useTasks();
   const pallets = usePallets();
@@ -38,11 +55,11 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
     >
-      <Text style={styles.title}>Putaway</Text>
-      {error && <Text style={styles.error}>{error.message}</Text>}
+      <Text style={styles.title}>{t('putaway.title')}</Text>
+      {error && <Text style={styles.error}>{translateError(error, t)}</Text>}
 
-      <Text style={styles.sectionTitle}>Assigned to you</Text>
-      {openTasks.length === 0 && <Text style={styles.empty}>No assigned put-away tasks.</Text>}
+      <Text style={styles.sectionTitle}>{t('putaway.assignedToYou')}</Text>
+      {openTasks.length === 0 && <Text style={styles.empty}>{t('putaway.noAssignedTasks')}</Text>}
       {openTasks.map((task) => (
         <Pressable
           key={task.id}
@@ -50,21 +67,21 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('PutAwayTaskDetail', { id: task.id })}
         >
           <Text style={styles.rowTitle}>{task.location}</Text>
-          <Text style={styles.rowSubtitle}>{STATUS_LABELS[task.status]}</Text>
+          <Text style={styles.rowSubtitle}>{t(STATUS_LABEL_KEYS[task.status])}</Text>
         </Pressable>
       ))}
 
-      <Text style={styles.sectionTitle}>Ready to put away yourself</Text>
-      {readyPallets.length === 0 && <Text style={styles.empty}>No pallets ready for self put-away.</Text>}
+      <Text style={styles.sectionTitle}>{t('putaway.readyToPutAwayYourself')}</Text>
+      {readyPallets.length === 0 && <Text style={styles.empty}>{t('putaway.noReadyPallets')}</Text>}
       {readyPallets.map((pallet) => (
         <Pressable
           key={pallet.id}
           style={styles.row}
           onPress={() => navigation.navigate('SellerStockDetail', { id: pallet.id })}
         >
-          <Text style={styles.rowTitle}>Pallet {pallet.palletIndex}</Text>
+          <Text style={styles.rowTitle}>{t('putaway.pallet', { index: pallet.palletIndex })}</Text>
           <Text style={styles.rowSubtitle}>
-            {pallet.sellerName} · Box {pallet.boxNumber}
+            {t('putaway.palletSubtitle', { sellerName: pallet.sellerName, boxNumber: pallet.boxNumber })}
           </Text>
         </Pressable>
       ))}

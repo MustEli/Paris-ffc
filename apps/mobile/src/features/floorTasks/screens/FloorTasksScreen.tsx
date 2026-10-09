@@ -1,9 +1,11 @@
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ListRow } from '../../../core/components/ListRow';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { useOrderPrepTasks } from '../../orderPrep/hooks/useOrderPrep';
@@ -32,6 +34,7 @@ const OPEN_ORDER_PREP_STATUSES = ['assigned', 'in_progress'];
  * that "My Tasks" is gone as its own menu entry.
  */
 export function FloorTasksScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { data: openTask, isPending, error } = useMyOpenFloorTask();
   const orderPrep = useOrderPrepTasks();
@@ -65,8 +68,8 @@ export function FloorTasksScreen({ navigation }: Props) {
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
     >
-      <Text style={styles.title}>Floor Tasks</Text>
-      {error && <Text style={styles.error}>{error.message}</Text>}
+      <Text style={styles.title}>{t('floorTasks.title')}</Text>
+      {error && <Text style={styles.error}>{translateError(error, t)}</Text>}
 
       {openOrderPrepTask && (
         <Pressable
@@ -74,7 +77,9 @@ export function FloorTasksScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('OrderPrepTaskDetail', { id: openOrderPrepTask.id })}
         >
           <Text style={styles.orderPrepBannerText}>
-            You have an assigned {openOrderPrepTask.role === 'picker' ? 'Picker' : 'Packer'} task — tap to open it
+            {t('floorTasks.assignedOrderPrepBanner', {
+              role: openOrderPrepTask.role === 'picker' ? t('floorTasks.picker') : t('floorTasks.packer'),
+            })}
           </Text>
         </Pressable>
       )}
@@ -82,18 +87,18 @@ export function FloorTasksScreen({ navigation }: Props) {
       {CATEGORY_META.slice(0, 3).map((meta) => (
         <ListRow
           key={meta.category}
-          label={meta.label}
+          label={t(meta.label)}
           strongDividerBelow={meta.strongDividerBelow}
           onPress={() => navigation.navigate('FloorTaskDetail', { category: meta.category })}
         />
       ))}
 
-      <ListRow label="Putaway" strongDividerBelow onPress={() => navigation.navigate('PutawayUnified')} />
+      <ListRow label={t('floorTasks.putaway')} strongDividerBelow onPress={() => navigation.navigate('PutawayUnified')} />
 
       {CATEGORY_META.slice(3).map((meta) => (
         <ListRow
           key={meta.category}
-          label={meta.label}
+          label={t(meta.label)}
           strongDividerBelow={meta.strongDividerBelow}
           onPress={() => navigation.navigate('FloorTaskDetail', { category: meta.category })}
         />

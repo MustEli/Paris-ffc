@@ -50,69 +50,74 @@ export interface CategoryMeta {
   comment?: { label: string; hint?: string };
 }
 
-/** Field sets match the requirements doc exactly — see the backend's issue-report.types.ts doc comment. */
+/**
+ * Field sets match the requirements doc exactly — see the backend's
+ * issue-report.types.ts doc comment. All `label`/`hint` values here are
+ * i18n keys (see core/i18n/translations/en.ts's `issueReports`
+ * namespace), not display text — callers must wrap with t().
+ */
 export const CATEGORY_META: CategoryMeta[] = [
   {
     category: 'non_traceable_return_parcel',
-    label: 'Non-traceable Return Parcel',
-    photos: { label: 'Photo of part/parcel', max: 1 },
-    trackingId: { label: 'Tracking ID' },
-    comment: { label: 'Comment', hint: 'Any information about the parcel? ID of part? Seller name?' },
+    label: 'issueReports.category.non_traceable_return_parcel',
+    photos: { label: 'issueReports.field.photoOfPartParcel', max: 1 },
+    trackingId: { label: 'issueReports.field.trackingId' },
+    comment: { label: 'issueReports.field.comment', hint: 'issueReports.field.commentHintReturnParcel' },
   },
   {
     category: 'non_fulfillment_return_parcel',
-    label: 'Non-fulfillment Return Parcel',
-    photos: { label: 'Photo of part/parcel', max: 1 },
-    trackingId: { label: 'Tracking ID' },
-    comment: { label: 'Comment', hint: 'Any information about the parcel? ID of part? Seller name?' },
+    label: 'issueReports.category.non_fulfillment_return_parcel',
+    photos: { label: 'issueReports.field.photoOfPartParcel', max: 1 },
+    trackingId: { label: 'issueReports.field.trackingId' },
+    comment: { label: 'issueReports.field.comment', hint: 'issueReports.field.commentHintReturnParcel' },
   },
   {
     category: 'no_return_request_generated',
-    label: 'No Return Request Generated',
-    trackingId: { label: 'Tracking ID' },
-    orderNumber: { label: 'Order Number' },
-    comment: { label: 'Comment', hint: 'Can you tell what the return reason is?' },
+    label: 'issueReports.category.no_return_request_generated',
+    trackingId: { label: 'issueReports.field.trackingId' },
+    orderNumber: { label: 'issueReports.field.orderNumber' },
+    comment: { label: 'issueReports.field.comment', hint: 'issueReports.field.commentHintNoReturnRequest' },
   },
   {
     category: 'shipment_label_not_generatable',
-    label: 'Shipment Label Not Generatable',
-    photos: { label: 'Photo of error page', max: 1 },
-    orderNumber: { label: 'Order Number' },
-    errorNo: { label: 'Error No.' },
-    comment: { label: 'Comment' },
+    label: 'issueReports.category.shipment_label_not_generatable',
+    photos: { label: 'issueReports.field.photoOfErrorPage', max: 1 },
+    orderNumber: { label: 'issueReports.field.orderNumber' },
+    errorNo: { label: 'issueReports.field.errorNo' },
+    comment: { label: 'issueReports.field.comment' },
   },
   {
     category: 'item_found_out_of_location',
-    label: 'Item Found Out of Location',
-    photos: { label: 'Photo of item', max: 1 },
-    idNumber: { label: 'ID Number' },
-    comment: { label: 'Comment', hint: 'Handed to whom?' },
+    label: 'issueReports.category.item_found_out_of_location',
+    photos: { label: 'issueReports.field.photoOfItem', max: 1 },
+    idNumber: { label: 'issueReports.field.idNumber' },
+    comment: { label: 'issueReports.field.comment', hint: 'issueReports.field.commentHintItemFound' },
   },
   {
     category: 'empty_crate',
-    label: 'Empty Crate',
-    photos: { label: 'Photo of crate', max: 1 },
-    locationId: { label: 'Location ID' },
+    label: 'issueReports.category.empty_crate',
+    photos: { label: 'issueReports.field.photoOfCrate', max: 1 },
+    locationId: { label: 'issueReports.field.locationId' },
   },
   {
     category: 'part_broken_in_location',
-    label: 'Part Broken in the Location',
-    locationId: { label: 'Location ID' },
-    photos: { label: 'Photos of the damaged part', max: 6 },
-    comment: { label: 'Comment', hint: 'Part ID, order ID if any, seller name if known' },
+    label: 'issueReports.category.part_broken_in_location',
+    locationId: { label: 'issueReports.field.locationId' },
+    photos: { label: 'issueReports.field.photosOfDamagedPart', max: 6 },
+    comment: { label: 'issueReports.field.comment', hint: 'issueReports.field.commentHintPartBroken' },
   },
   {
     category: 'heavy_crate',
-    label: 'Heavy Crate',
-    photos: { label: 'Photo of crate', max: 1 },
-    locationId: { label: 'Location ID' },
+    label: 'issueReports.category.heavy_crate',
+    photos: { label: 'issueReports.field.photoOfCrate', max: 1 },
+    locationId: { label: 'issueReports.field.locationId' },
   },
   {
     category: 'other',
-    label: 'Other',
+    label: 'issueReports.category.other',
     strongDividerAbove: true,
-    comment: { label: 'What happened?' },
-    photos: { label: 'Photo (optional)', max: 3, optional: true },
+    comment: { label: 'issueReports.field.whatHappened' },
+    photos: { label: 'issueReports.field.photoOptional', max: 3, optional: true },
   },
 ];
 

@@ -1,11 +1,13 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { uploadPhoto } from '../../../core/api/upload';
 import { setMyPhoto } from '../../../core/api/users';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { compressForUpload } from '../../../core/media/compressImage';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
@@ -22,6 +24,7 @@ interface Props {
  * shift-status bar.
  */
 export function SelfieCaptureScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const setPhotoUrl = useAuthStore((state) => state.setPhotoUrl);
   const [localUri, setLocalUri] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export function SelfieCaptureScreen({ navigation }: Props) {
     setError(null);
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      setError('Camera permission is required.');
+      setError(t('selfie.cameraPermissionRequired'));
       return;
     }
     // No allowsEditing — Android's native crop editor that opens varies by
@@ -59,7 +62,7 @@ export function SelfieCaptureScreen({ navigation }: Props) {
       setPhotoUrl(updated.photoUrl ?? url);
       navigation.replace('StaffHome');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save photo');
+      setError(err instanceof Error ? translateError(err, t) : t('selfie.couldNotSave'));
     } finally {
       setIsSaving(false);
     }
@@ -67,14 +70,14 @@ export function SelfieCaptureScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add your photo</Text>
-      <Text style={styles.subtitle}>Shown next to your name while you're on shift. Just once.</Text>
+      <Text style={styles.title}>{t('selfie.title')}</Text>
+      <Text style={styles.subtitle}>{t('selfie.subtitle')}</Text>
 
       <Pressable style={styles.tapArea} onPress={handleCapture} disabled={isSaving}>
         {localUri ? (
           <Image source={{ uri: localUri }} style={styles.preview} />
         ) : (
-          <Text style={styles.placeholder}>Tap to take a photo</Text>
+          <Text style={styles.placeholder}>{t('selfie.tapToTake')}</Text>
         )}
       </Pressable>
 
@@ -83,10 +86,10 @@ export function SelfieCaptureScreen({ navigation }: Props) {
       {localUri && (
         <>
           <Pressable style={styles.retakeButton} onPress={handleCapture} disabled={isSaving}>
-            <Text style={styles.retakeText}>Retake</Text>
+            <Text style={styles.retakeText}>{t('selfie.retake')}</Text>
           </Pressable>
           <Pressable style={[styles.saveButton, isSaving && styles.saveButtonBusy]} onPress={handleSave} disabled={isSaving}>
-            {isSaving ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.saveText}>Use this photo</Text>}
+            {isSaving ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.saveText}>{t('selfie.useThisPhoto')}</Text>}
           </Pressable>
         </>
       )}

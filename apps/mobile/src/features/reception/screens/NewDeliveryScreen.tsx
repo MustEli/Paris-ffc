@@ -1,12 +1,14 @@
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useReferenceList } from '../../../core/hooks/useReferenceList';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { colors } from '../../../core/theme/colors';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
@@ -28,6 +30,7 @@ interface Props {
 
 /** Doc Step 1 + 2: "New Delivery" → category → category-specific data entry. `presetCategory` (set when arriving from one of the Reception menu's boxes) skips the category picker entirely. */
 export function NewDeliveryScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const presetCategory = route.params?.presetCategory;
   const [category, setCategory] = useState<ReceptionCategory | null>(presetCategory ?? null);
@@ -81,11 +84,11 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
 
   return (
     <KeyboardAwareScreen contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 28 }]}>
-      <Text style={styles.title}>{presetCategory ? CATEGORY_LABELS[presetCategory] : 'New Delivery'}</Text>
+      <Text style={styles.title}>{presetCategory ? t(CATEGORY_LABELS[presetCategory]) : t('reception.newDelivery')}</Text>
 
       {!presetCategory && (
         <>
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>{t('reception.category')}</Text>
           <View style={styles.chipRow}>
             {CATEGORIES.map((c) => (
               <Pressable
@@ -94,7 +97,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
                 onPress={() => setCategory(c)}
               >
                 <Text style={[styles.chipText, category === c && styles.chipTextSelected]}>
-                  {CATEGORY_LABELS[c]}
+                  {t(CATEGORY_LABELS[c])}
                 </Text>
               </Pressable>
             ))}
@@ -106,7 +109,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         category === 'packaging_stock' ||
         category === 'equipment_other') && (
         <>
-          <Text style={styles.label}>Parcel count</Text>
+          <Text style={styles.label}>{t('reception.parcelCount')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -118,7 +121,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
 
       {category === 'sellers_stock' && (
         <>
-          <Text style={styles.label}>Pallet count</Text>
+          <Text style={styles.label}>{t('reception.palletCount')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -130,57 +133,43 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
 
       {category === 'return_parcels' && (
         <>
-          <Text style={styles.label}>Transporter company</Text>
+          <Text style={styles.label}>{t('reception.transporterCompany')}</Text>
           <DropdownPicker
             options={transporterCompanies.data?.map((v) => v.value) ?? []}
             value={transporterCompany || null}
             onChange={setTransporterCompany}
             isLoading={transporterCompanies.isPending}
-            placeholder="Select transporter company"
-            emptyLabel="No transporter companies yet — ask an Admin to add some in the web dashboard."
+            placeholder={t('reception.selectTransporterCompany')}
+            emptyLabel={t('reception.noTransporterCompanies')}
           />
         </>
       )}
 
       {category === 'packaging_stock' && (
         <>
-          <Text style={styles.label}>Packaging type</Text>
+          <Text style={styles.label}>{t('reception.packagingType')}</Text>
           <DropdownPicker
             options={packagingTypes.data?.map((v) => v.value) ?? []}
             value={packagingType || null}
             onChange={setPackagingType}
             isLoading={packagingTypes.isPending}
-            placeholder="Select packaging type"
-            emptyLabel="No packaging types yet — ask an Admin to add some in the web dashboard."
+            placeholder={t('reception.selectPackagingType')}
+            emptyLabel={t('reception.noPackagingTypes')}
           />
 
-          <Text style={styles.label}>Seller</Text>
+          <Text style={styles.label}>{t('reception.seller')}</Text>
           <DropdownPicker
             options={sellers.data?.map((v) => v.value) ?? []}
             value={sellerName || null}
             onChange={setSellerName}
             isLoading={sellers.isPending}
-            placeholder="Select seller"
-            emptyLabel="No sellers yet — ask an Admin to add some in the web dashboard."
+            placeholder={t('reception.selectSeller')}
+            emptyLabel={t('reception.noSellers')}
           />
 
           <View style={styles.photoSection}>
-            <MultiPhotoCapture label="Invoice photo (optional)" photos={invoicePhotos} onChange={setInvoicePhotos} maxPhotos={3} />
-          </View>
-        </>
-      )}
-
-      {category === 'equipment_other' && (
-        <>
-          <Text style={styles.label}>Item description</Text>
-          <TextInput style={styles.input} value={itemDescription} onChangeText={setItemDescription} />
-
-          <View style={styles.photoSection}>
-            <MultiPhotoCapture label="Photo of equipment" photos={photos} onChange={setPhotos} maxPhotos={6} />
-          </View>
-          <View style={styles.photoSection}>
             <MultiPhotoCapture
-              label="Invoice photo (optional)"
+              label={t('reception.invoicePhotoOptional')}
               photos={invoicePhotos}
               onChange={setInvoicePhotos}
               maxPhotos={3}
@@ -189,14 +178,33 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         </>
       )}
 
-      {error && <Text style={styles.error}>{error.message}</Text>}
+      {category === 'equipment_other' && (
+        <>
+          <Text style={styles.label}>{t('reception.itemDescription')}</Text>
+          <TextInput style={styles.input} value={itemDescription} onChangeText={setItemDescription} />
+
+          <View style={styles.photoSection}>
+            <MultiPhotoCapture label={t('reception.photoOfEquipment')} photos={photos} onChange={setPhotos} maxPhotos={6} />
+          </View>
+          <View style={styles.photoSection}>
+            <MultiPhotoCapture
+              label={t('reception.invoicePhotoOptional')}
+              photos={invoicePhotos}
+              onChange={setInvoicePhotos}
+              maxPhotos={3}
+            />
+          </View>
+        </>
+      )}
+
+      {error && <Text style={styles.error}>{translateError(error, t)}</Text>}
 
       <Pressable
         style={[styles.submitButton, (!isFormValid() || isPending) && styles.submitButtonDisabled]}
         onPress={handleSubmit}
         disabled={!isFormValid() || isPending}
       >
-        {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Log delivery</Text>}
+        {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{t('reception.logDelivery')}</Text>}
       </Pressable>
     </KeyboardAwareScreen>
   );

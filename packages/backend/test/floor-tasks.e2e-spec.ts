@@ -192,18 +192,20 @@ describe('Floor Tasks (e2e)', () => {
     expect(ended.body.totalPausedMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('rejects starting a second floor task while one is already open', async () => {
+  it('rejects starting a second floor task while one is already open, with a stable error code for the mobile app to translate', async () => {
     await request(app.getHttpServer())
       .post('/floor-tasks/start')
       .set('Authorization', `Bearer ${staff.token}`)
       .send({ category: 'pick' })
       .expect(201);
 
-    return request(app.getHttpServer())
+    const rejected = await request(app.getHttpServer())
       .post('/floor-tasks/start')
       .set('Authorization', `Bearer ${staff.token}`)
       .send({ category: 'pack' })
       .expect(409);
+    expect(rejected.body.code).toBe('floor_task.already_open');
+    expect(rejected.body.message).toContain('Already have an open floor task');
   });
 
   it('rejects starting a floor task with the merged-away "box_prep" category', () => {

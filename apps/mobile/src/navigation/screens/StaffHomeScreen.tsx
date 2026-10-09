@@ -1,4 +1,5 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,17 +20,18 @@ interface Props {
  * StaffAppShell's LockedGate covers this whole screen until then.
  */
 export function StaffHomeScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
     >
-      <MenuBox label="Reception" onPress={() => navigation.navigate('ReceptionMenu')} />
-      <MenuBox label="Floor Tasks" onPress={() => navigation.navigate('FloorTasks')} />
-      <MenuBox label="Open Pool Tasks" onPress={() => navigation.navigate('OpenPool')} />
+      <MenuBox label={t('mainMenu.reception')} onPress={() => navigation.navigate('ReceptionMenu')} />
+      <MenuBox label={t('mainMenu.floorTasks')} onPress={() => navigation.navigate('FloorTasks')} />
+      <MenuBox label={t('mainMenu.openPoolTasks')} onPress={() => navigation.navigate('OpenPool')} />
       <MenuBox
-        label="Issue Reporting"
+        label={t('mainMenu.issueReporting')}
         variant="alert"
         spacedAbove
         onPress={() => navigation.navigate('IssueReportingMenu')}

@@ -1,4 +1,5 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,25 +13,26 @@ interface Props {
 
 /** Reception's 4-way split — tap a category, land in its own world (history + add new), or Seller Stock's own feature for pallets. */
 export function ReceptionMenuScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
     >
-      <Text style={styles.title}>Reception</Text>
+      <Text style={styles.title}>{t('reception.title')}</Text>
 
       <MenuBox
-        label="Return Parcels"
+        label={t('reception.returnParcels')}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'return_parcels' })}
       />
       <MenuBox
-        label="Packaging Stock"
+        label={t('reception.packagingStock')}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'packaging_stock' })}
       />
-      <MenuBox label="Sellers Stock" onPress={() => navigation.navigate('SellerStockList')} />
+      <MenuBox label={t('reception.sellersStock')} onPress={() => navigation.navigate('SellerStockList')} />
       <MenuBox
-        label="Equipment & Other"
+        label={t('reception.equipmentOther')}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'equipment_other' })}
       />
     </ScrollView>

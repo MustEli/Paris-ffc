@@ -48,9 +48,10 @@ export interface Reception {
   flaggedForReview: boolean;
 }
 
+/** Values are i18n keys (see core/i18n/translations/en.ts's `reception` namespace), not display text — callers must wrap with t(). */
 export const CATEGORY_LABELS: Record<ReceptionCategory, string> = {
-  return_parcels: 'Return Parcels',
-  packaging_stock: 'Packaging Stock',
-  sellers_stock: 'Sellers Stock',
-  equipment_other: 'Equipment & Other',
+  return_parcels: 'reception.returnParcels',
+  packaging_stock: 'reception.packagingStock',
+  sellers_stock: 'reception.sellersStock',
+  equipment_other: 'reception.equipmentOther',
 };

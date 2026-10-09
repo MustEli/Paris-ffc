@@ -1,10 +1,12 @@
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useAddInstructions, useCompleteReception, useReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS } from '../types';
@@ -27,6 +29,7 @@ function formatDuration(ms: number): string {
  * on completion.
  */
 export function ReceptionDetailScreen({ route }: Props) {
+  const { t } = useTranslation();
   const { id } = route.params;
   const role = useAuthStore((state) => state.user?.role);
   const { data: reception, isPending, error } = useReception(id);
@@ -37,19 +40,19 @@ export function ReceptionDetailScreen({ route }: Props) {
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
   if (error || !reception) {
-    return <Text style={styles.error}>{error?.message ?? 'Not found'}</Text>;
+    return <Text style={styles.error}>{error ? translateError(error, t) : t('reception.notFound')}</Text>;
   }
 
   return (
     <KeyboardAwareScreen contentContainerStyle={styles.container}>
-      <Text style={styles.category}>{CATEGORY_LABELS[reception.details.category]}</Text>
+      <Text style={styles.category}>{t(CATEGORY_LABELS[reception.details.category])}</Text>
       <Text style={styles.summary}>{summarizeDetails(reception)}</Text>
-      <Text style={styles.status}>{STATUS_LABELS[reception.status]}</Text>
-      <Text style={styles.meta}>Arrived: {new Date(reception.arrivedAt).toLocaleString()}</Text>
+      <Text style={styles.status}>{t(STATUS_LABELS[reception.status])}</Text>
+      <Text style={styles.meta}>{t('reception.arrived', { date: new Date(reception.arrivedAt).toLocaleString() })}</Text>
 
       {reception.details.category === 'equipment_other' && reception.details.photoUrls.length > 0 && (
         <View style={styles.photoBlock}>
-          <Text style={styles.label}>Equipment photo(s)</Text>
+          <Text style={styles.label}>{t('reception.equipmentPhotos')}</Text>
           <View style={styles.photoRow}>
             {reception.details.photoUrls.map((url) => (
               <Image key={url} source={{ uri: resolvePhotoUrl(url) }} style={styles.photo} />
@@ -61,7 +64,7 @@ export function ReceptionDetailScreen({ route }: Props) {
       {(reception.details.category === 'equipment_other' || reception.details.category === 'packaging_stock') &&
         reception.details.invoicePhotoUrls.length > 0 && (
           <View style={styles.photoBlock}>
-            <Text style={styles.label}>Invoice photo(s)</Text>
+            <Text style={styles.label}>{t('reception.invoicePhotos')}</Text>
             <View style={styles.photoRow}>
               {reception.details.invoicePhotoUrls.map((url) => (
                 <Image key={url} source={{ uri: resolvePhotoUrl(url) }} style={styles.photo} />
@@ -72,32 +75,32 @@ export function ReceptionDetailScreen({ route }: Props) {
 
       {reception.instructions && (
         <View style={styles.instructionsBox}>
-          <Text style={styles.instructionsLabel}>Instructions from admin</Text>
+          <Text style={styles.instructionsLabel}>{t('reception.instructionsFromAdmin')}</Text>
           <Text style={styles.instructionsText}>{reception.instructions}</Text>
         </View>
       )}
 
       {reception.status === 'completed' && reception.processingDurationMs !== null && (
         <>
-          <Text style={styles.meta}>Put away: {new Date(reception.putAwayAt!).toLocaleString()}</Text>
-          <Text style={styles.meta}>Processing time: {formatDuration(reception.processingDurationMs)}</Text>
-          {reception.flaggedForReview && (
-            <Text style={styles.flag}>⚠ Flagged for review — took over 2 hours</Text>
-          )}
+          <Text style={styles.meta}>{t('reception.putAway', { date: new Date(reception.putAwayAt!).toLocaleString() })}</Text>
+          <Text style={styles.meta}>
+            {t('reception.processingTime', { duration: formatDuration(reception.processingDurationMs) })}
+          </Text>
+          {reception.flaggedForReview && <Text style={styles.flag}>{t('reception.flaggedOver2h')}</Text>}
         </>
       )}
 
       {role === 'admin' && reception.status === 'arrived' && (
         <View style={styles.actionBox}>
-          <Text style={styles.label}>Give instructions</Text>
+          <Text style={styles.label}>{t('reception.giveInstructions')}</Text>
           <TextInput
             style={styles.input}
             multiline
-            placeholder="e.g. Stack in aisle 4, bay 2"
+            placeholder={t('reception.instructionsPlaceholder')}
             value={instructionsDraft}
             onChangeText={setInstructionsDraft}
           />
-          {addInstructions.error && <Text style={styles.error}>{addInstructions.error.message}</Text>}
+          {addInstructions.error && <Text style={styles.error}>{translateError(addInstructions.error, t)}</Text>}
           <Pressable
             style={[styles.button, !instructionsDraft && styles.buttonDisabled]}
             disabled={!instructionsDraft || addInstructions.isPending}
@@ -106,7 +109,7 @@ export function ReceptionDetailScreen({ route }: Props) {
             {addInstructions.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Send instructions</Text>
+              <Text style={styles.buttonText}>{t('reception.sendInstructions')}</Text>
             )}
           </Pressable>
         </View>
@@ -114,7 +117,7 @@ export function ReceptionDetailScreen({ route }: Props) {
 
       {role === 'staff' && reception.status === 'ready_for_putaway' && (
         <View style={styles.actionBox}>
-          {complete.error && <Text style={styles.error}>{complete.error.message}</Text>}
+          {complete.error && <Text style={styles.error}>{translateError(complete.error, t)}</Text>}
           <Pressable
             style={styles.button}
             disabled={complete.isPending}
@@ -123,14 +126,14 @@ export function ReceptionDetailScreen({ route }: Props) {
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Confirm items are put away</Text>
+              <Text style={styles.buttonText}>{t('reception.confirmPutAway')}</Text>
             )}
           </Pressable>
         </View>
       )}
 
       {role === 'staff' && reception.status === 'arrived' && (
-        <Text style={styles.waiting}>Waiting on admin instructions…</Text>
+        <Text style={styles.waiting}>{t('reception.waitingOnAdmin')}</Text>
       )}
     </KeyboardAwareScreen>
   );

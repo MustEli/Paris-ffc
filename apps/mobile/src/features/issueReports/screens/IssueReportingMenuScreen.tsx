@@ -1,4 +1,5 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,17 +14,18 @@ interface Props {
 
 /** One-tap floor-blocker capture — see issue-report.types.ts (backend) for the per-category field doc. */
 export function IssueReportingMenuScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
     >
-      <Text style={styles.title}>Issue Reporting</Text>
+      <Text style={styles.title}>{t('issueReports.title')}</Text>
       {CATEGORY_META.map((meta, index) => (
         <ListRow
           key={meta.category}
-          label={meta.label}
+          label={t(meta.label)}
           strongDividerBelow={CATEGORY_META[index + 1]?.strongDividerAbove}
           onPress={() => navigation.navigate('IssueReportForm', { category: meta.category })}
         />

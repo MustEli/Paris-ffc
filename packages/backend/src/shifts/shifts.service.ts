@@ -110,7 +110,10 @@ export class ShiftsService {
 
   async startShift(userId: string): Promise<Shift> {
     if (await this.findActiveShift(userId)) {
-      throw new ConflictException('Shift already in progress — clock out before starting a new one');
+      throw new ConflictException({
+        message: 'Shift already in progress — clock out before starting a new one',
+        code: 'shift.already_active',
+      });
     }
 
     const now = new Date();
@@ -123,7 +126,7 @@ export class ShiftsService {
   async endShift(userId: string): Promise<Shift> {
     const shift = await this.findActiveShift(userId);
     if (!shift) {
-      throw new NotFoundException('No active shift to end');
+      throw new NotFoundException({ message: 'No active shift to end', code: 'shift.not_active' });
     }
     return this.toDomain(await this.endShiftInternal(shift, new Date()));
   }
@@ -238,17 +241,23 @@ export class ShiftsService {
   async startBreak(userId: string, type: BreakType): Promise<Break> {
     const shift = await this.getEffectiveActiveShift(userId);
     if (!shift) {
-      throw new NotFoundException('No active shift to take a break from');
+      throw new NotFoundException({ message: 'No active shift to take a break from', code: 'shift.not_active' });
     }
     if (await this.findActiveBreak(shift.id)) {
-      throw new ConflictException('Already on a break — end it before starting another');
+      throw new ConflictException({
+        message: 'Already on a break — end it before starting another',
+        code: 'shift.break_already_active',
+      });
     }
 
     const now = new Date();
     if (type === 'short') {
       const usedMs = await this.shortBreakUsedMs(shift.id, now);
       if (usedMs >= SHORT_BREAK_LIMIT_MS) {
-        throw new ConflictException('Short break allowance for this shift has already been used up');
+        throw new ConflictException({
+          message: 'Short break allowance for this shift has already been used up',
+          code: 'shift.short_break_used_up',
+        });
       }
     }
 
@@ -273,11 +282,11 @@ export class ShiftsService {
   async endBreak(userId: string): Promise<Break> {
     const shift = await this.getEffectiveActiveShift(userId);
     if (!shift) {
-      throw new NotFoundException('No active shift');
+      throw new NotFoundException({ message: 'No active shift', code: 'shift.not_active' });
     }
     const activeBreak = await this.findActiveBreak(shift.id);
     if (!activeBreak) {
-      throw new NotFoundException('No break in progress to end');
+      throw new NotFoundException({ message: 'No break in progress to end', code: 'shift.no_break_to_end' });
     }
 
     const updated = await this.prisma.break.update({
