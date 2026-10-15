@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,15 +16,6 @@ import { useMySchedule } from '../../schedule/hooks/useMySchedule';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 
 const LANGUAGE_NATIVE_NAME: Record<AppLanguage, string> = { en: 'English', fr: 'Français' };
-
-/** "H:MM:SS", counting up — ticking seconds reads as "alive" rather than a static number that only changes once a minute. */
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
 
 function formatDate(date: Date, locale: AppLanguage): string {
   return date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
@@ -59,17 +50,11 @@ export function ShiftStatusBar() {
     isEndingBreak,
   } = useShiftStatus();
 
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   const [isOpen, setIsOpen] = useState(false);
 
   if (!status?.active || !status.startedAt) return null;
 
-  const elapsedMs = now.getTime() - new Date(status.startedAt).getTime();
+  const now = new Date();
   const onBreak = status.onBreak;
   const onLunchBreak = onBreak && status.breakType === 'lunch';
   const onShortBreak = onBreak && status.breakType === 'short';
@@ -168,7 +153,6 @@ export function ShiftStatusBar() {
           </View>
 
           <View style={styles.statusColumn}>
-            <Text style={styles.elapsed}>{formatElapsed(elapsedMs)}</Text>
             <Text style={styles.subline}>
               {schedule ? `${t('shiftBar.ends', { time: schedule.shiftEndTime })} · ` : ''}
               {formatDate(now, language)}
@@ -307,11 +291,6 @@ const styles = StyleSheet.create({
   },
   statusColumn: {
     alignItems: 'flex-end',
-  },
-  elapsed: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.brandOrange,
   },
   subline: {
     fontSize: 11,

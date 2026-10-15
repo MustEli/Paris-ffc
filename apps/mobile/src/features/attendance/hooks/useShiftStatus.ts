@@ -56,6 +56,10 @@ export function useShiftStatus() {
 
   return {
     status: statusQuery.data,
+    // When the last status fetch completed — lets a ticking local clock
+    // derive a live countdown between polls without drifting, instead
+    // of just replaying the value from that one fetch.
+    statusUpdatedAt: statusQuery.dataUpdatedAt,
     isLoadingStatus: statusQuery.isPending,
     statusError: statusQuery.error,
     start: startMutation.mutate,

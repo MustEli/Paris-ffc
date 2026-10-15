@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -6,9 +6,20 @@ import { useAuthStore } from '../../../core/auth/authStore';
 import { navigationRef } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { ActiveFloorTaskIndicator } from '../../floorTasks/components/ActiveFloorTaskIndicator';
+import { LUNCH_BREAK_SUGGESTED_DURATION_MS } from '../api';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 import { ShiftStatusBar } from './ShiftStatusBar';
 import { LockedGate } from '../../../core/components/LockedGate';
+
+/** "MM:SS", counting down; past zero it flips to "+MM:SS" (over), rather than going negative. */
+function formatCountdown(ms: number): string {
+  const over = ms < 0;
+  const totalSeconds = Math.floor(Math.abs(ms) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const digits = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return over ? `+${digits}` : digits;
+}
 
 /**
  * Wraps the whole Staff stack. The off-shift and on-break states both
@@ -23,7 +34,7 @@ import { LockedGate } from '../../../core/components/LockedGate';
 export function StaffAppShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
-  const { status, isLoadingStatus, start, isStarting, endBreak, isEndingBreak } = useShiftStatus();
+  const { status, statusUpdatedAt, isLoadingStatus, start, isStarting, endBreak, isEndingBreak } = useShiftStatus();
 
   // While status is still loading, don't flash a gate that's about to
   // disappear — treat as on-shift briefly rather than a misleading
@@ -31,6 +42,25 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
   // used).
   const onShift = isLoadingStatus || !!status?.active;
   const onBreak = !isLoadingStatus && !!status?.onBreak;
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!onBreak) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [onBreak]);
+
+  // Short break ticks down from whatever the last status fetch reported
+  // (that poll already accounts for usage across earlier short breaks
+  // this shift), offset by real time elapsed since that fetch so it
+  // doesn't just jump every 5s. Lunch has no running total to carry —
+  // it's a plain countdown from this one break's own start time.
+  const breakCounter =
+    status?.breakType === 'short'
+      ? formatCountdown(status.shortBreakRemainingMs - (now - statusUpdatedAt))
+      : status?.breakType === 'lunch' && status.breakStartedAt
+        ? formatCountdown(LUNCH_BREAK_SUGGESTED_DURATION_MS - (now - new Date(status.breakStartedAt).getTime()))
+        : undefined;
 
   function handleStartShift() {
     start(undefined, {
@@ -63,6 +93,7 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
 
         {!isLoadingStatus && onShift && onBreak && (
           <LockedGate
+            counter={breakCounter}
             title={status?.breakType === 'lunch' ? t('shiftGate.onLunchBreak') : t('shiftGate.onShortBreak')}
             subtitle={t('shiftGate.onBreakSubtitle')}
             buttonLabel={t('shiftGate.endBreak')}

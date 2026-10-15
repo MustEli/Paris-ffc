@@ -5,6 +5,8 @@ import { colors } from '../theme/colors';
 interface Props {
   /** Shown above the button — e.g. "Ready when you are" / "On break". */
   title: string;
+  /** Shown above the title, in much larger digits — e.g. a break countdown. */
+  counter?: string;
   subtitle?: string;
   buttonLabel: string;
   onPress: () => void;
@@ -22,10 +24,11 @@ interface Props {
  * one bright orange button already reads as "this is the one thing to
  * do right now" without it.
  */
-export function LockedGate({ title, subtitle, buttonLabel, onPress, isBusy, secondaryLabel, onSecondaryPress }: Props) {
+export function LockedGate({ title, counter, subtitle, buttonLabel, onPress, isBusy, secondaryLabel, onSecondaryPress }: Props) {
   return (
     <View style={styles.scrim}>
       <View style={styles.content}>
+        {counter && <Text style={styles.counter}>{counter}</Text>}
         <Text style={styles.title}>{title}</Text>
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
@@ -58,6 +61,14 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     paddingHorizontal: 32,
+  },
+  counter: {
+    fontSize: 56,
+    fontWeight: '800',
+    color: colors.brandOrange,
+    textAlign: 'center',
+    marginBottom: 12,
+    fontVariant: ['tabular-nums'],
   },
   title: {
     fontSize: 20,
