@@ -68,9 +68,6 @@ export const fr = {
     packagingType: 'Type d’emballage',
     selectPackagingType: 'Sélectionner un type d’emballage',
     noPackagingTypes: 'Aucun type d’emballage pour l’instant — demandez à un administrateur d’en ajouter sur le tableau de bord web.',
-    seller: 'Vendeur',
-    selectSeller: 'Sélectionner un vendeur',
-    noSellers: 'Aucun vendeur pour l’instant — demandez à un administrateur d’en ajouter sur le tableau de bord web.',
     itemDescription: 'Description de l’article',
     photoOfEquipment: 'Photo de l’équipement',
     invoicePhotoOptional: 'Photo de la facture (optionnel)',
@@ -98,7 +95,7 @@ export const fr = {
     },
     summary: {
       returnParcels: '{{count}} colis de {{transporterCompany}} — rangé à {{putAwayLocation}}',
-      packagingStock: '{{count}} colis — {{packagingType}} — vendeur : {{sellerName}}',
+      packagingStock: '{{count}} colis — {{packagingType}} — rangé à {{putAwayLocation}}',
       sellersStock: '{{count}} palette(s)',
       equipmentOther: '{{count}} colis — {{itemDescription}}',
     },

@@ -144,19 +144,11 @@ describe('Reports (e2e)', () => {
       .set('Authorization', `Bearer ${staff.token}`)
       .expect(201);
 
-    const created = await request(app.getHttpServer())
+    // packaging_stock is created already completed (no admin instructions step) — see receptions.service.ts's create().
+    await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', sellerName: 'Acme Supplies' })
-      .expect(201);
-    await request(app.getHttpServer())
-      .post(`/receptions/${created.body.id}/instructions`)
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ instructions: 'Aisle 1' })
-      .expect(201);
-    await request(app.getHttpServer())
-      .post(`/receptions/${created.body.id}/complete`)
-      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', putAwayLocation: 'Zone B, Rack 1' })
       .expect(201);
 
     const report = await request(app.getHttpServer())

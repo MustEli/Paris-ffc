@@ -15,7 +15,7 @@ export function summarizeDetails(reception: Reception): string {
       return i18n.t('reception.summary.packagingStock', {
         count: details.parcelCount,
         packagingType: details.packagingType,
-        sellerName: details.sellerName,
+        putAwayLocation: details.putAwayLocation,
       });
     case 'sellers_stock':
       return i18n.t('reception.summary.sellersStock', { count: details.palletCount });

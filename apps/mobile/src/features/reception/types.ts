@@ -15,8 +15,11 @@ export interface PackagingStockDetails {
   category: 'packaging_stock';
   parcelCount: number;
   packagingType: string;
-  sellerName: string;
+  /** No longer collected (customer request) — stays nullable so older receptions that do have one still display it. */
+  sellerName: string | null;
   invoicePhotoUrls: string[];
+  /** Recorded by staff themselves, same submission as logging it — no admin instructions step for this category. */
+  putAwayLocation: string;
 }
 
 export interface SellersStockDetails {

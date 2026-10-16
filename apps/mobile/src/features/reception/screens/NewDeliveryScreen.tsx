@@ -40,21 +40,19 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
   const [putAwayLocation, setPutAwayLocation] = useState('');
   const [packagingType, setPackagingType] = useState('');
   const [itemDescription, setItemDescription] = useState('');
-  const [sellerName, setSellerName] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [invoicePhotos, setInvoicePhotos] = useState<string[]>([]);
 
   const { mutate: submit, isPending, error } = useCreateReception();
   const transporterCompanies = useReferenceList('transporter_company');
   const packagingTypes = useReferenceList('packaging_type');
-  const sellers = useReferenceList('seller_name');
 
   function isFormValid(): boolean {
     switch (category) {
       case 'return_parcels':
         return !!parcelCount && !!transporterCompany && !!putAwayLocation.trim();
       case 'packaging_stock':
-        return !!parcelCount && !!packagingType && !!sellerName;
+        return !!parcelCount && !!packagingType && !!putAwayLocation.trim();
       case 'sellers_stock':
         return !!palletCount;
       case 'equipment_other':
@@ -74,8 +72,8 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         transporterCompany: transporterCompany || undefined,
         packagingType: packagingType || undefined,
         itemDescription: itemDescription || undefined,
-        sellerName: sellerName || undefined,
-        putAwayLocation: category === 'return_parcels' ? putAwayLocation.trim() : undefined,
+        putAwayLocation:
+          category === 'return_parcels' || category === 'packaging_stock' ? putAwayLocation.trim() : undefined,
         photoUrls: category === 'equipment_other' ? photos : undefined,
         invoicePhotoUrls:
           category === 'equipment_other' || category === 'packaging_stock' ? invoicePhotos : undefined,
@@ -167,14 +165,12 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
             emptyLabel={t('reception.noPackagingTypes')}
           />
 
-          <Text style={styles.label}>{t('reception.seller')}</Text>
-          <DropdownPicker
-            options={sellers.data?.map((v) => v.value) ?? []}
-            value={sellerName || null}
-            onChange={setSellerName}
-            isLoading={sellers.isPending}
-            placeholder={t('reception.selectSeller')}
-            emptyLabel={t('reception.noSellers')}
+          <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
+          <TextInput
+            style={styles.input}
+            value={putAwayLocation}
+            onChangeText={setPutAwayLocation}
+            placeholder={t('reception.putAwayLocationPlaceholder')}
           />
 
           <View style={styles.photoSection}>

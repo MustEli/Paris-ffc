@@ -74,9 +74,6 @@ export const en = {
     packagingType: 'Packaging type',
     selectPackagingType: 'Select packaging type',
     noPackagingTypes: 'No packaging types yet — ask an Admin to add some in the web dashboard.',
-    seller: 'Seller',
-    selectSeller: 'Select seller',
-    noSellers: 'No sellers yet — ask an Admin to add some in the web dashboard.',
     itemDescription: 'Item description',
     photoOfEquipment: 'Photo of equipment',
     invoicePhotoOptional: 'Invoice photo (optional)',
@@ -104,7 +101,7 @@ export const en = {
     },
     summary: {
       returnParcels: '{{count}} parcel(s) from {{transporterCompany}} — put away at {{putAwayLocation}}',
-      packagingStock: '{{count}} parcel(s) — {{packagingType}} — seller: {{sellerName}}',
+      packagingStock: '{{count}} parcel(s) — {{packagingType}} — put away at {{putAwayLocation}}',
       sellersStock: '{{count}} pallet(s)',
       equipmentOther: '{{count}} parcel(s) — {{itemDescription}}',
     },

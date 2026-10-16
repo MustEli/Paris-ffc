@@ -47,7 +47,7 @@ export class ReceptionsService {
       case 'return_parcels':
         return `${details.parcelCount} parcel(s) via ${details.transporterCompany} — put away at ${details.putAwayLocation}`;
       case 'packaging_stock':
-        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType} — seller: ${details.sellerName}`;
+        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType} — put away at ${details.putAwayLocation}`;
       case 'sellers_stock':
         return `${details.palletCount} pallet(s)`;
       case 'equipment_other':
@@ -72,9 +72,9 @@ export class ReceptionsService {
         };
 
       case 'packaging_stock':
-        if (!dto.parcelCount || !dto.packagingType || !dto.sellerName) {
+        if (!dto.parcelCount || !dto.packagingType || !dto.putAwayLocation) {
           throw new BadRequestException({
-            message: 'packaging_stock requires parcelCount, packagingType, and sellerName',
+            message: 'packaging_stock requires parcelCount, packagingType, and putAwayLocation',
             code: 'reception.missing_required_fields',
           });
         }
@@ -82,8 +82,9 @@ export class ReceptionsService {
           category: 'packaging_stock',
           parcelCount: dto.parcelCount,
           packagingType: dto.packagingType,
-          sellerName: dto.sellerName,
+          sellerName: dto.sellerName ?? null,
           invoicePhotoUrls: dto.invoicePhotoUrls ?? [],
+          putAwayLocation: dto.putAwayLocation,
         };
 
       case 'sellers_stock':
@@ -140,6 +141,7 @@ export class ReceptionsService {
           packagingType: details.packagingType,
           sellerName: details.sellerName,
           invoicePhotoUrls: details.invoicePhotoUrls,
+          putAwayLocation: details.putAwayLocation,
         };
       case 'sellers_stock':
         return { ...empty, palletCount: details.palletCount };
@@ -171,9 +173,10 @@ export class ReceptionsService {
           category: 'packaging_stock',
           parcelCount: row.parcelCount!,
           packagingType: row.packagingType!,
-          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
-          sellerName: row.sellerName ?? '(not recorded)',
+          sellerName: row.sellerName,
           invoicePhotoUrls: row.invoicePhotoUrls,
+          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
+          putAwayLocation: row.putAwayLocation ?? '(not recorded)',
         };
         break;
       case 'sellers_stock':
@@ -203,18 +206,18 @@ export class ReceptionsService {
   }
 
   /**
-   * return_parcels skips the admin-instructions wait entirely (customer
-   * request): staff record where they put it in the same submission
-   * that logs the delivery, so it's created already `completed` —
-   * arrivedAt and putAwayAt are the same instant, durationMs is 0, and
-   * it's never eligible for the 2-hour review flag. Every other
-   * category keeps the normal `arrived` → admin instructs → staff
-   * confirms flow, unchanged.
+   * return_parcels and packaging_stock skip the admin-instructions wait
+   * entirely (customer request): staff record where they put it in the
+   * same submission that logs the delivery, so it's created already
+   * `completed` — arrivedAt and putAwayAt are the same instant,
+   * durationMs is 0, and it's never eligible for the 2-hour review
+   * flag. Sellers Stock and Equipment & Other keep the normal
+   * `arrived` → admin instructs → staff confirms flow, unchanged.
    */
   async create(userId: string, dto: CreateReceptionDto): Promise<Reception> {
     const details = this.buildDetails(dto);
     const arrivedAt = new Date();
-    const isInstant = details.category === 'return_parcels';
+    const isInstant = details.category === 'return_parcels' || details.category === 'packaging_stock';
 
     const row = await this.prisma.reception.create({
       data: {

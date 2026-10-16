@@ -80,20 +80,22 @@ describe('Receptions (e2e)', () => {
     expect(created.body.details.invoicePhotoUrls).toEqual(['https://example.com/invoice.jpg']);
   });
 
-  it('requires sellerName for packaging_stock, and defaults invoicePhotoUrls to empty when omitted', async () => {
+  it('requires putAwayLocation for packaging_stock, no longer collects sellerName, and defaults invoicePhotoUrls to empty when omitted', async () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes' }) // no sellerName
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes' }) // no putAwayLocation
       .expect(400);
 
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', sellerName: 'Acme Supplies' })
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', putAwayLocation: 'Zone B, Rack 1' })
       .expect(201);
-    expect(created.body.details.sellerName).toBe('Acme Supplies');
+    expect(created.body.details.sellerName).toBeNull();
+    expect(created.body.details.putAwayLocation).toBe('Zone B, Rack 1');
     expect(created.body.details.invoicePhotoUrls).toEqual([]);
+    expect(created.body.status).toBe('completed');
   });
 
   it('rejects a non-admin trying to give instructions', async () => {
@@ -145,6 +147,27 @@ describe('Receptions (e2e)', () => {
       .expect(409);
   });
 
+  it('creates packaging_stock already completed, with no admin instructions step', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'packaging_stock', parcelCount: 10, packagingType: 'Cardboard boxes', putAwayLocation: 'Zone C, Rack 4' })
+      .expect(201);
+
+    expect(created.body.status).toBe('completed');
+    expect(created.body.instructions).toBeNull();
+    expect(created.body.putAwayAt).not.toBeNull();
+    expect(created.body.processingDurationMs).toBe(0);
+    expect(created.body.flaggedForReview).toBe(false);
+    expect(created.body.details.putAwayLocation).toBe('Zone C, Rack 4');
+
+    await request(app.getHttpServer())
+      .post(`/receptions/${created.body.id}/instructions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ instructions: 'Stack in aisle 4' })
+      .expect(409);
+  });
+
   it('rejects creating a new reception in the sellers_stock category — redundant now that Seller Stock is its own feature', () => {
     return request(app.getHttpServer())
       .post('/receptions')
@@ -170,7 +193,7 @@ describe('Receptions (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 10, packagingType: 'Cardboard boxes', sellerName: 'Acme Supplies' })
+      .send({ category: 'equipment_other', parcelCount: 10, itemDescription: 'Shelving', photoUrls: ['https://example.com/shelving.jpg'] })
       .expect(201);
     expect(created.body.status).toBe('arrived');
 
@@ -207,7 +230,7 @@ describe('Receptions (e2e)', () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes', sellerName: 'Acme Supplies' })
+      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes', putAwayLocation: 'Zone B, Rack 1' })
       .expect(403);
 
     // Admin has no shift at all, ever — never gated by this.

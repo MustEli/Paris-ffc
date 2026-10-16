@@ -14,8 +14,10 @@ export interface PackagingStockDetails {
   category: 'packaging_stock';
   parcelCount: number;
   packagingType: string;
-  sellerName: string;
+  /** No longer collected (customer request) — stays nullable so older receptions that do have one still display it. */
+  sellerName: string | null;
   invoicePhotoUrls: string[];
+  putAwayLocation: string;
 }
 export interface SellersStockDetails {
   category: 'sellers_stock';
@@ -61,7 +63,7 @@ export function summarizeDetails(reception: Reception): string {
     case 'return_parcels':
       return `${details.parcelCount} parcel(s) from ${details.transporterCompany} — put away at ${details.putAwayLocation}`;
     case 'packaging_stock':
-      return `${details.parcelCount} parcel(s) — ${details.packagingType} — seller: ${details.sellerName}`;
+      return `${details.parcelCount} parcel(s) — ${details.packagingType} — put away at ${details.putAwayLocation}`;
     case 'sellers_stock':
       return `${details.palletCount} pallet(s)`;
     case 'equipment_other':
