@@ -122,6 +122,8 @@ export const fr = {
     photos: 'Photos',
     pauseFirstTitle: 'Mettez en pause d’abord',
     pauseFirstMessage: 'Mettez cette tâche en pause avant de quitter cette page.',
+    missingCountsTitle: 'Entrez les nombres d’abord',
+    missingCountsMessage: 'Remplissez chaque champ numérique ci-dessous — entrez 0 si rien n’a encore été traité.',
     stopConfirmTitle: 'Arrêter : {{label}} ?',
     stopConfirmMessage: 'Ceci termine la tâche — vous ne pourrez plus rien y ajouter ensuite.',
     keepGoing: 'Continuer',

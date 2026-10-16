@@ -29,6 +29,11 @@ function metaFor(category: string): CategoryMeta {
   return CATEGORY_META.find((m) => m.category === category)!;
 }
 
+/** Digits only — strips anything else (decimals, minus signs, letters, pasted junk). */
+function sanitizeDigits(text: string): string {
+  return text.replace(/[^0-9]/g, '');
+}
+
 /** "H:MM:SS", counting up — matches the shift-status bar's elapsed-time format. */
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -78,6 +83,24 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const needsComment = meta.category === 'backup_other' || meta.needsComment;
   const commentRequired = meta.category === 'backup_other';
 
+  // Every number box the category shows must have something typed in —
+  // 0 counts — before Pause or Stop can proceed. Purely a client-side
+  // gate: nothing is sent to the backend here, it just stops the
+  // button press until the box isn't blank.
+  function hasRequiredCounts(): boolean {
+    if (meta.countLabel && count.trim() === '') return false;
+    if (meta.countExtraLabel && countExtra.trim() === '') return false;
+    return true;
+  }
+
+  function requireCountsThen(action: () => void) {
+    if (!hasRequiredCounts()) {
+      Alert.alert(t('floorTasks.missingCountsTitle'), t('floorTasks.missingCountsMessage'));
+      return;
+    }
+    action();
+  }
+
   // Running (open and not paused) blocks leaving this page entirely —
   // only a Pause makes it safe to go elsewhere. Covers Home, Back, the
   // hardware/gesture back, all in one place, since all of them remove
@@ -91,21 +114,24 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     });
   }, [isRunning, navigation]);
 
-  // Stop always succeeds, whatever is or isn't filled in — no
-  // validation gate, no silent substitution of some other action.
+  // Once the number boxes are filled (required — see requireCountsThen),
+  // Stop always succeeds whatever else is or isn't filled in — no
+  // silent substitution of some other action.
   function handleStop() {
-    const endInput = {
-      count: meta.countLabel ? Number(count) : undefined,
-      countExtra: meta.countExtraLabel ? Number(countExtra) : undefined,
-      zone: meta.needsZone ? zone.trim() : undefined,
-      comment: needsComment && comment.trim() ? comment.trim() : undefined,
-      photoUrls: meta.needsPhotos ? photos : undefined,
-    };
+    requireCountsThen(() => {
+      const endInput = {
+        count: meta.countLabel ? Number(count) : undefined,
+        countExtra: meta.countExtraLabel ? Number(countExtra) : undefined,
+        zone: meta.needsZone ? zone.trim() : undefined,
+        comment: needsComment && comment.trim() ? comment.trim() : undefined,
+        photoUrls: meta.needsPhotos ? photos : undefined,
+      };
 
-    Alert.alert(t('floorTasks.stopConfirmTitle', { label: t(meta.label) }), t('floorTasks.stopConfirmMessage'), [
-      { text: t('floorTasks.keepGoing'), style: 'cancel' },
-      { text: t('floorTasks.stop'), style: 'destructive', onPress: () => end.mutate(endInput) },
-    ]);
+      Alert.alert(t('floorTasks.stopConfirmTitle', { label: t(meta.label) }), t('floorTasks.stopConfirmMessage'), [
+        { text: t('floorTasks.keepGoing'), style: 'cancel' },
+        { text: t('floorTasks.stop'), style: 'destructive', onPress: () => end.mutate(endInput) },
+      ]);
+    });
   }
 
   if (isPending) return <ActivityIndicator style={styles.spinner} color={colors.textSecondary} />;
@@ -140,7 +166,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             style={styles.input}
             keyboardType="number-pad"
             value={count}
-            onChangeText={setCount}
+            onChangeText={(text) => setCount(sanitizeDigits(text))}
             placeholderTextColor={colors.textMuted}
           />
         </>
@@ -153,7 +179,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             style={styles.input}
             keyboardType="number-pad"
             value={countExtra}
-            onChangeText={setCountExtra}
+            onChangeText={(text) => setCountExtra(sanitizeDigits(text))}
             placeholderTextColor={colors.textMuted}
           />
         </>
@@ -211,7 +237,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             <Pressable
               style={[styles.iconButton, styles.pauseIconButton, (pause.isPending || resume.isPending) && styles.buttonBusy]}
               disabled={pause.isPending || resume.isPending}
-              onPress={() => (isPaused ? resume.mutate() : pause.mutate())}
+              onPress={() => (isPaused ? resume.mutate() : requireCountsThen(() => pause.mutate()))}
             >
               {pause.isPending || resume.isPending ? (
                 <ActivityIndicator color={colors.brandOrange} />

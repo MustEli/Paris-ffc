@@ -128,6 +128,8 @@ export const en = {
     photos: 'Photos',
     pauseFirstTitle: 'Pause first',
     pauseFirstMessage: 'Pause this task before leaving its page.',
+    missingCountsTitle: 'Enter the numbers first',
+    missingCountsMessage: 'Fill in every number box below — enter 0 if nothing was processed yet.',
     stopConfirmTitle: 'Stop {{label}}?',
     stopConfirmMessage: "This finishes the task — you won't be able to add more to it afterward.",
     keepGoing: 'Keep Going',
