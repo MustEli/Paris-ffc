@@ -210,6 +210,13 @@ export const en = {
     },
   },
 
+  /** Shared across features — currently just Issue Reporting's Tracking ID fields, but not feature-specific. */
+  barcodeScanner: {
+    scanButtonLabel: 'Scan barcode',
+    hint: 'Point the camera at the barcode',
+    cameraPermissionRequired: 'Camera permission is required to scan a barcode.',
+  },
+
   /** Shared across features — MultiPhotoCapture/PhotoCaptureButton are used by Seller Stock, Floor Tasks, and Reception alike. */
   photoCapture: {
     tapToTakePhoto: '📷 Tap to take photo',

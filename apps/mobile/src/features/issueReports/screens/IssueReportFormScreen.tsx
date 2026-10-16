@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BarcodeScanButton } from '../../../core/components/BarcodeScanButton';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { useUnsavedChangesStore } from '../../../core/navigation/unsavedChangesStore';
@@ -97,14 +98,17 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
       {meta.trackingId && (
         <View style={styles.field}>
           <Text style={styles.label}>{t(meta.trackingId.label)}</Text>
-          <TextInput
-            style={styles.input}
-            value={trackingId}
-            onChangeText={setTrackingId}
-            autoCapitalize="characters"
-            placeholder={t('issueReports.trackingIdPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-          />
+          <View style={styles.rowWithButton}>
+            <TextInput
+              style={[styles.input, styles.inputWithButton]}
+              value={trackingId}
+              onChangeText={setTrackingId}
+              autoCapitalize="characters"
+              placeholder={t('issueReports.trackingIdPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+            />
+            <BarcodeScanButton onScan={(value) => setTrackingId(value.trim().toUpperCase())} />
+          </View>
           {trackingId.length > 0 && !trackingIdValid && (
             <Text style={styles.fieldError}>{t('issueReports.trackingIdInvalid')}</Text>
           )}
@@ -224,6 +228,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  rowWithButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inputWithButton: {
+    flex: 1,
   },
   multiline: {
     minHeight: 80,

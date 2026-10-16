@@ -204,6 +204,12 @@ export const fr = {
     },
   },
 
+  barcodeScanner: {
+    scanButtonLabel: 'Scanner le code-barres',
+    hint: 'Pointez la caméra vers le code-barres',
+    cameraPermissionRequired: 'L’autorisation de la caméra est requise pour scanner un code-barres.',
+  },
+
   photoCapture: {
     tapToTakePhoto: '📷 Touchez pour prendre une photo',
     tapToRetake: 'Touchez pour reprendre',

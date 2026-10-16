@@ -31,7 +31,8 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: androidPackage,
       infoPlist: {
-        NSCameraUsageDescription: 'ELNO uses the camera to capture shipping label and damage-evidence photos.',
+        NSCameraUsageDescription:
+          'ELNO uses the camera to capture shipping label and damage-evidence photos, and to scan tracking ID barcodes.',
         NSPhotoLibraryUsageDescription:
           'ELNO needs photo library access to attach an existing photo instead of using the camera.',
       },
