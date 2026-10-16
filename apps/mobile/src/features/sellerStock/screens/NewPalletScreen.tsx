@@ -63,8 +63,20 @@ export function NewPalletScreen({ navigation }: Props) {
     conditionFlags.length > 0 &&
     (isGoodOnly || (!!damageRemarks && damagePhotos.length > 0));
 
+  // "Good Condition" and the problem flags are mutually exclusive — a
+  // pallet either arrived fine or has one or more specific problems,
+  // never both. Picking Good clears any problem flags; picking a
+  // problem flag clears Good, and multiple problem flags can combine.
   function toggleFlag(flag: PalletConditionFlag) {
-    setConditionFlags((prev) => (prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag]));
+    setConditionFlags((prev) => {
+      if (prev.includes(flag)) {
+        return prev.filter((f) => f !== flag);
+      }
+      if (flag === 'good') {
+        return ['good'];
+      }
+      return [...prev.filter((f) => f !== 'good'), flag];
+    });
   }
 
   function handleSubmit() {
