@@ -185,7 +185,7 @@ export const en = {
       shipment_label_not_generatable: 'Shipment Label Not Generatable',
       item_found_out_of_location: 'Item Found Out of Location',
       empty_crate: 'Empty Crate',
-      part_broken_in_location: 'Part Broken in the Location',
+      part_broken_in_location: 'Part Damaged in the Location',
       heavy_crate: 'Heavy Crate',
       other: 'Other',
     },

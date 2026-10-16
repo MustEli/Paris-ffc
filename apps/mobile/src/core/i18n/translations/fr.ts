@@ -179,7 +179,7 @@ export const fr = {
       shipment_label_not_generatable: 'Étiquette d’expédition impossible à générer',
       item_found_out_of_location: 'Article trouvé hors emplacement',
       empty_crate: 'Caisse vide',
-      part_broken_in_location: 'Pièce cassée à l’emplacement',
+      part_broken_in_location: 'Pièce endommagée à l’emplacement',
       heavy_crate: 'Caisse lourde',
       other: 'Autre',
     },
