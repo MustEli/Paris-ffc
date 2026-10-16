@@ -210,6 +210,39 @@ export const en = {
     },
   },
 
+  /** Shared across features — MultiPhotoCapture/PhotoCaptureButton are used by Seller Stock, Floor Tasks, and Reception alike. */
+  photoCapture: {
+    tapToTakePhoto: '📷 Tap to take photo',
+    tapToRetake: 'Tap to retake',
+    cameraPermissionRequired: 'Camera permission is required to take this photo.',
+    uploadFailed: 'Upload failed',
+    maxReached: '{{label}} — maximum {{max}} photos reached',
+    remove: '✕ remove',
+  },
+
+  sellerStock: {
+    newPallet: {
+      deliveryProof: 'Delivery Proof',
+      deliveryProofHint: 'At least {{min}} photos required: one of the shipping label, one of the box number (up to {{max}} total).',
+      boxNumber: 'Box number',
+      sellerName: 'Seller name',
+      weightKg: 'Weight (kg)',
+      overweightWarning: '⚠ Over {{threshold}}kg — will be flagged for admin review.',
+      condition: 'Condition',
+      conditionHint: 'Select every condition that applies — anything other than Good Condition alone requires remarks and photo evidence, and needs Admin review.',
+      damageRemarks: 'Damage remarks',
+      damageEvidencePhoto: 'Damage evidence photo',
+      logPallet: 'Log pallet',
+      conditionFlag: {
+        good: 'Good Condition',
+        overweight: 'Over Weight',
+        overloaded: 'Over Loaded',
+        damaged: 'Damaged',
+        location_name_needed: 'Location Name Needed',
+      },
+    },
+  },
+
   errors: {
     generic: 'Something went wrong — try again.',
   },

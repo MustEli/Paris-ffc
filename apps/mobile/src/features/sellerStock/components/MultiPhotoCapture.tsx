@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
+import { colors } from '../../../core/theme/colors';
 import { MAX_PHOTOS_PER_FIELD } from '../types';
 import { PhotoCaptureButton } from './PhotoCaptureButton';
 
@@ -19,6 +21,7 @@ interface Props {
  * one shot of the label too, since a single photo isn't always enough.
  */
 export function MultiPhotoCapture({ label, photos, onChange, maxPhotos = MAX_PHOTOS_PER_FIELD }: Props) {
+  const { t } = useTranslation();
   const atMax = photos.length >= maxPhotos;
 
   function addPhoto(url: string) {
@@ -32,9 +35,7 @@ export function MultiPhotoCapture({ label, photos, onChange, maxPhotos = MAX_PHO
   return (
     <View>
       {atMax ? (
-        <Text style={styles.maxReached}>
-          {label} — maximum {maxPhotos} photos reached
-        </Text>
+        <Text style={styles.maxReached}>{t('photoCapture.maxReached', { label, max: maxPhotos })}</Text>
       ) : (
         <PhotoCaptureButton
           label={photos.length > 0 ? `${label} (${photos.length}/${maxPhotos})` : label}
@@ -48,7 +49,7 @@ export function MultiPhotoCapture({ label, photos, onChange, maxPhotos = MAX_PHO
           {photos.map((url, index) => (
             <Pressable key={url} style={styles.thumbWrapper} onPress={() => removePhoto(index)}>
               <Image source={{ uri: resolvePhotoUrl(url) }} style={styles.thumb} />
-              <Text style={styles.remove}>✕ remove</Text>
+              <Text style={styles.remove}>{t('photoCapture.remove')}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   maxReached: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   row: {
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
   },
   remove: {
     fontSize: 10,
-    color: '#dc2626',
+    color: colors.alert,
     marginTop: 2,
   },
 });

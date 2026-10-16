@@ -204,6 +204,38 @@ export const fr = {
     },
   },
 
+  photoCapture: {
+    tapToTakePhoto: '📷 Touchez pour prendre une photo',
+    tapToRetake: 'Touchez pour reprendre',
+    cameraPermissionRequired: 'L’autorisation de la caméra est requise pour prendre cette photo.',
+    uploadFailed: 'Échec du téléversement',
+    maxReached: '{{label}} — maximum {{max}} photos atteint',
+    remove: '✕ supprimer',
+  },
+
+  sellerStock: {
+    newPallet: {
+      deliveryProof: 'Preuve de livraison',
+      deliveryProofHint: 'Au moins {{min}} photos requises : une de l’étiquette d’expédition, une du numéro de boîte (jusqu’à {{max}} au total).',
+      boxNumber: 'Numéro de boîte',
+      sellerName: 'Nom du vendeur',
+      weightKg: 'Poids (kg)',
+      overweightWarning: '⚠ Plus de {{threshold}}kg — sera signalé pour révision par l’administrateur.',
+      condition: 'État',
+      conditionHint: 'Sélectionnez tous les états applicables — tout autre choix que « Bon état » seul nécessite des remarques et des preuves photo, et une révision par l’administrateur.',
+      damageRemarks: 'Remarques sur les dommages',
+      damageEvidencePhoto: 'Photo de preuve des dommages',
+      logPallet: 'Enregistrer la palette',
+      conditionFlag: {
+        good: 'Bon état',
+        overweight: 'Surpoids',
+        overloaded: 'Surchargé',
+        damaged: 'Endommagé',
+        location_name_needed: 'Nom d’emplacement requis',
+      },
+    },
+  },
+
   errors: {
     generic: 'Une erreur est survenue — réessayez.',
   },
