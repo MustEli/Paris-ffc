@@ -63,6 +63,8 @@ export const fr = {
     transporterCompany: 'Transporteur',
     selectTransporterCompany: 'Sélectionner un transporteur',
     noTransporterCompanies: 'Aucun transporteur pour l’instant — demandez à un administrateur d’en ajouter sur le tableau de bord web.',
+    putAwayLocation: 'Emplacement de rangement',
+    putAwayLocationPlaceholder: 'ex. Zone A, Racks 1-10',
     packagingType: 'Type d’emballage',
     selectPackagingType: 'Sélectionner un type d’emballage',
     noPackagingTypes: 'Aucun type d’emballage pour l’instant — demandez à un administrateur d’en ajouter sur le tableau de bord web.',
@@ -95,7 +97,7 @@ export const fr = {
       completed: 'Terminé',
     },
     summary: {
-      returnParcels: '{{count}} colis de {{transporterCompany}}',
+      returnParcels: '{{count}} colis de {{transporterCompany}} — rangé à {{putAwayLocation}}',
       packagingStock: '{{count}} colis — {{packagingType}} — vendeur : {{sellerName}}',
       sellersStock: '{{count}} palette(s)',
       equipmentOther: '{{count}} colis — {{itemDescription}}',

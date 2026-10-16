@@ -263,6 +263,8 @@ model Reception {
   invoicePhotoUrls     String[]          @default([])
   /** packaging_stock's seller, picked from the admin-managed `seller_name` reference list. */
   sellerName           String?
+  /** return_parcels only — staff records where they put it themselves, same submission as logging it (no admin instructions step for this category). */
+  putAwayLocation      String?
   arrivedAt            DateTime
   instructions         String?
   putAwayAt            DateTime?

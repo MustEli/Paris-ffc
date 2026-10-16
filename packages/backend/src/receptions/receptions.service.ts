@@ -45,7 +45,7 @@ export class ReceptionsService {
   private summarizeDetails(details: ReceptionDetails): string {
     switch (details.category) {
       case 'return_parcels':
-        return `${details.parcelCount} parcel(s) via ${details.transporterCompany}`;
+        return `${details.parcelCount} parcel(s) via ${details.transporterCompany} — put away at ${details.putAwayLocation}`;
       case 'packaging_stock':
         return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType} — seller: ${details.sellerName}`;
       case 'sellers_stock':
@@ -58,13 +58,18 @@ export class ReceptionsService {
   private buildDetails(dto: CreateReceptionDto): ReceptionDetails {
     switch (dto.category) {
       case 'return_parcels':
-        if (!dto.parcelCount || !dto.transporterCompany) {
+        if (!dto.parcelCount || !dto.transporterCompany || !dto.putAwayLocation) {
           throw new BadRequestException({
-            message: 'return_parcels requires parcelCount and transporterCompany',
+            message: 'return_parcels requires parcelCount, transporterCompany, and putAwayLocation',
             code: 'reception.missing_required_fields',
           });
         }
-        return { category: 'return_parcels', parcelCount: dto.parcelCount, transporterCompany: dto.transporterCompany };
+        return {
+          category: 'return_parcels',
+          parcelCount: dto.parcelCount,
+          transporterCompany: dto.transporterCompany,
+          putAwayLocation: dto.putAwayLocation,
+        };
 
       case 'packaging_stock':
         if (!dto.parcelCount || !dto.packagingType || !dto.sellerName) {
@@ -118,10 +123,16 @@ export class ReceptionsService {
       photoUrls: [] as string[],
       invoicePhotoUrls: [] as string[],
       sellerName: null,
+      putAwayLocation: null,
     };
     switch (details.category) {
       case 'return_parcels':
-        return { ...empty, parcelCount: details.parcelCount, transporterCompany: details.transporterCompany };
+        return {
+          ...empty,
+          parcelCount: details.parcelCount,
+          transporterCompany: details.transporterCompany,
+          putAwayLocation: details.putAwayLocation,
+        };
       case 'packaging_stock':
         return {
           ...empty,
@@ -147,7 +158,13 @@ export class ReceptionsService {
     let details: ReceptionDetails;
     switch (row.category) {
       case 'return_parcels':
-        details = { category: 'return_parcels', parcelCount: row.parcelCount!, transporterCompany: row.transporterCompany! };
+        details = {
+          category: 'return_parcels',
+          parcelCount: row.parcelCount!,
+          transporterCompany: row.transporterCompany!,
+          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
+          putAwayLocation: row.putAwayLocation ?? '(not recorded)',
+        };
         break;
       case 'packaging_stock':
         details = {
@@ -185,19 +202,40 @@ export class ReceptionsService {
     };
   }
 
+  /**
+   * return_parcels skips the admin-instructions wait entirely (customer
+   * request): staff record where they put it in the same submission
+   * that logs the delivery, so it's created already `completed` —
+   * arrivedAt and putAwayAt are the same instant, durationMs is 0, and
+   * it's never eligible for the 2-hour review flag. Every other
+   * category keeps the normal `arrived` → admin instructs → staff
+   * confirms flow, unchanged.
+   */
   async create(userId: string, dto: CreateReceptionDto): Promise<Reception> {
     const details = this.buildDetails(dto);
+    const arrivedAt = new Date();
+    const isInstant = details.category === 'return_parcels';
+
     const row = await this.prisma.reception.create({
       data: {
         id: randomUUID(),
         createdByUserId: userId,
-        status: 'arrived',
+        status: isInstant ? 'completed' : 'arrived',
         category: details.category,
-        arrivedAt: new Date(),
+        arrivedAt,
+        putAwayAt: isInstant ? arrivedAt : null,
+        processingDurationMs: isInstant ? 0 : null,
         ...this.buildDetailsColumns(details),
       },
     });
-    return this.toDomain(row);
+    const domain = this.toDomain(row);
+
+    if (isInstant) {
+      const user = await this.usersService.findById(userId);
+      await this.appendCompletionToSheet(domain, user?.name ?? userId, arrivedAt, arrivedAt, 0);
+    }
+
+    return domain;
   }
 
   async findAll(): Promise<Reception[]> {
@@ -276,21 +314,31 @@ export class ReceptionsService {
       },
     });
     const domain = this.toDomain(row);
-
-    // Doc's Feature 2: "All recorded in a Google sheet." Same
-    // never-throws/no-op-when-unconfigured contract as Shifts — see
-    // SheetsService's class doc comment.
     const user = await this.usersService.findById(reception.createdByUserId);
+    await this.appendCompletionToSheet(domain, user?.name ?? reception.createdByUserId, row.arrivedAt, putAwayAt, durationMs);
+
+    return domain;
+  }
+
+  // Doc's Feature 2: "All recorded in a Google sheet." Same
+  // never-throws/no-op-when-unconfigured contract as Shifts — see
+  // SheetsService's class doc comment. Shared by complete() and
+  // create()'s return_parcels instant-completion path.
+  private async appendCompletionToSheet(
+    domain: Reception,
+    userName: string,
+    arrivedAt: Date,
+    putAwayAt: Date,
+    durationMs: number,
+  ): Promise<void> {
     await this.sheetsService.appendRow(SHEET_TAB, SHEET_HEADER, [
       CATEGORY_LABELS[domain.details.category],
-      user?.name ?? reception.createdByUserId,
-      formatTimestampForSheet(row.arrivedAt),
+      userName,
+      formatTimestampForSheet(arrivedAt),
       formatTimestampForSheet(putAwayAt),
       Math.round(durationMs / 60_000),
       domain.flaggedForReview ? 'Yes' : 'No',
       this.summarizeDetails(domain.details),
     ]);
-
-    return domain;
   }
 }

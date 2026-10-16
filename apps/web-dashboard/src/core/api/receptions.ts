@@ -8,6 +8,7 @@ export interface ReturnParcelsDetails {
   category: 'return_parcels';
   parcelCount: number;
   transporterCompany: string;
+  putAwayLocation: string;
 }
 export interface PackagingStockDetails {
   category: 'packaging_stock';
@@ -58,7 +59,7 @@ export function summarizeDetails(reception: Reception): string {
   const { details } = reception;
   switch (details.category) {
     case 'return_parcels':
-      return `${details.parcelCount} parcel(s) from ${details.transporterCompany}`;
+      return `${details.parcelCount} parcel(s) from ${details.transporterCompany} — put away at ${details.putAwayLocation}`;
     case 'packaging_stock':
       return `${details.parcelCount} parcel(s) — ${details.packagingType} — seller: ${details.sellerName}`;
     case 'sellers_stock':

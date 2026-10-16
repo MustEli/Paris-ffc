@@ -50,6 +50,10 @@ export class CreateReceptionDto {
   sellerName?: string;
 
   @IsOptional()
+  @IsString()
+  putAwayLocation?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   photoUrls?: string[];

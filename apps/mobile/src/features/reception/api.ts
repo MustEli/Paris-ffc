@@ -11,6 +11,7 @@ export interface CreateReceptionInput {
   sellerName?: string;
   photoUrls?: string[];
   invoicePhotoUrls?: string[];
+  putAwayLocation?: string;
 }
 
 export function listReceptions(token: string) {

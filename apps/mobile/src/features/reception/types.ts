@@ -7,6 +7,8 @@ export interface ReturnParcelsDetails {
   category: 'return_parcels';
   parcelCount: number;
   transporterCompany: string;
+  /** Recorded by staff themselves, same submission as logging it — no admin instructions step for this category. */
+  putAwayLocation: string;
 }
 
 export interface PackagingStockDetails {

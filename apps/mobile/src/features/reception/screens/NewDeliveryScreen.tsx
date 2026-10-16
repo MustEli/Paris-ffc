@@ -37,6 +37,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
   const [parcelCount, setParcelCount] = useState('');
   const [palletCount, setPalletCount] = useState('');
   const [transporterCompany, setTransporterCompany] = useState('');
+  const [putAwayLocation, setPutAwayLocation] = useState('');
   const [packagingType, setPackagingType] = useState('');
   const [itemDescription, setItemDescription] = useState('');
   const [sellerName, setSellerName] = useState('');
@@ -51,7 +52,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
   function isFormValid(): boolean {
     switch (category) {
       case 'return_parcels':
-        return !!parcelCount && !!transporterCompany;
+        return !!parcelCount && !!transporterCompany && !!putAwayLocation.trim();
       case 'packaging_stock':
         return !!parcelCount && !!packagingType && !!sellerName;
       case 'sellers_stock':
@@ -74,6 +75,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         packagingType: packagingType || undefined,
         itemDescription: itemDescription || undefined,
         sellerName: sellerName || undefined,
+        putAwayLocation: category === 'return_parcels' ? putAwayLocation.trim() : undefined,
         photoUrls: category === 'equipment_other' ? photos : undefined,
         invoicePhotoUrls:
           category === 'equipment_other' || category === 'packaging_stock' ? invoicePhotos : undefined,
@@ -141,6 +143,14 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
             isLoading={transporterCompanies.isPending}
             placeholder={t('reception.selectTransporterCompany')}
             emptyLabel={t('reception.noTransporterCompanies')}
+          />
+
+          <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
+          <TextInput
+            style={styles.input}
+            value={putAwayLocation}
+            onChangeText={setPutAwayLocation}
+            placeholder={t('reception.putAwayLocationPlaceholder')}
           />
         </>
       )}

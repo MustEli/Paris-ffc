@@ -100,7 +100,7 @@ describe('Receptions (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'return_parcels', parcelCount: 3, transporterCompany: 'Acme Logistics' })
+      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack', photoUrls: ['https://example.com/jack.jpg'] })
       .expect(201);
 
     return request(app.getHttpServer())
@@ -108,6 +108,41 @@ describe('Receptions (e2e)', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ instructions: 'Put in aisle 4' })
       .expect(403);
+  });
+
+  it('rejects return_parcels missing putAwayLocation', () => {
+    return request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ category: 'return_parcels', parcelCount: 3, transporterCompany: 'Acme Logistics' }) // missing putAwayLocation
+      .expect(400);
+  });
+
+  it('creates return_parcels already completed, with no admin instructions step', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        category: 'return_parcels',
+        parcelCount: 3,
+        transporterCompany: 'Acme Logistics',
+        putAwayLocation: 'Zone A, Rack 2',
+      })
+      .expect(201);
+
+    expect(created.body.status).toBe('completed');
+    expect(created.body.instructions).toBeNull();
+    expect(created.body.putAwayAt).not.toBeNull();
+    expect(created.body.processingDurationMs).toBe(0);
+    expect(created.body.flaggedForReview).toBe(false);
+    expect(created.body.details.putAwayLocation).toBe('Zone A, Rack 2');
+
+    // Never passed through arrived, so there's nothing for Admin to instruct on.
+    await request(app.getHttpServer())
+      .post(`/receptions/${created.body.id}/instructions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ instructions: 'Stack in aisle 4' })
+      .expect(409);
   });
 
   it('rejects creating a new reception in the sellers_stock category — redundant now that Seller Stock is its own feature', () => {

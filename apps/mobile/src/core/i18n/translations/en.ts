@@ -69,6 +69,8 @@ export const en = {
     transporterCompany: 'Transporter company',
     selectTransporterCompany: 'Select transporter company',
     noTransporterCompanies: 'No transporter companies yet — ask an Admin to add some in the web dashboard.',
+    putAwayLocation: 'Put-away location',
+    putAwayLocationPlaceholder: 'e.g. Zone A, Racks 1-10',
     packagingType: 'Packaging type',
     selectPackagingType: 'Select packaging type',
     noPackagingTypes: 'No packaging types yet — ask an Admin to add some in the web dashboard.',
@@ -101,7 +103,7 @@ export const en = {
       completed: 'Completed',
     },
     summary: {
-      returnParcels: '{{count}} parcel(s) from {{transporterCompany}}',
+      returnParcels: '{{count}} parcel(s) from {{transporterCompany}} — put away at {{putAwayLocation}}',
       packagingStock: '{{count}} parcel(s) — {{packagingType}} — seller: {{sellerName}}',
       sellersStock: '{{count}} pallet(s)',
       equipmentOther: '{{count}} parcel(s) — {{itemDescription}}',

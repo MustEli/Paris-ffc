@@ -10,6 +10,12 @@ export type ReceptionCategory = 'return_parcels' | 'packaging_stock' | 'sellers_
  * they happen in one API call here rather than two, since splitting
  * them wouldn't add anything for this slice. It means "logged, waiting
  * on admin instructions" until it moves to ready_for_putaway.
+ *
+ * return_parcels skips this wait entirely — per customer request, staff
+ * record the put-away location themselves in the same submission that
+ * logs the delivery, so a return_parcels reception goes straight to
+ * `completed` at creation and never passes through `arrived` or
+ * `ready_for_putaway` at all. See ReceptionsService.create().
  */
 export type ReceptionStatus = 'arrived' | 'ready_for_putaway' | 'completed';
 
@@ -17,6 +23,8 @@ export interface ReturnParcelsDetails {
   category: 'return_parcels';
   parcelCount: number;
   transporterCompany: string;
+  /** Where staff put it — recorded by staff themselves, no admin instructions involved for this category. */
+  putAwayLocation: string;
 }
 
 export interface PackagingStockDetails {

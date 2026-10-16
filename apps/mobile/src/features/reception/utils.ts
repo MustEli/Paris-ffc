@@ -9,6 +9,7 @@ export function summarizeDetails(reception: Reception): string {
       return i18n.t('reception.summary.returnParcels', {
         count: details.parcelCount,
         transporterCompany: details.transporterCompany,
+        putAwayLocation: details.putAwayLocation,
       });
     case 'packaging_stock':
       return i18n.t('reception.summary.packagingStock', {
