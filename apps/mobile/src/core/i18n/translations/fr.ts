@@ -194,7 +194,7 @@ export const fr = {
       errorNo: 'N° d’erreur',
       photoOfItem: 'Photo de l’article',
       idNumber: 'Numéro d’identification',
-      commentHintItemFound: 'Remis à qui ?',
+      commentHintItemFound: 'Remis à qui et où ?',
       photoOfCrate: 'Photo de la caisse',
       locationId: 'ID de l’emplacement',
       photosOfDamagedPart: 'Photos de la pièce endommagée',

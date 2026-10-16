@@ -200,7 +200,7 @@ export const en = {
       errorNo: 'Error No.',
       photoOfItem: 'Photo of item',
       idNumber: 'ID Number',
-      commentHintItemFound: 'Handed to whom?',
+      commentHintItemFound: 'Handed to whom and where?',
       photoOfCrate: 'Photo of crate',
       locationId: 'Location ID',
       photosOfDamagedPart: 'Photos of the damaged part',
