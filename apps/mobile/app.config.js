@@ -15,7 +15,17 @@ const IS_DEV_BUILD = process.env.EAS_BUILD_PROFILE === 'development';
 // to solve in the first place), and nothing about the app's technical
 // identity needs to match its display name. Only user-facing text
 // (name, permission descriptions) changed.
-const BASE_PACKAGE = 'com.warehousehq.mobile';
+//
+// This `hm-el` branch is a parallel UX-redesign fork being compared
+// side by side against the `master` branch's app ("Elno-P" in the
+// user's own shorthand for the two versions; this one is "Hm-El") —
+// same backend, same display name ("ELNO"), deliberately NOT renamed
+// per the user's instruction (whichever version wins keeps the ELNO
+// name). Only the package identity differs, specifically so this
+// build can be installed on the same phone as master's build without
+// silently overwriting it — the display name alone can't do that,
+// Android/iOS dedupe by package identity, not by name.
+const BASE_PACKAGE = 'com.warehousehq.mobile.hmel';
 const androidPackage = IS_DEV_BUILD ? `${BASE_PACKAGE}.dev` : BASE_PACKAGE;
 const appName = IS_DEV_BUILD ? 'ELNO (Dev)' : 'ELNO';
 
