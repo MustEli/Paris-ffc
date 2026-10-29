@@ -33,6 +33,7 @@ const CONDITION_FLAG_LABEL_KEYS: Record<PalletConditionFlag, string> = {
   overloaded: 'sellerStock.newPallet.conditionFlag.overloaded',
   damaged: 'sellerStock.newPallet.conditionFlag.damaged',
   location_name_needed: 'sellerStock.newPallet.conditionFlag.location_name_needed',
+  other: 'sellerStock.newPallet.conditionFlag.other',
 };
 
 /** Doc's Initial Scan + Measurement & Inspection + Branching Decision steps, all in one form. */
@@ -222,14 +223,25 @@ const styles = StyleSheet.create({
   conditionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
+    rowGap: 10,
   },
+  // Fixed width/height (not "hug the text") so every box is the same
+  // size regardless of label length — "Location Name Needed" and
+  // "Other" sit in equal boxes, longer labels just wrap to a second
+  // line instead of stretching their box. Still the same rounded-pill
+  // shape (borderRadius: 20) as before, per explicit instruction to
+  // keep that.
   conditionChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    width: '48%',
+    minHeight: 52,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   conditionChipSelected: {
     backgroundColor: colors.brandOrange,
@@ -238,6 +250,7 @@ const styles = StyleSheet.create({
   conditionText: {
     fontSize: 13,
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   conditionTextSelected: {
     color: '#1a1200',

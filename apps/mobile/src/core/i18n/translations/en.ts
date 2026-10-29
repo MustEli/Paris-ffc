@@ -246,6 +246,7 @@ export const en = {
         overloaded: 'Over Loaded',
         damaged: 'Damaged',
         location_name_needed: 'Location Name Needed',
+        other: 'Other',
       },
     },
   },

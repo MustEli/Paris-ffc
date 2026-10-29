@@ -285,6 +285,7 @@ enum PalletConditionFlag {
   overloaded
   damaged
   location_name_needed
+  other
 }
 
 model SellerStockPallet {
