@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useStaffUsers } from '../../../core/hooks/useStaffUsers';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { type PutAwayStackParamList } from '../../../navigation/types';
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../tasks/priority';
 import {
@@ -85,7 +86,11 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
       {role === 'staff' && task.status === 'in_progress' && (
         <View style={styles.actionBox}>
           {complete.error && <Text style={styles.error}>{complete.error.message}</Text>}
-          <Pressable style={styles.button} disabled={complete.isPending} onPress={() => complete.mutate()}>
+          <Pressable
+            style={styles.button}
+            disabled={complete.isPending}
+            onPress={() => complete.mutate(undefined, { onSuccess: goToStaffHome })}
+          >
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (

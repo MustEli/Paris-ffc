@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
@@ -129,7 +130,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
 
       Alert.alert(t('floorTasks.stopConfirmTitle', { label: t(meta.label) }), t('floorTasks.stopConfirmMessage'), [
         { text: t('floorTasks.keepGoing'), style: 'cancel' },
-        { text: t('floorTasks.stop'), style: 'destructive', onPress: () => end.mutate(endInput) },
+        { text: t('floorTasks.stop'), style: 'destructive', onPress: () => end.mutate(endInput, { onSuccess: goToStaffHome }) },
       ]);
     });
   }

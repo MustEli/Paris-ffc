@@ -7,6 +7,7 @@ import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useAddInstructions, useCompleteReception, useReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS } from '../types';
@@ -121,7 +122,7 @@ export function ReceptionDetailScreen({ route }: Props) {
           <Pressable
             style={styles.button}
             disabled={complete.isPending}
-            onPress={() => complete.mutate()}
+            onPress={() => complete.mutate(undefined, { onSuccess: goToStaffHome })}
           >
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
