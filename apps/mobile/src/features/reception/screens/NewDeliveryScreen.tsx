@@ -57,7 +57,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
       case 'sellers_stock':
         return !!palletCount;
       case 'equipment_other':
-        return !!parcelCount && !!itemDescription && photos.length > 0;
+        return !!parcelCount && !!itemDescription && photos.length > 0 && !!putAwayLocation.trim();
       default:
         return false;
     }
@@ -74,7 +74,9 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         packagingType: packagingType || undefined,
         itemDescription: itemDescription || undefined,
         putAwayLocation:
-          category === 'return_parcels' || category === 'packaging_stock' ? putAwayLocation.trim() : undefined,
+          category === 'return_parcels' || category === 'packaging_stock' || category === 'equipment_other'
+            ? putAwayLocation.trim()
+            : undefined,
         photoUrls: category === 'equipment_other' ? photos : undefined,
         invoicePhotoUrls:
           category === 'equipment_other' || category === 'packaging_stock' ? invoicePhotos : undefined,
@@ -189,6 +191,14 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         <>
           <Text style={styles.label}>{t('reception.itemDescription')}</Text>
           <TextInput style={styles.input} value={itemDescription} onChangeText={setItemDescription} />
+
+          <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
+          <TextInput
+            style={styles.input}
+            value={putAwayLocation}
+            onChangeText={setPutAwayLocation}
+            placeholder={t('reception.putAwayLocationPlaceholder')}
+          />
 
           <View style={styles.photoSection}>
             <MultiPhotoCapture label={t('reception.photoOfEquipment')} photos={photos} onChange={setPhotos} maxPhotos={6} />

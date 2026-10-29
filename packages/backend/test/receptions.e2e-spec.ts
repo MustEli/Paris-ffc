@@ -1,8 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
+import { PrismaService } from '../src/prisma/prisma.service';
 import { AppModule } from './../src/app.module';
 import { closeTestDb, resetDatabase } from './utils/db';
 
@@ -12,6 +14,34 @@ async function loginAs(app: INestApplication<App>, email: string): Promise<strin
     .send({ email, password: 'password123' })
     .expect(201);
   return response.body.accessToken as string;
+}
+
+/**
+ * return_parcels, packaging_stock, and equipment_other are all instant-
+ * complete now, and sellers_stock can't be created via POST /receptions
+ * at all (see the "rejects creating a new reception in the
+ * sellers_stock category" test below) — so there's no longer any
+ * *creatable* path to a reception that actually sits in `arrived`. The
+ * instructions/complete flow is still real code though (it's what any
+ * pre-existing historical sellers_stock reception would still go
+ * through), so these two tests seed one directly via Prisma rather
+ * than through the public API, the same way such a historical row
+ * would actually exist.
+ */
+async function seedArrivedSellersStockReception(app: INestApplication<App>, palletCount: number): Promise<string> {
+  const prisma = app.get(PrismaService);
+  const id = randomUUID();
+  await prisma.reception.create({
+    data: {
+      id,
+      createdByUserId: 'seed-test-user',
+      status: 'arrived',
+      category: 'sellers_stock',
+      palletCount,
+      arrivedAt: new Date(),
+    },
+  });
+  return id;
 }
 
 describe('Receptions (e2e)', () => {
@@ -58,11 +88,11 @@ describe('Receptions (e2e)', () => {
       .expect(400);
   });
 
-  it('requires at least one equipment photo for equipment_other, and accepts an optional invoice photo', async () => {
+  it('requires at least one equipment photo and a putAwayLocation for equipment_other, and accepts an optional invoice photo', async () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' }) // no photoUrls
+      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' }) // no photoUrls, no putAwayLocation
       .expect(400);
 
     const created = await request(app.getHttpServer())
@@ -74,10 +104,13 @@ describe('Receptions (e2e)', () => {
         itemDescription: 'Pallet jack',
         photoUrls: ['https://example.com/jack.jpg'],
         invoicePhotoUrls: ['https://example.com/invoice.jpg'],
+        putAwayLocation: 'Zone D, Rack 3',
       })
       .expect(201);
+    expect(created.body.status).toBe('completed');
     expect(created.body.details.photoUrls).toEqual(['https://example.com/jack.jpg']);
     expect(created.body.details.invoicePhotoUrls).toEqual(['https://example.com/invoice.jpg']);
+    expect(created.body.details.putAwayLocation).toBe('Zone D, Rack 3');
   });
 
   it('requires putAwayLocation for packaging_stock, no longer collects sellerName, and defaults invoicePhotoUrls to empty when omitted', async () => {
@@ -98,15 +131,11 @@ describe('Receptions (e2e)', () => {
     expect(created.body.status).toBe('completed');
   });
 
-  it('rejects a non-admin trying to give instructions', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/receptions')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack', photoUrls: ['https://example.com/jack.jpg'] })
-      .expect(201);
-
+  it('rejects a non-admin trying to give instructions', () => {
+    // RolesGuard denies before the controller ever looks the id up, so
+    // no reception needs to actually exist for this to prove the point.
     return request(app.getHttpServer())
-      .post(`/receptions/${created.body.id}/instructions`)
+      .post('/receptions/irrelevant-id/instructions')
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ instructions: 'Put in aisle 4' })
       .expect(403);
@@ -168,6 +197,33 @@ describe('Receptions (e2e)', () => {
       .expect(409);
   });
 
+  it('creates equipment_other already completed, with no admin instructions step', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/receptions')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        category: 'equipment_other',
+        parcelCount: 2,
+        itemDescription: 'Pallet jack',
+        photoUrls: ['https://example.com/jack.jpg'],
+        putAwayLocation: 'Zone D, Rack 3',
+      })
+      .expect(201);
+
+    expect(created.body.status).toBe('completed');
+    expect(created.body.instructions).toBeNull();
+    expect(created.body.putAwayAt).not.toBeNull();
+    expect(created.body.processingDurationMs).toBe(0);
+    expect(created.body.flaggedForReview).toBe(false);
+    expect(created.body.details.putAwayLocation).toBe('Zone D, Rack 3');
+
+    await request(app.getHttpServer())
+      .post(`/receptions/${created.body.id}/instructions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ instructions: 'Stack in aisle 4' })
+      .expect(409);
+  });
+
   it('rejects creating a new reception in the sellers_stock category — redundant now that Seller Stock is its own feature', () => {
     return request(app.getHttpServer())
       .post('/receptions')
@@ -176,11 +232,22 @@ describe('Receptions (e2e)', () => {
       .expect(400);
   });
 
-  it('rejects completing before instructions exist', async () => {
+  it('rejects completing a reception not in ready_for_putaway status', async () => {
+    // equipment_other is instant-complete now, so the reachable way to
+    // hit this guard is "already completed" rather than "never started"
+    // — same 409, different trigger. See the seeded-sellers_stock test
+    // below for the "never started" case (genuinely still reachable,
+    // just not via a creatable category).
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack', photoUrls: ['https://example.com/jack.jpg'] })
+      .send({
+        category: 'equipment_other',
+        parcelCount: 1,
+        itemDescription: 'Pallet jack',
+        photoUrls: ['https://example.com/jack.jpg'],
+        putAwayLocation: 'Zone D, Rack 3',
+      })
       .expect(201);
 
     return request(app.getHttpServer())
@@ -189,22 +256,17 @@ describe('Receptions (e2e)', () => {
       .expect(409);
   });
 
-  it('runs the full arrival → instructions → put-away flow and computes duration', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/receptions')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 10, itemDescription: 'Shelving', photoUrls: ['https://example.com/shelving.jpg'] })
-      .expect(201);
-    expect(created.body.status).toBe('arrived');
+  it('runs the full arrival → instructions → put-away flow and computes duration (seeded sellers_stock — see seedArrivedSellersStockReception)', async () => {
+    const id = await seedArrivedSellersStockReception(app, 10);
 
     const listed = await request(app.getHttpServer())
       .get('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(200);
-    expect(listed.body.some((r: { id: string }) => r.id === created.body.id)).toBe(true);
+    expect(listed.body.some((r: { id: string }) => r.id === id)).toBe(true);
 
     const instructed = await request(app.getHttpServer())
-      .post(`/receptions/${created.body.id}/instructions`)
+      .post(`/receptions/${id}/instructions`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ instructions: 'Stack in aisle 4, bay 2' })
       .expect(201);
@@ -212,7 +274,7 @@ describe('Receptions (e2e)', () => {
     expect(instructed.body.instructions).toBe('Stack in aisle 4, bay 2');
 
     const completed = await request(app.getHttpServer())
-      .post(`/receptions/${created.body.id}/complete`)
+      .post(`/receptions/${id}/complete`)
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(201);
     expect(completed.body.status).toBe('completed');
@@ -261,37 +323,31 @@ describe('Receptions (e2e)', () => {
   });
 
   it('applies bulk instructions independently per row, without aborting on a bad one', async () => {
-    const first = await request(app.getHttpServer())
-      .post('/receptions')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 2, itemDescription: 'Shelving', photoUrls: ['https://example.com/shelving.jpg'] })
-      .expect(201);
-    const second = await request(app.getHttpServer())
-      .post('/receptions')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 5, itemDescription: 'Forklift parts', photoUrls: ['https://example.com/forklift.jpg'] })
-      .expect(201);
+    // Seeded (see seedArrivedSellersStockReception's doc comment) — no
+    // creatable category reaches `arrived` anymore for this to exercise.
+    const firstId = await seedArrivedSellersStockReception(app, 2);
+    const secondId = await seedArrivedSellersStockReception(app, 5);
 
     const result = await request(app.getHttpServer())
       .post('/receptions/bulk-instructions')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         items: [
-          { id: first.body.id, instructions: 'Aisle 1' },
+          { id: firstId, instructions: 'Aisle 1' },
           { id: 'not-a-real-id', instructions: 'Aisle 2' },
-          { id: second.body.id, instructions: 'Aisle 3' },
+          { id: secondId, instructions: 'Aisle 3' },
         ],
       })
       .expect(201);
 
     expect(result.body).toEqual([
-      { id: first.body.id, success: true, error: null },
+      { id: firstId, success: true, error: null },
       { id: 'not-a-real-id', success: false, error: expect.any(String) },
-      { id: second.body.id, success: true, error: null },
+      { id: secondId, success: true, error: null },
     ]);
 
     const reloadedFirst = await request(app.getHttpServer())
-      .get(`/receptions/${first.body.id}`)
+      .get(`/receptions/${firstId}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(reloadedFirst.body.instructions).toBe('Aisle 1');

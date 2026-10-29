@@ -97,7 +97,7 @@ export const fr = {
       returnParcels: '{{count}} colis de {{transporterCompany}} — rangé à {{putAwayLocation}}',
       packagingStock: '{{count}} colis — {{packagingType}} — rangé à {{putAwayLocation}}',
       sellersStock: '{{count}} palette(s)',
-      equipmentOther: '{{count}} colis — {{itemDescription}}',
+      equipmentOther: '{{count}} colis — {{itemDescription}} — rangé à {{putAwayLocation}}',
     },
   },
 

@@ -103,7 +103,7 @@ export const en = {
       returnParcels: '{{count}} parcel(s) from {{transporterCompany}} — put away at {{putAwayLocation}}',
       packagingStock: '{{count}} parcel(s) — {{packagingType}} — put away at {{putAwayLocation}}',
       sellersStock: '{{count}} pallet(s)',
-      equipmentOther: '{{count}} parcel(s) — {{itemDescription}}',
+      equipmentOther: '{{count}} parcel(s) — {{itemDescription}} — put away at {{putAwayLocation}}',
     },
   },
 
