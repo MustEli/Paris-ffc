@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarcodeScanButton } from '../../../core/components/BarcodeScanButton';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { useUnsavedChangesStore } from '../../../core/navigation/unsavedChangesStore';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
@@ -79,7 +80,7 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
       {
         onSuccess: () => {
           setHasUnsavedChanges(false);
-          navigation.goBack();
+          goToStaffHome();
         },
       },
     );

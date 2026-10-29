@@ -2,6 +2,7 @@ import { type RouteProp } from '@react-navigation/native';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { type OrderPrepStackParamList } from '../../../navigation/types';
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../tasks/priority';
 import { useCompleteOrderPrepTask, useOrderPrepTask, useStartOrderPrepTask } from '../hooks/useOrderPrep';
@@ -62,7 +63,11 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
       {role === 'staff' && task.status === 'in_progress' && (
         <>
           {complete.error && <Text style={styles.error}>{complete.error.message}</Text>}
-          <Pressable style={styles.button} disabled={complete.isPending} onPress={() => complete.mutate()}>
+          <Pressable
+            style={styles.button}
+            disabled={complete.isPending}
+            onPress={() => complete.mutate(undefined, { onSuccess: goToStaffHome })}
+          >
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (

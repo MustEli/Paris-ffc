@@ -9,6 +9,7 @@ import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useReferenceList } from '../../../core/hooks/useReferenceList';
 import { translateError } from '../../../core/i18n/errorCodes';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
@@ -78,7 +79,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         invoicePhotoUrls:
           category === 'equipment_other' || category === 'packaging_stock' ? invoicePhotos : undefined,
       },
-      { onSuccess: () => navigation.navigate('ReceptionList') },
+      { onSuccess: goToStaffHome },
     );
   }
 

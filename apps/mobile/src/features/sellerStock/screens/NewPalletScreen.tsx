@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
+import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type SellerStockStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../components/MultiPhotoCapture';
@@ -90,7 +91,7 @@ export function NewPalletScreen({ navigation }: Props) {
         damageRemarks: isGoodOnly ? undefined : damageRemarks,
         damageEvidencePhotoUrls: isGoodOnly ? undefined : damagePhotos,
       },
-      { onSuccess: () => navigation.navigate('SellerStockList') },
+      { onSuccess: goToStaffHome },
     );
   }
 
