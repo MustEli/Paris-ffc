@@ -1,8 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
+import { PrismaService } from '../src/prisma/prisma.service';
 import { AppModule } from './../src/app.module';
 import { DELIVERY_PROOF_PHOTOS_MAX, DELIVERY_PROOF_PHOTOS_MIN } from '../src/seller-stock/seller-stock.types';
 import { closeTestDb, resetDatabase } from './utils/db';
@@ -26,6 +28,35 @@ async function uploadFakePhoto(app: INestApplication<App>, token: string): Promi
     .attach('file', Buffer.from('fake-image-bytes'), 'label.jpg')
     .expect(201);
   return response.body.url as string;
+}
+
+/**
+ * A Good Condition, non-overweight pallet is instant self-put-away now
+ * (see SellerStockService.create()), so it never actually reaches
+ * ready_for_putaway via the public API any more. selfPutAway() is
+ * still real code though (what any pre-existing historical pallet in
+ * that status would still go through), so this seeds one directly via
+ * Prisma — the same approach used for Reception's equivalent gap.
+ */
+async function seedReadyForPutawayPallet(app: INestApplication<App>): Promise<string> {
+  const prisma = app.get(PrismaService);
+  const id = randomUUID();
+  await prisma.sellerStockPallet.create({
+    data: {
+      id,
+      boxNumber: 'B-SEED',
+      sellerName: 'Acme Parts',
+      weightKg: 80,
+      overweightFlag: false,
+      condition: 'good',
+      conditionFlags: ['good'],
+      damageEvidencePhotoUrls: [],
+      labelPhotoUrls: [],
+      status: 'ready_for_putaway',
+      createdByUserId: 'seed-test-user',
+    },
+  });
+  return id;
 }
 
 describe('Seller Stock (e2e)', () => {
@@ -102,7 +133,7 @@ describe('Seller Stock (e2e)', () => {
     expect(created.body.status).toBe('pending_admin_review');
   });
 
-  it('logs a good-condition pallet with multiple label photos', async () => {
+  it('logs a good-condition pallet with multiple label photos, already put away', async () => {
     const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
     const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     const created = await request(app.getHttpServer())
@@ -114,9 +145,12 @@ describe('Seller Stock (e2e)', () => {
         sellerName: 'Acme Parts',
         weightKg: 120,
         conditionFlags: ['good'],
+        putAwayLocation: 'Zone A, Rack 2',
       })
       .expect(201);
-    expect(created.body.status).toBe('ready_for_putaway');
+    expect(created.body.status).toBe('put_away');
+    expect(created.body.putAwayLocation).toBe('Zone A, Rack 2');
+    expect(created.body.putAwayAt).not.toBeNull();
     expect(created.body.palletIndex).toMatch(/^PLT-\d{6}$/);
     expect(created.body.labelPhotoUrls).toEqual([labelPhotoUrl1, labelPhotoUrl2]);
 
@@ -125,6 +159,22 @@ describe('Seller Stock (e2e)', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(200);
     expect(listed.body.some((p: { id: string }) => p.id === created.body.id)).toBe(true);
+  });
+
+  it('rejects a good-condition, non-overweight pallet missing putAwayLocation', async () => {
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
+    return request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-3b',
+        sellerName: 'Acme Parts',
+        weightKg: 120,
+        conditionFlags: ['good'], // no putAwayLocation
+      })
+      .expect(400);
   });
 
   it('rejects a pallet flagged good + damaged together without damage remarks/evidence', async () => {
@@ -159,24 +209,17 @@ describe('Seller Stock (e2e)', () => {
       .expect(400);
   });
 
-  it('lets Staff self-confirm put-away for a good-condition pallet with no Admin step, but not for a flagged one', async () => {
-    const goodLabel1 = await uploadFakePhoto(app, staffToken);
-    const goodLabel2 = await uploadFakePhoto(app, staffToken);
-    const good = await request(app.getHttpServer())
-      .post('/seller-stock')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        labelPhotoUrls: [goodLabel1, goodLabel2],
-        boxNumber: 'B-SELF-1',
-        sellerName: 'Acme Parts',
-        weightKg: 80,
-        conditionFlags: ['good'],
-      })
-      .expect(201);
-    expect(good.body.status).toBe('ready_for_putaway');
+  it('lets Staff self-confirm put-away for a seeded ready_for_putaway pallet, but not for a flagged one', async () => {
+    // Seeded (see seedReadyForPutawayPallet's doc comment) — a new Good
+    // Condition, non-overweight pallet never reaches this status any
+    // more, it's instant put_away at creation (covered by "logs a
+    // good-condition pallet with multiple label photos, already put
+    // away" above). selfPutAway() is still real code for whatever
+    // historical pallet might still be sitting in ready_for_putaway.
+    const readyId = await seedReadyForPutawayPallet(app);
 
     const putAway = await request(app.getHttpServer())
-      .post(`/seller-stock/${good.body.id}/self-putaway`)
+      .post(`/seller-stock/${readyId}/self-putaway`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ zone: 'Zone A - Rack 04' })
       .expect(201);

@@ -14,6 +14,14 @@ async function loginAs(app: INestApplication<App>, email: string): Promise<{ tok
   return { token: response.body.accessToken as string, id: response.body.user.id as string };
 }
 
+/**
+ * Produces a pallet that's a pending put-away item on the Task Board.
+ * Deliberately overweight: a Good Condition, non-overweight pallet is
+ * instant self-put-away now (see SellerStockService.create()), never
+ * reaching pending_admin_review/ready_for_putaway at all — the Task
+ * Board's pendingItems derivation (tasks.service.ts) treats both
+ * statuses the same way, so this still exercises the same code path.
+ */
 async function createReadyPallet(app: INestApplication<App>, staffToken: string): Promise<string> {
   const photo1 = await request(app.getHttpServer())
     .post('/uploads')
@@ -33,7 +41,7 @@ async function createReadyPallet(app: INestApplication<App>, staffToken: string)
       labelPhotoUrls: [photo1.body.url, photo2.body.url],
       boxNumber: 'B-200',
       sellerName: 'Board Test Seller',
-      weightKg: 50,
+      weightKg: 750,
       conditionFlags: ['good'],
     })
     .expect(201);
@@ -108,7 +116,7 @@ describe('Task Board (e2e)', () => {
       (i: { type: string; palletId?: string }) => i.type === 'put_away' && i.palletId === palletId,
     );
     expect(pendingBefore).toHaveLength(1);
-    expect(pendingBefore[0].status).toBe('ready_for_putaway');
+    expect(pendingBefore[0].status).toBe('pending_admin_review');
 
     await request(app.getHttpServer())
       .post('/put-away-tasks')

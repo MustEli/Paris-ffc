@@ -47,6 +47,7 @@ export function NewPalletScreen({ navigation }: Props) {
   const [conditionFlags, setConditionFlags] = useState<PalletConditionFlag[]>(['good']);
   const [damageRemarks, setDamageRemarks] = useState('');
   const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
+  const [putAwayLocation, setPutAwayLocation] = useState('');
 
   const { mutate: submit, isPending, error } = useCreatePallet();
 
@@ -55,6 +56,11 @@ export function NewPalletScreen({ navigation }: Props) {
   // Exactly ['good'] is the only combination that skips Admin review —
   // matches the backend's SellerStockService.create() exactly.
   const isGoodOnly = conditionFlags.length === 1 && conditionFlags[0] === 'good';
+  // Matches the backend's `!needsReview` exactly — Good Condition AND
+  // not overweight. This is the only case staff record a put-away
+  // location themselves; anything else still goes to Admin review with
+  // no location yet.
+  const skipsReview = isGoodOnly && !isOverweight;
 
   const isValid =
     labelPhotos.length >= DELIVERY_PROOF_PHOTOS_MIN &&
@@ -63,7 +69,8 @@ export function NewPalletScreen({ navigation }: Props) {
     !!weightKg &&
     weightValue > 0 &&
     conditionFlags.length > 0 &&
-    (isGoodOnly || (!!damageRemarks && damagePhotos.length > 0));
+    (isGoodOnly || (!!damageRemarks && damagePhotos.length > 0)) &&
+    (!skipsReview || !!putAwayLocation.trim());
 
   // "Good Condition" and the problem flags are mutually exclusive — a
   // pallet either arrived fine or has one or more specific problems,
@@ -91,6 +98,7 @@ export function NewPalletScreen({ navigation }: Props) {
         conditionFlags,
         damageRemarks: isGoodOnly ? undefined : damageRemarks,
         damageEvidencePhotoUrls: isGoodOnly ? undefined : damagePhotos,
+        putAwayLocation: skipsReview ? putAwayLocation.trim() : undefined,
       },
       { onSuccess: goToStaffHome },
     );
@@ -147,6 +155,19 @@ export function NewPalletScreen({ navigation }: Props) {
           </Pressable>
         ))}
       </View>
+
+      {skipsReview && (
+        <>
+          <Text style={styles.label}>{t('sellerStock.newPallet.putAwayLocation')}</Text>
+          <TextInput
+            style={styles.input}
+            value={putAwayLocation}
+            onChangeText={setPutAwayLocation}
+            placeholder={t('sellerStock.newPallet.putAwayLocationPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+          />
+        </>
+      )}
 
       {!isGoodOnly && (
         <>

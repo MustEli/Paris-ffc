@@ -67,6 +67,18 @@ export class SellerStockService {
     const overweightFlag = dto.weightKg > OVERWEIGHT_THRESHOLD_KG;
     const needsReview = !isGoodOnly || overweightFlag;
 
+    // A pallet that doesn't need review (Good Condition, not overweight)
+    // used to land in 'ready_for_putaway' and wait for a separate
+    // self-put-away step (still available via selfPutAway(), for any
+    // pallet that reached that status before this change). Now staff
+    // record the put-away location in the same submission that logs the
+    // pallet, so it's created already 'put_away' — no separate step at
+    // all. Anything needing review is untouched: still
+    // 'pending_admin_review', no location yet.
+    if (!needsReview && !dto.putAwayLocation) {
+      throw new BadRequestException('A Good Condition, non-overweight pallet requires putAwayLocation');
+    }
+
     const row = await this.prisma.sellerStockPallet.create({
       data: {
         id: randomUUID(),
@@ -79,10 +91,10 @@ export class SellerStockService {
         damageRemarks: dto.damageRemarks ?? null,
         damageEvidencePhotoUrls: dto.damageEvidencePhotoUrls ?? [],
         labelPhotoUrls: dto.labelPhotoUrls,
-        status: needsReview ? 'pending_admin_review' : 'ready_for_putaway',
-        putAwayLocation: null,
+        status: needsReview ? 'pending_admin_review' : 'put_away',
+        putAwayLocation: needsReview ? null : dto.putAwayLocation!,
         createdByUserId: userId,
-        putAwayAt: null,
+        putAwayAt: needsReview ? null : new Date(),
       },
     });
     return this.toDomain(row);

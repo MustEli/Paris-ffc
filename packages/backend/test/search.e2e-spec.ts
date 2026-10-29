@@ -84,6 +84,7 @@ describe('Search (e2e)', () => {
         sellerName: 'Searchable Seller Co',
         weightKg: 50,
         conditionFlags: ['good'],
+        putAwayLocation: 'Zone A, Rack 1',
       })
       .expect(201);
 
@@ -145,7 +146,11 @@ describe('Search (e2e)', () => {
         labelPhotoUrls: [photo.body.url, photo.body.url],
         boxNumber: 'B-DONE',
         sellerName: 'Done Seller',
-        weightKg: 50,
+        // Overweight so it lands in pending_admin_review and stays
+        // assignable — a Good Condition, non-overweight pallet is
+        // instant self-put-away now, never reaching a state Admin can
+        // assign a put-away task against.
+        weightKg: 750,
         conditionFlags: ['good'],
       })
       .expect(201);

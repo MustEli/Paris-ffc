@@ -239,6 +239,8 @@ export const en = {
       conditionHint: 'Select every condition that applies — anything other than Good Condition alone requires remarks and photo evidence, and needs Admin review.',
       damageRemarks: 'Damage remarks',
       damageEvidencePhoto: 'Damage evidence photo',
+      putAwayLocation: 'Put-away location',
+      putAwayLocationPlaceholder: 'e.g. Zone A, Racks 1-10',
       logPallet: 'Log pallet',
       conditionFlag: {
         good: 'Good Condition',
