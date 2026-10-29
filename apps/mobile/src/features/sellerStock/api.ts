@@ -9,6 +9,8 @@ export interface CreatePalletInput {
   conditionFlags: PalletConditionFlag[];
   damageRemarks?: string;
   damageEvidencePhotoUrls?: string[];
+  /** Required only when the pallet is Good Condition and not overweight — see SellerStockService.create(). */
+  putAwayLocation?: string;
 }
 
 // NOTE: put-away assignment (instructions/complete) used to live here as

@@ -182,7 +182,11 @@ describe('Reports (e2e)', () => {
         labelPhotoUrls: [photoUrl1, photoUrl2],
         boxNumber: 'B-1',
         sellerName: 'Acme',
-        weightKg: 50,
+        // Overweight so it lands in pending_admin_review and stays
+        // assignable — a Good Condition, non-overweight pallet is
+        // instant self-put-away now (see SellerStockService.create()),
+        // never reaching a state Admin can assign a task against.
+        weightKg: 750,
         conditionFlags: ['good'],
       })
       .expect(201);
@@ -280,7 +284,9 @@ describe('Reports (e2e)', () => {
         labelPhotoUrls: [photoUrl1, photoUrl2],
         boxNumber: 'B-9',
         sellerName: 'Acme',
-        weightKg: 40,
+        // Overweight so it stays assignable — see the other pallet
+        // creation above in this file for why.
+        weightKg: 750,
         conditionFlags: ['good'],
       })
       .expect(201);

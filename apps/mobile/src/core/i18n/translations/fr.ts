@@ -231,6 +231,8 @@ export const fr = {
       conditionHint: 'Sélectionnez tous les états applicables — tout autre choix que « Bon état » seul nécessite des remarques et des preuves photo, et une révision par l’administrateur.',
       damageRemarks: 'Remarques sur les dommages',
       damageEvidencePhoto: 'Photo de preuve des dommages',
+      putAwayLocation: 'Emplacement de rangement',
+      putAwayLocationPlaceholder: 'ex. Zone A, Racks 1-10',
       logPallet: 'Enregistrer la palette',
       conditionFlag: {
         good: 'Bon état',

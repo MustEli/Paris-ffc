@@ -14,6 +14,15 @@ async function loginAs(app: INestApplication<App>, email: string): Promise<{ tok
   return { token: response.body.accessToken as string, id: response.body.user.id as string };
 }
 
+/**
+ * Produces a pallet Admin can assign a put-away task for. Good
+ * Condition pallets within the weight limit are instant self-put-away
+ * now (see SellerStockService.create()) and never reach a state Admin
+ * can assign against, so this is deliberately overweight — still
+ * "Good Condition" (condition flags unchanged), just enough to land in
+ * pending_admin_review instead, which PutAwayService.assign() accepts
+ * exactly the same way it always accepted ready_for_putaway.
+ */
 async function createReadyPallet(app: INestApplication<App>, staffToken: string): Promise<string> {
   const photo1 = await request(app.getHttpServer())
     .post('/uploads')
@@ -33,7 +42,7 @@ async function createReadyPallet(app: INestApplication<App>, staffToken: string)
       labelPhotoUrls: [photo1.body.url, photo2.body.url],
       boxNumber: 'B-100',
       sellerName: 'Acme Parts',
-      weightKg: 100,
+      weightKg: 750,
       conditionFlags: ['good'],
     })
     .expect(201);
