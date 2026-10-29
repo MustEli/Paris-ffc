@@ -51,7 +51,7 @@ export class ReceptionsService {
       case 'sellers_stock':
         return `${details.palletCount} pallet(s)`;
       case 'equipment_other':
-        return `${details.parcelCount} parcel(s) — ${details.itemDescription}`;
+        return `${details.parcelCount} parcel(s) — ${details.itemDescription} — put away at ${details.putAwayLocation}`;
     }
   }
 
@@ -97,9 +97,9 @@ export class ReceptionsService {
         return { category: 'sellers_stock', palletCount: dto.palletCount };
 
       case 'equipment_other':
-        if (!dto.parcelCount || !dto.itemDescription || !dto.photoUrls?.length) {
+        if (!dto.parcelCount || !dto.itemDescription || !dto.photoUrls?.length || !dto.putAwayLocation) {
           throw new BadRequestException({
-            message: 'equipment_other requires parcelCount, itemDescription, and at least one photo',
+            message: 'equipment_other requires parcelCount, itemDescription, at least one photo, and putAwayLocation',
             code: 'reception.missing_required_fields',
           });
         }
@@ -109,6 +109,7 @@ export class ReceptionsService {
           itemDescription: dto.itemDescription,
           photoUrls: dto.photoUrls,
           invoicePhotoUrls: dto.invoicePhotoUrls ?? [],
+          putAwayLocation: dto.putAwayLocation,
         };
     }
   }
@@ -152,6 +153,7 @@ export class ReceptionsService {
           itemDescription: details.itemDescription,
           photoUrls: details.photoUrls,
           invoicePhotoUrls: details.invoicePhotoUrls,
+          putAwayLocation: details.putAwayLocation,
         };
     }
   }
@@ -189,6 +191,8 @@ export class ReceptionsService {
           itemDescription: row.itemDescription!,
           photoUrls: row.photoUrls,
           invoicePhotoUrls: row.invoicePhotoUrls,
+          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
+          putAwayLocation: row.putAwayLocation ?? '(not recorded)',
         };
         break;
     }
@@ -206,18 +210,21 @@ export class ReceptionsService {
   }
 
   /**
-   * return_parcels and packaging_stock skip the admin-instructions wait
-   * entirely (customer request): staff record where they put it in the
-   * same submission that logs the delivery, so it's created already
-   * `completed` — arrivedAt and putAwayAt are the same instant,
-   * durationMs is 0, and it's never eligible for the 2-hour review
-   * flag. Sellers Stock and Equipment & Other keep the normal
-   * `arrived` → admin instructs → staff confirms flow, unchanged.
+   * return_parcels, packaging_stock, and equipment_other all skip the
+   * admin-instructions wait entirely (customer request): staff record
+   * where they put it in the same submission that logs the delivery,
+   * so it's created already `completed` — arrivedAt and putAwayAt are
+   * the same instant, durationMs is 0, and it's never eligible for the
+   * 2-hour review flag. Sellers Stock is the only category left on the
+   * normal `arrived` → admin instructs → staff confirms flow.
    */
   async create(userId: string, dto: CreateReceptionDto): Promise<Reception> {
     const details = this.buildDetails(dto);
     const arrivedAt = new Date();
-    const isInstant = details.category === 'return_parcels' || details.category === 'packaging_stock';
+    const isInstant =
+      details.category === 'return_parcels' ||
+      details.category === 'packaging_stock' ||
+      details.category === 'equipment_other';
 
     const row = await this.prisma.reception.create({
       data: {

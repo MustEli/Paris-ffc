@@ -33,6 +33,8 @@ export interface EquipmentOtherDetails {
   itemDescription: string;
   photoUrls: string[];
   invoicePhotoUrls: string[];
+  /** Recorded by staff themselves, same submission as logging it — no admin instructions step for this category. */
+  putAwayLocation: string;
 }
 
 export type ReceptionDetails =

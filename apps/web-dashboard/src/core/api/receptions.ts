@@ -29,6 +29,7 @@ export interface EquipmentOtherDetails {
   itemDescription: string;
   photoUrls: string[];
   invoicePhotoUrls: string[];
+  putAwayLocation: string;
 }
 export type ReceptionDetails = ReturnParcelsDetails | PackagingStockDetails | SellersStockDetails | EquipmentOtherDetails;
 
@@ -67,7 +68,7 @@ export function summarizeDetails(reception: Reception): string {
     case 'sellers_stock':
       return `${details.palletCount} pallet(s)`;
     case 'equipment_other':
-      return `${details.parcelCount} parcel(s) — ${details.itemDescription}`;
+      return `${details.parcelCount} parcel(s) — ${details.itemDescription} — put away at ${details.putAwayLocation}`;
   }
 }
 

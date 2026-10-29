@@ -258,19 +258,17 @@ describe('Reports (e2e)', () => {
       .expect(201);
 
     // Today's activity: a completed reception and a completed put-away task.
-    const reception = await request(app.getHttpServer())
+    // equipment_other is created already completed (no admin instructions step) — see receptions.service.ts's create().
+    await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ category: 'equipment_other', parcelCount: 3, itemDescription: 'Pallet racking', photoUrls: ['https://example.com/racking.jpg'] })
-      .expect(201);
-    await request(app.getHttpServer())
-      .post(`/receptions/${reception.body.id}/instructions`)
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ instructions: 'Aisle 1' })
-      .expect(201);
-    await request(app.getHttpServer())
-      .post(`/receptions/${reception.body.id}/complete`)
-      .set('Authorization', `Bearer ${staff.token}`)
+      .send({
+        category: 'equipment_other',
+        parcelCount: 3,
+        itemDescription: 'Pallet racking',
+        photoUrls: ['https://example.com/racking.jpg'],
+        putAwayLocation: 'Zone D, Rack 3',
+      })
       .expect(201);
 
     const photoUrl1 = await uploadFakePhoto(app, staff.token);

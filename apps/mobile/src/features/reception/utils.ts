@@ -23,6 +23,7 @@ export function summarizeDetails(reception: Reception): string {
       return i18n.t('reception.summary.equipmentOther', {
         count: details.parcelCount,
         itemDescription: details.itemDescription,
+        putAwayLocation: details.putAwayLocation,
       });
   }
 }

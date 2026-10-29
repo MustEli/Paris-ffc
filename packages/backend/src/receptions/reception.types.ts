@@ -11,12 +11,12 @@ export type ReceptionCategory = 'return_parcels' | 'packaging_stock' | 'sellers_
  * them wouldn't add anything for this slice. It means "logged, waiting
  * on admin instructions" until it moves to ready_for_putaway.
  *
- * return_parcels and packaging_stock skip this wait entirely — per
- * customer request, staff record the put-away location themselves in
- * the same submission that logs the delivery, so a reception in either
- * category goes straight to `completed` at creation and never passes
- * through `arrived` or `ready_for_putaway` at all. See
- * ReceptionsService.create().
+ * return_parcels, packaging_stock, and equipment_other skip this wait
+ * entirely — per customer request, staff record the put-away location
+ * themselves in the same submission that logs the delivery, so a
+ * reception in any of these categories goes straight to `completed` at
+ * creation and never passes through `arrived` or `ready_for_putaway`
+ * at all. See ReceptionsService.create().
  */
 export type ReceptionStatus = 'arrived' | 'ready_for_putaway' | 'completed';
 
@@ -59,6 +59,8 @@ export interface EquipmentOtherDetails {
   itemDescription: string;
   photoUrls: string[];
   invoicePhotoUrls: string[];
+  /** Where staff put it — recorded by staff themselves, no admin instructions involved for this category. */
+  putAwayLocation: string;
 }
 
 export type ReceptionDetails =
