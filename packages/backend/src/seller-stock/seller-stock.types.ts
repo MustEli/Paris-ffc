@@ -17,7 +17,7 @@ export type PalletCondition = 'good' | 'damaged';
  * is exactly `['good']`, 'damaged' otherwise. Any flag other than a
  * lone 'good' routes the pallet to Admin review, same as before.
  */
-export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed';
+export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed' | 'other';
 
 export const CONDITION_FLAGS: PalletConditionFlag[] = [
   'good',
@@ -25,6 +25,7 @@ export const CONDITION_FLAGS: PalletConditionFlag[] = [
   'overloaded',
   'damaged',
   'location_name_needed',
+  'other',
 ];
 
 export type SellerStockStatus =

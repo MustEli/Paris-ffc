@@ -2,7 +2,7 @@
 export type PalletCondition = 'good' | 'damaged';
 
 /** Staff's own multi-select report — exactly ['good'] is the only combination that skips Admin review. */
-export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed';
+export type PalletConditionFlag = 'good' | 'overweight' | 'overloaded' | 'damaged' | 'location_name_needed' | 'other';
 
 export const CONDITION_FLAGS: PalletConditionFlag[] = [
   'good',
@@ -10,6 +10,7 @@ export const CONDITION_FLAGS: PalletConditionFlag[] = [
   'overloaded',
   'damaged',
   'location_name_needed',
+  'other',
 ];
 
 export const CONDITION_FLAG_LABELS: Record<PalletConditionFlag, string> = {
@@ -18,6 +19,7 @@ export const CONDITION_FLAG_LABELS: Record<PalletConditionFlag, string> = {
   overloaded: 'Over Loaded',
   damaged: 'Damaged',
   location_name_needed: 'Location Name Needed',
+  other: 'Other',
 };
 
 export type SellerStockStatus = 'ready_for_putaway' | 'pending_admin_review' | 'instructed' | 'put_away';

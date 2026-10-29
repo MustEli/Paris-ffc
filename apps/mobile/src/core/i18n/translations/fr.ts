@@ -238,6 +238,7 @@ export const fr = {
         overloaded: 'Surchargé',
         damaged: 'Endommagé',
         location_name_needed: 'Nom d’emplacement requis',
+        other: 'Autre',
       },
     },
   },
