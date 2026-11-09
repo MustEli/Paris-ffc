@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useReferenceList } from '../../../core/hooks/useReferenceList';
+import { useWarehouseLocations } from '../../../core/hooks/useWarehouseLocations';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
@@ -47,6 +48,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
   const { mutate: submit, isPending, error } = useCreateReception();
   const transporterCompanies = useReferenceList('transporter_company');
   const packagingTypes = useReferenceList('packaging_type');
+  const locations = useWarehouseLocations();
 
   function isFormValid(): boolean {
     switch (category) {
@@ -147,11 +149,13 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
           />
 
           <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
-          <TextInput
-            style={styles.input}
-            value={putAwayLocation}
-            onChangeText={setPutAwayLocation}
-            placeholder={t('reception.putAwayLocationPlaceholder')}
+          <DropdownPicker
+            options={locations.data?.map((l) => l.location) ?? []}
+            value={putAwayLocation || null}
+            onChange={setPutAwayLocation}
+            isLoading={locations.isPending}
+            placeholder={t('reception.selectPutAwayLocation')}
+            emptyLabel={t('reception.noLocations')}
           />
         </>
       )}
@@ -169,11 +173,13 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
           />
 
           <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
-          <TextInput
-            style={styles.input}
-            value={putAwayLocation}
-            onChangeText={setPutAwayLocation}
-            placeholder={t('reception.putAwayLocationPlaceholder')}
+          <DropdownPicker
+            options={locations.data?.map((l) => l.location) ?? []}
+            value={putAwayLocation || null}
+            onChange={setPutAwayLocation}
+            isLoading={locations.isPending}
+            placeholder={t('reception.selectPutAwayLocation')}
+            emptyLabel={t('reception.noLocations')}
           />
 
           <View style={styles.photoSection}>
@@ -193,11 +199,13 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
           <TextInput style={styles.input} value={itemDescription} onChangeText={setItemDescription} />
 
           <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
-          <TextInput
-            style={styles.input}
-            value={putAwayLocation}
-            onChangeText={setPutAwayLocation}
-            placeholder={t('reception.putAwayLocationPlaceholder')}
+          <DropdownPicker
+            options={locations.data?.map((l) => l.location) ?? []}
+            value={putAwayLocation || null}
+            onChange={setPutAwayLocation}
+            isLoading={locations.isPending}
+            placeholder={t('reception.selectPutAwayLocation')}
+            emptyLabel={t('reception.noLocations')}
           />
 
           <View style={styles.photoSection}>

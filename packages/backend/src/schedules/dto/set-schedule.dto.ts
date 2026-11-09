@@ -17,14 +17,6 @@ export class SetScheduleDto {
   requiredWorkingHours!: number;
 
   @IsOptional()
-  @Matches(HH_MM_PATTERN, { message: 'paidBreakStartTime must be "HH:MM"' })
-  paidBreakStartTime?: string;
-
-  @IsOptional()
-  @Matches(HH_MM_PATTERN, { message: 'lunchBreakStartTime must be "HH:MM"' })
-  lunchBreakStartTime?: string;
-
-  @IsOptional()
   @IsInt()
   @IsPositive()
   lunchBreakDurationMinutes?: number;

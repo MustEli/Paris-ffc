@@ -53,8 +53,16 @@ interface RequestOptions {
   token?: string;
 }
 
+// Without this, a stalled connection (e.g. the hosted backend's free
+// tier waking from an idle sleep, which can take 30s+) left fetch()
+// neither resolving nor rejecting — the caller just sat on a spinner
+// forever with no error to show or recover from.
+const REQUEST_TIMEOUT_MS = 20000;
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response: Response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
@@ -63,14 +71,20 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
     });
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new ApiError(0, 'Could not reach the server — check your connection and try again.');
+    }
     // Surface the real underlying error instead of a blanket "unreachable"
     // message — a caught fetch exception isn't always "server is down";
     // hiding the actual cause made this much harder to debug than it
     // needed to be.
     const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
     throw new ApiError(0, `Request failed (${detail}) — target was ${API_BASE_URL}${path}`);
+  } finally {
+    clearTimeout(timeout);
   }
 
   const payload = await response.json().catch(() => null);

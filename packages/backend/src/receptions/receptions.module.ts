@@ -10,5 +10,7 @@ import { ReceptionsService } from './receptions.service';
   imports: [AuthModule, UsersModule, ShiftsModule], // AuthModule needed for JwtStrategy; ShiftsModule for ActiveShiftGuard
   controllers: [ReceptionsController],
   providers: [ReceptionsService],
+  // Exported so OpenPoolModule can dispatch tasks from, and cascade-complete, a Reception.
+  exports: [ReceptionsService],
 })
 export class ReceptionsModule {}

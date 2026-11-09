@@ -40,6 +40,6 @@ export class DirectivesController {
 
   @Post(':id/resolve')
   resolve(@Param('id') id: string, @Body() dto: ResolveDirectiveDto, @CurrentUser() user: PublicUser) {
-    return this.directivesService.resolve(id, user.id, dto.photoUrl);
+    return this.directivesService.resolve(id, user.id, dto.completionPhotoUrl, dto.completionComment);
   }
 }

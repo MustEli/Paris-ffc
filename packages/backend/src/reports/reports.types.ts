@@ -34,6 +34,26 @@ export interface AttendanceReport {
   rows: AttendanceReportRow[];
 }
 
+export interface StaffHistoryDay {
+  /** 0 on a day outside the staff member's configured working days (or if they have no schedule at all). */
+  plannedHours: number;
+  /** Net of lunch break. Only from completed (clocked-out) shifts that started on this day. */
+  actualHours: number;
+}
+
+export interface StaffHistoryRow {
+  userId: string;
+  userName: string;
+  /** Keyed by "YYYY-MM-DD" (UTC) — every key in StaffHistoryReport.days is present here, 0/0 for days with nothing recorded. */
+  days: Record<string, StaffHistoryDay>;
+}
+
+export interface StaffHistoryReport {
+  /** "YYYY-MM-DD" (UTC), ascending, from the app's first-ever completed shift to today. Empty if no shift has ever completed. */
+  days: string[];
+  staff: StaffHistoryRow[];
+}
+
 export interface ReceptionCategoryStats {
   category: ReceptionCategory;
   totalCount: number;

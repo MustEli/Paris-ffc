@@ -8,10 +8,14 @@ import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { APP_LANGUAGES, type AppLanguage } from '../../../core/i18n/i18n';
 import { useLanguageStore } from '../../../core/i18n/languageStore';
+import { useActiveTaskGuardStore } from '../../../core/navigation/activeTaskGuardStore';
 import { useCurrentRouteStore } from '../../../core/navigation/currentRouteStore';
 import { navigationRef } from '../../../core/navigation/navigationRef';
 import { useUnsavedChangesStore } from '../../../core/navigation/unsavedChangesStore';
 import { colors } from '../../../core/theme/colors';
+import { useMyOpenPoolTasks } from '../../openPool/hooks/useOpenPool';
+import { useOrderPrepTasks } from '../../orderPrep/hooks/useOrderPrep';
+import { useTasks as usePutAwayTasks } from '../../putAway/hooks/usePutAwayTasks';
 import { useMySchedule } from '../../schedule/hooks/useMySchedule';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 
@@ -52,6 +56,27 @@ export function ShiftStatusBar() {
 
   const [isOpen, setIsOpen] = useState(false);
 
+  // Assigned-to-me work that isn't done yet — shown everywhere via this
+  // bar so it can't be missed on whatever screen staff happens to be
+  // on. Directives are deliberately excluded: they already block the
+  // whole screen with their own overlay the instant one arrives, so a
+  // second reminder here would be redundant. Floor Tasks are
+  // self-started, not assigned, so they don't belong in this list
+  // either — and leaving one running already blocks navigation on its
+  // own (see activeTaskGuardStore).
+  const { data: putAwayTasks } = usePutAwayTasks();
+  const { data: orderPrepTasks } = useOrderPrepTasks();
+  const { data: openPoolTasks } = useMyOpenPoolTasks();
+  const pendingItems = [
+    ...(putAwayTasks ?? [])
+      .filter((t) => t.status !== 'completed')
+      .map((t) => ({ key: `put-away:${t.id}`, label: `Put-away — ${t.location}` })),
+    ...(orderPrepTasks ?? [])
+      .filter((t) => t.status !== 'completed')
+      .map((t) => ({ key: `order-prep:${t.id}`, label: `Order prep — ${t.role === 'picker' ? 'Picker' : 'Packer'}` })),
+    ...(openPoolTasks ?? []).map((t) => ({ key: `open-pool:${t.id}`, label: t.title })),
+  ];
+
   if (!status?.active || !status.startedAt) return null;
 
   const now = new Date();
@@ -83,6 +108,10 @@ export function ShiftStatusBar() {
   }
 
   function goHome() {
+    if (useActiveTaskGuardStore.getState().isTaskRunning) {
+      Alert.alert(t('floorTasks.pauseFirstTitle'), t('floorTasks.pauseFirstMessage'));
+      return;
+    }
     withUnsavedGuard(() => {
       setIsOpen(false);
       if (navigationRef.isReady()) {
@@ -126,7 +155,7 @@ export function ShiftStatusBar() {
         <View style={[styles.tricolorSegment, { backgroundColor: '#f8fafc' }]} />
         <View style={[styles.tricolorSegment, { backgroundColor: colors.brandRed }]} />
       </View>
-      <View style={styles.bar}>
+      <View style={[styles.bar, pendingItems.length > 0 && styles.barPending]}>
         <View style={styles.row}>
           {showNavIcons && (
             <Pressable style={styles.navButton} onPress={goBack} hitSlop={8}>
@@ -164,6 +193,14 @@ export function ShiftStatusBar() {
           <Text style={styles.breakBanner}>{onLunchBreak ? t('shiftGate.onLunchBreak') : t('shiftGate.onShortBreak')}</Text>
         )}
 
+        {pendingItems.length > 0 && (
+          <Pressable onPress={() => setIsOpen(true)}>
+            <Text style={styles.pendingBanner}>
+              {t('shiftBar.pendingTasks', { count: pendingItems.length })}
+            </Text>
+          </Pressable>
+        )}
+
         <Pressable
           style={styles.chevronButton}
           onPress={() => setIsOpen((v) => !v)}
@@ -177,6 +214,16 @@ export function ShiftStatusBar() {
         <>
           <Pressable style={styles.backdrop} onPress={() => setIsOpen(false)} />
           <View style={styles.dropdown}>
+            {pendingItems.length > 0 && (
+              <View style={styles.pendingSection}>
+                <Text style={styles.pendingSectionTitle}>{t('shiftBar.pendingTasksTitle')}</Text>
+                {pendingItems.map((item) => (
+                  <Text key={item.key} style={styles.pendingItem}>
+                    •  {item.label}
+                  </Text>
+                ))}
+              </View>
+            )}
             {!onBreak && (
               <>
                 <Pressable
@@ -254,6 +301,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  barPending: {
+    backgroundColor: colors.brandOrange + '1a',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,6 +354,14 @@ const styles = StyleSheet.create({
     color: colors.brandOrange,
     textAlign: 'center',
   },
+  pendingBanner: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.brandOrange,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
   chevronButton: {
     alignSelf: 'center',
     marginTop: 6,
@@ -340,6 +398,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  pendingSection: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    backgroundColor: colors.brandOrange + '1a',
+  },
+  pendingSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.brandOrange,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  pendingItem: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginBottom: 4,
   },
   dropdownRowDisabled: {
     opacity: 0.4,

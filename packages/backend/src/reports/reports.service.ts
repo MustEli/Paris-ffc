@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { type ReceptionCategory } from '../receptions/reception.types';
+import { type Weekday } from '../schedules/schedule.types';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import { LUNCH_BREAK_SUGGESTED_DURATION_MS, SHORT_BREAK_LIMIT_MS } from '../shifts/shift.types';
 import {
@@ -12,8 +13,28 @@ import {
   type OverviewReport,
   type PutAwayReport,
   type ReceptionReport,
+  type StaffHistoryReport,
   type StaffStatus,
 } from './reports.types';
+
+/** "YYYY-MM-DD", UTC — see schema.prisma's StaffSchedule doc comment for the same UTC-as-local simplification used throughout. */
+function dateKeyUTC(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** Inclusive of both ends. */
+function enumerateDaysUTC(startKey: string, endKey: string): string[] {
+  const days: string[] = [];
+  const cursor = new Date(`${startKey}T00:00:00.000Z`);
+  const end = new Date(`${endKey}T00:00:00.000Z`);
+  while (cursor.getTime() <= end.getTime()) {
+    days.push(dateKeyUTC(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
+}
+
+const WEEKDAY_BY_UTC_DAY_INDEX: Weekday[] = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 const RECEPTION_CATEGORIES: ReceptionCategory[] = [
   'return_parcels',
@@ -119,6 +140,62 @@ export class ReportsService {
       .sort((a, b) => b.totalHoursWorked - a.totalHoursWorked);
 
     return { rows };
+  }
+
+  /**
+   * Backs the web dashboard's "Staff History" section — a planned vs.
+   * actual day-by-day grid, one column per day since the app's very
+   * first completed shift. "Planned" comes from each staff member's
+   * *current* StaffSchedule applied retroactively to every day (no
+   * history of past schedule changes is kept, so a schedule edited
+   * partway through is a known, accepted simplification — same
+   * "current config applied to history" trade-off used elsewhere, e.g.
+   * ReferenceListValue renames). A day outside the staff member's
+   * working days, or with no schedule configured at all, plans 0 hours.
+   */
+  async staffHistory(): Promise<StaffHistoryReport> {
+    const [staffUsers, schedules, completedShifts] = await Promise.all([
+      this.prisma.user.findMany({ where: { role: 'staff' } }),
+      this.prisma.staffSchedule.findMany(),
+      this.prisma.shift.findMany({ where: { endedAt: { not: null } } }),
+    ]);
+
+    if (completedShifts.length === 0) {
+      return { days: [], staff: staffUsers.map((u) => ({ userId: u.id, userName: u.name, days: {} })) };
+    }
+
+    const breaks = await this.prisma.break.findMany({
+      where: { shiftId: { in: completedShifts.map((s) => s.id) } },
+    });
+    const breakMsByShift = sumBreakMsByShift(breaks);
+    const scheduleByUserId = new Map(schedules.map((s) => [s.userId, s]));
+
+    const earliestMs = Math.min(...completedShifts.map((s) => s.startedAt.getTime()));
+    const days = enumerateDaysUTC(dateKeyUTC(new Date(earliestMs)), dateKeyUTC(new Date()));
+
+    const actualHoursByUserDay = new Map<string, Map<string, number>>();
+    for (const shift of completedShifts) {
+      const day = dateKeyUTC(shift.startedAt);
+      const durationMs = shift.endedAt!.getTime() - shift.startedAt.getTime() - (breakMsByShift.get(shift.id) ?? 0);
+      const userDays = actualHoursByUserDay.get(shift.userId) ?? new Map<string, number>();
+      userDays.set(day, (userDays.get(day) ?? 0) + durationMs / 3_600_000);
+      actualHoursByUserDay.set(shift.userId, userDays);
+    }
+
+    const staff = staffUsers.map((user) => {
+      const schedule = scheduleByUserId.get(user.id);
+      const userActualDays = actualHoursByUserDay.get(user.id);
+      const dayEntries: Record<string, { plannedHours: number; actualHours: number }> = {};
+      for (const day of days) {
+        const weekday = WEEKDAY_BY_UTC_DAY_INDEX[new Date(`${day}T00:00:00.000Z`).getUTCDay()];
+        const plannedHours = schedule && schedule.workingDays.includes(weekday) ? schedule.requiredWorkingHours : 0;
+        const actualHours = Math.round((userActualDays?.get(day) ?? 0) * 100) / 100;
+        dayEntries[day] = { plannedHours, actualHours };
+      }
+      return { userId: user.id, userName: user.name, days: dayEntries };
+    });
+
+    return { days, staff };
   }
 
   async reception(): Promise<ReceptionReport> {

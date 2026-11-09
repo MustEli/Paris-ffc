@@ -14,4 +14,14 @@ export class CreateDirectiveDto {
   @IsString()
   @MinLength(1)
   message!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  creationPhotoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  creationComment?: string;
 }

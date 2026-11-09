@@ -27,16 +27,23 @@ export interface Directive {
   message: string;
   status: DirectiveStatus;
   receivedByUserId: string | null;
-  photoUrl: string | null;
   pushedAt: string;
   receivedAt: string | null;
   resolvedAt: string | null;
+  /** Admin-attached at creation, optional. */
+  creationPhotoUrl: string | null;
+  creationComment: string | null;
+  /** Staff-attached at resolution. */
+  completionPhotoUrl: string | null;
+  completionComment: string | null;
 }
 
 export interface CreateDirectiveInput {
   targetUserId?: string;
   type: DirectiveType;
   message: string;
+  creationPhotoUrl?: string;
+  creationComment?: string;
 }
 
 export function fetchAllDirectives(token: string) {

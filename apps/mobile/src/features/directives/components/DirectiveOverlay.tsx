@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { resolvePhotoUrl } from '../../../core/api/upload';
 import { PhotoCaptureButton } from '../../sellerStock/components/PhotoCaptureButton';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { useAcknowledgeDirective, useMyDirectives, useResolveDirective } from '../hooks/useDirectives';
@@ -23,16 +24,25 @@ export function DirectiveOverlay() {
   const acknowledge = useAcknowledgeDirective();
   const resolve = useResolveDirective();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
 
   if (role !== 'staff') return null;
   const active = directives?.[0];
   if (!active) return null;
 
   const isAcknowledgedByMe = active.status === 'in_progress' && active.receivedByUserId === userId;
-  const needsPhoto = active.type === 'photo_demand';
 
   function handleResolve() {
-    resolve.mutate({ id: active!.id, photoUrl: photoUrl ?? undefined }, { onSuccess: () => setPhotoUrl(null) });
+    if (!photoUrl || !comment.trim()) return;
+    resolve.mutate(
+      { id: active!.id, completionPhotoUrl: photoUrl, completionComment: comment.trim() },
+      {
+        onSuccess: () => {
+          setPhotoUrl(null);
+          setComment('');
+        },
+      },
+    );
   }
 
   return (
@@ -56,15 +66,30 @@ export function DirectiveOverlay() {
 
           {isAcknowledgedByMe && (
             <>
-              {needsPhoto && (
-                <View style={styles.photoWrap}>
-                  <PhotoCaptureButton label="Required photo" value={photoUrl} onChange={setPhotoUrl} />
+              {(active.creationPhotoUrl || active.creationComment) && (
+                <View style={styles.creationBox}>
+                  {active.creationComment && <Text style={styles.creationComment}>{active.creationComment}</Text>}
+                  {active.creationPhotoUrl && (
+                    <Image source={{ uri: resolvePhotoUrl(active.creationPhotoUrl) }} style={styles.creationPhoto} />
+                  )}
                 </View>
               )}
+
+              <View style={styles.photoWrap}>
+                <PhotoCaptureButton label="Photo" value={photoUrl} onChange={setPhotoUrl} />
+              </View>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Comment"
+                placeholderTextColor="#9ca3af"
+                multiline
+                value={comment}
+                onChangeText={setComment}
+              />
               {resolve.error && <Text style={styles.error}>{resolve.error.message}</Text>}
               <Pressable
-                style={[styles.button, ((needsPhoto && !photoUrl) || resolve.isPending) && styles.buttonDisabled]}
-                disabled={(needsPhoto && !photoUrl) || resolve.isPending}
+                style={[styles.button, (!photoUrl || !comment.trim() || resolve.isPending) && styles.buttonDisabled]}
+                disabled={!photoUrl || !comment.trim() || resolve.isPending}
                 onPress={handleResolve}
               >
                 {resolve.isPending ? (
@@ -118,7 +143,36 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 20,
   },
+  creationBox: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  creationComment: {
+    fontSize: 14,
+    color: '#334155',
+    marginBottom: 8,
+  },
+  creationPhoto: {
+    width: '100%',
+    height: 160,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+  },
   photoWrap: {
+    marginBottom: 12,
+  },
+  commentInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#0f172a',
+    minHeight: 70,
+    textAlignVertical: 'top',
     marginBottom: 12,
   },
   button: {

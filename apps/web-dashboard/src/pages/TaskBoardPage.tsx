@@ -15,7 +15,30 @@ import {
   type PendingTaskItem,
   type TaskPriority,
 } from '../core/api/tasks';
+import { resolvePhotoUrl } from '../core/api/upload';
+import { fetchStaffUsers } from '../core/api/users';
 import { useAuth } from '../core/auth/AuthContext';
+import { PhotoUploadField } from '../components/PhotoUploadField';
+
+/** Shared by both sections below — resolves a user id to a name, including staff who have since gone off-shift. */
+function useStaffNames() {
+  const { token } = useAuth();
+  const { data } = useQuery({
+    queryKey: ['staff-users'],
+    queryFn: () => fetchStaffUsers(token!),
+    enabled: !!token,
+  });
+  const nameById = new Map((data ?? []).map((s) => [s.id, s.name]));
+  return (userId: string | null) => (userId ? (nameById.get(userId) ?? userId) : '—');
+}
+
+function PhotoThumbnailLink({ url }: { url: string }) {
+  return (
+    <a href={resolvePhotoUrl(url)} target="_blank" rel="noreferrer">
+      <img src={resolvePhotoUrl(url)} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
+    </a>
+  );
+}
 
 const PENDING_ITEM_MIME = 'application/x-elno-pending-item';
 const STAFF_MIME = 'application/x-elno-staff';
@@ -303,16 +326,27 @@ function DirectivesSection({
   const [targetUserId, setTargetUserId] = useState<string>(''); // '' means "anyone available"
   const [type, setType] = useState<(typeof DIRECTIVE_TYPES)[number]>('verify_location');
   const [message, setMessage] = useState('');
+  const [creationPhotoUrl, setCreationPhotoUrl] = useState<string | null>(null);
+  const [creationComment, setCreationComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const staffName = useStaffNames();
 
   async function handlePush() {
     if (!message.trim()) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await createDirective(token!, { targetUserId: targetUserId || undefined, type, message: message.trim() });
+      await createDirective(token!, {
+        targetUserId: targetUserId || undefined,
+        type,
+        message: message.trim(),
+        creationPhotoUrl: creationPhotoUrl ?? undefined,
+        creationComment: creationComment.trim() || undefined,
+      });
       setMessage('');
+      setCreationPhotoUrl(null);
+      setCreationComment('');
       queryClient.invalidateQueries({ queryKey: ['directives'] });
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : 'Failed to push directive');
@@ -365,6 +399,16 @@ function DirectivesSection({
           placeholder="e.g. Upload photo of missing item at Aisle 4B Rack 3 immediately"
         />
       </div>
+      <PhotoUploadField label="Photo (optional)" value={creationPhotoUrl} onChange={setCreationPhotoUrl} />
+      <div className="form-row">
+        <label className="form-label">Comment (optional)</label>
+        <textarea
+          rows={2}
+          value={creationComment}
+          onChange={(e) => setCreationComment(e.target.value)}
+          placeholder="Anything extra staff should see the moment they accept"
+        />
+      </div>
       {submitError && <p className="error-text">{submitError}</p>}
       <button className="btn btn-accent" onClick={handlePush} disabled={isSubmitting || !message.trim()}>
         {isSubmitting ? 'Sending…' : 'Send Alert to Staff'}
@@ -381,12 +425,16 @@ function DirectivesSection({
             <th>Target</th>
             <th>Status</th>
             <th>Pushed</th>
+            <th>Completion photo</th>
+            <th>Completion comment</th>
+            <th>Done at</th>
+            <th>Done by</th>
           </tr>
         </thead>
         <tbody>
           {directives?.length === 0 && (
             <tr>
-              <td colSpan={5}>No directives pushed yet.</td>
+              <td colSpan={9}>No directives pushed yet.</td>
             </tr>
           )}
           {directives?.map((d) => (
@@ -402,6 +450,10 @@ function DirectivesSection({
                 <span className={`pill ${STATUS_PILL_CLASS[d.status]}`}>{d.status}</span>
               </td>
               <td>{new Date(d.pushedAt).toLocaleString()}</td>
+              <td>{d.completionPhotoUrl ? <PhotoThumbnailLink url={d.completionPhotoUrl} /> : '—'}</td>
+              <td>{d.completionComment ?? '—'}</td>
+              <td>{d.resolvedAt ? new Date(d.resolvedAt).toLocaleString() : '—'}</td>
+              <td>{staffName(d.receivedByUserId)}</td>
             </tr>
           ))}
         </tbody>
@@ -433,21 +485,41 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
     }
   }, [highlightId, tasks]);
 
+  const { data: staffUsers } = useQuery({
+    queryKey: ['staff-users'],
+    queryFn: () => fetchStaffUsers(token!),
+    enabled: !!token,
+  });
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('normal');
+  const [targetUserId, setTargetUserId] = useState('');
+  const [creationPhotoUrl, setCreationPhotoUrl] = useState<string | null>(null);
+  const [creationComment, setCreationComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const staffName = useStaffNames();
 
   async function handlePublish() {
     if (!title.trim()) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await createOpenPoolTask(token!, { title: title.trim(), description: description.trim() || undefined, priority });
+      await createOpenPoolTask(token!, {
+        title: title.trim(),
+        targetUserId: targetUserId || undefined,
+        description: description.trim() || undefined,
+        priority,
+        creationPhotoUrl: creationPhotoUrl ?? undefined,
+        creationComment: creationComment.trim() || undefined,
+      });
       setTitle('');
       setDescription('');
       setPriority('normal');
+      setTargetUserId('');
+      setCreationPhotoUrl(null);
+      setCreationComment('');
       queryClient.invalidateQueries({ queryKey: ['open-pool-tasks'] });
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : 'Failed to publish task');
@@ -466,6 +538,17 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
       <div className="form-row">
         <label className="form-label">Title</label>
         <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Recount aisle 4" />
+      </div>
+      <div className="form-row">
+        <label className="form-label">Target</label>
+        <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+          <option value="">Anyone available</option>
+          {staffUsers?.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="form-row">
         <label className="form-label">Description (optional)</label>
@@ -487,6 +570,16 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
           ))}
         </div>
       </div>
+      <PhotoUploadField label="Photo (optional)" value={creationPhotoUrl} onChange={setCreationPhotoUrl} />
+      <div className="form-row">
+        <label className="form-label">Comment (optional)</label>
+        <textarea
+          rows={2}
+          value={creationComment}
+          onChange={(e) => setCreationComment(e.target.value)}
+          placeholder="Anything extra staff should see the moment they claim it"
+        />
+      </div>
       {submitError && <p className="error-text">{submitError}</p>}
       <button className="btn btn-accent" onClick={handlePublish} disabled={isSubmitting || !title.trim()}>
         {isSubmitting ? 'Publishing…' : 'Publish to Open Pool'}
@@ -499,15 +592,21 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
         <thead>
           <tr>
             <th>Title</th>
+            <th>Description</th>
+            <th>Target</th>
             <th>Priority</th>
             <th>Status</th>
             <th>Created</th>
+            <th>Completion photo</th>
+            <th>Completion comment</th>
+            <th>Completed at</th>
+            <th>Completed by</th>
           </tr>
         </thead>
         <tbody>
           {tasks?.length === 0 && (
             <tr>
-              <td colSpan={4}>No open pool tasks yet.</td>
+              <td colSpan={10}>No open pool tasks yet.</td>
             </tr>
           )}
           {tasks?.map((t) => (
@@ -517,11 +616,17 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
               className={t.id === highlightId ? 'highlight-row' : undefined}
             >
               <td>{t.title}</td>
+              <td>{t.description ?? '—'}</td>
+              <td>{t.targetUserId ? staffName(t.targetUserId) : 'Anyone'}</td>
               <td>{PRIORITY_LABELS[t.priority]}</td>
               <td>
                 <span className={`pill ${STATUS_PILL_CLASS[t.status]}`}>{t.status}</span>
               </td>
               <td>{new Date(t.createdAt).toLocaleString()}</td>
+              <td>{t.completionPhotoUrl ? <PhotoThumbnailLink url={t.completionPhotoUrl} /> : '—'}</td>
+              <td>{t.completionComment ?? '—'}</td>
+              <td>{t.completedAt ? new Date(t.completedAt).toLocaleString() : '—'}</td>
+              <td>{staffName(t.claimedByUserId)}</td>
             </tr>
           ))}
         </tbody>

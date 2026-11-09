@@ -5,6 +5,7 @@ import { useAuth } from './core/auth/AuthContext';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { PutAwayLocationsPage } from './pages/PutAwayLocationsPage';
 import { ReceptionIntakePage } from './pages/ReceptionIntakePage';
 import { ReferenceListsPage } from './pages/ReferenceListsPage';
 import { SchedulesPage } from './pages/SchedulesPage';
@@ -28,15 +29,7 @@ export function App() {
         <Route path="/task-board" element={<TaskBoardPage />} />
         <Route path="/schedules" element={<SchedulesPage />} />
         <Route path="/reception-intake" element={<ReceptionIntakePage />} />
-        <Route
-          path="/put-away"
-          element={
-            <PlaceholderPage
-              title="Put-Away & Location Assignment"
-              description="Warehouse mapping and racks."
-            />
-          }
-        />
+        <Route path="/put-away" element={<PutAwayLocationsPage />} />
         <Route
           path="/order-prep"
           element={<PlaceholderPage title="Order Prep (Pick & Pack)" description="Labor calculator and staggering." />}

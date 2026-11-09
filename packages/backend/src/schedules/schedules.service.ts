@@ -27,8 +27,6 @@ export class SchedulesService {
       shiftStartTime: row.shiftStartTime,
       shiftEndTime: row.shiftEndTime,
       requiredWorkingHours: row.requiredWorkingHours,
-      paidBreakStartTime: row.paidBreakStartTime,
-      lunchBreakStartTime: row.lunchBreakStartTime,
       lunchBreakDurationMinutes: row.lunchBreakDurationMinutes,
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -50,8 +48,6 @@ export class SchedulesService {
       shiftStartTime: dto.shiftStartTime,
       shiftEndTime: dto.shiftEndTime,
       requiredWorkingHours: dto.requiredWorkingHours,
-      paidBreakStartTime: dto.paidBreakStartTime ?? null,
-      lunchBreakStartTime: dto.lunchBreakStartTime ?? null,
       lunchBreakDurationMinutes: dto.lunchBreakDurationMinutes ?? 60,
     };
 

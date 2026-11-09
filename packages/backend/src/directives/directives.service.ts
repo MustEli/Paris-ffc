@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { type Directive as PrismaDirective } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
+import { FloorTasksService } from '../floor-tasks/floor-tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { UsersService } from '../users/users.service';
@@ -21,6 +22,7 @@ export class DirectivesService {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly realtimeService: RealtimeService,
+    private readonly floorTasksService: FloorTasksService,
   ) {}
 
   private toDomain(row: PrismaDirective): Directive {
@@ -32,10 +34,13 @@ export class DirectivesService {
       message: row.message,
       status: row.status,
       receivedByUserId: row.receivedByUserId,
-      photoUrl: row.photoUrl,
       pushedAt: row.pushedAt.toISOString(),
       receivedAt: row.receivedAt ? row.receivedAt.toISOString() : null,
       resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+      creationPhotoUrl: row.creationPhotoUrl,
+      creationComment: row.creationComment,
+      completionPhotoUrl: row.completionPhotoUrl,
+      completionComment: row.completionComment,
     };
   }
 
@@ -55,6 +60,8 @@ export class DirectivesService {
         type: dto.type,
         message: dto.message,
         status: 'pushed',
+        creationPhotoUrl: dto.creationPhotoUrl ?? null,
+        creationComment: dto.creationComment ?? null,
       },
     });
     const directive = this.toDomain(row);
@@ -90,6 +97,10 @@ export class DirectivesService {
       throw new ConflictException('Already acknowledged by another staff member');
     }
 
+    // Accepting a directive means dropping whatever floor task was
+    // running — never leave both "in progress" at once.
+    await this.floorTasksService.pauseIfRunning(userId);
+
     const row = await this.prisma.directive.findUniqueOrThrow({ where: { id } });
     const acknowledged = this.toDomain(row);
     this.realtimeService.emitToRole('admin', 'directive:acknowledged', acknowledged);
@@ -102,7 +113,7 @@ export class DirectivesService {
     return acknowledged;
   }
 
-  async resolve(id: string, userId: string, photoUrl: string | undefined): Promise<Directive> {
+  async resolve(id: string, userId: string, completionPhotoUrl: string, completionComment: string): Promise<Directive> {
     const directive = await this.findOneRow(id);
     if (directive.receivedByUserId !== userId) {
       throw new ForbiddenException('This directive was not acknowledged by you');
@@ -110,13 +121,10 @@ export class DirectivesService {
     if (directive.status !== 'in_progress') {
       throw new ConflictException(`Cannot resolve a directive in status "${directive.status}"`);
     }
-    if (directive.type === 'photo_demand' && !photoUrl) {
-      throw new BadRequestException('photoUrl is required to resolve a photo_demand directive');
-    }
 
     const row = await this.prisma.directive.update({
       where: { id },
-      data: { status: 'resolved', resolvedAt: new Date(), photoUrl: photoUrl ?? null },
+      data: { status: 'resolved', resolvedAt: new Date(), completionPhotoUrl, completionComment },
     });
     this.realtimeService.emitToRole('admin', 'directive:resolved', this.toDomain(row));
     return this.toDomain(row);

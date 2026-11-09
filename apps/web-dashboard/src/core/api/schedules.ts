@@ -21,8 +21,6 @@ export interface StaffSchedule {
   shiftStartTime: string;
   shiftEndTime: string;
   requiredWorkingHours: number;
-  paidBreakStartTime: string | null;
-  lunchBreakStartTime: string | null;
   lunchBreakDurationMinutes: number;
   updatedAt: string;
 }
@@ -32,8 +30,6 @@ export interface SetScheduleInput {
   shiftStartTime: string;
   shiftEndTime: string;
   requiredWorkingHours: number;
-  paidBreakStartTime?: string;
-  lunchBreakStartTime?: string;
   lunchBreakDurationMinutes?: number;
 }
 

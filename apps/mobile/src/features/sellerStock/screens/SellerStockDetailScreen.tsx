@@ -6,7 +6,7 @@ import { Image, ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable
 import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
-import { useReferenceList } from '../../../core/hooks/useReferenceList';
+import { useWarehouseLocations } from '../../../core/hooks/useWarehouseLocations';
 import { type PutAwayStackParamList, type SellerStockStackParamList } from '../../../navigation/types';
 import { useSelfPutAway, usePallet } from '../hooks/useSellerStock';
 import { CONDITION_FLAG_LABELS, OVERWEIGHT_THRESHOLD_KG, STATUS_LABELS } from '../types';
@@ -31,7 +31,7 @@ export function SellerStockDetailScreen({ route }: Props) {
   const { data: pallet, isPending, error } = usePallet(id);
   const navigation = useNavigation<NativeStackNavigationProp<PutAwayStackParamList>>();
 
-  const zones = useReferenceList('warehouse_zone');
+  const locations = useWarehouseLocations();
   const [selfPutAwayZone, setSelfPutAwayZone] = useState<string | null>(null);
   const selfPutAway = useSelfPutAway(id);
 
@@ -95,12 +95,12 @@ export function SellerStockDetailScreen({ route }: Props) {
         <View style={styles.selfPutAwayBox}>
           <Text style={styles.label}>Ready for put-away — no admin instruction needed</Text>
           <DropdownPicker
-            options={zones.data?.map((v) => v.value) ?? []}
+            options={locations.data?.map((l) => l.location) ?? []}
             value={selfPutAwayZone}
             onChange={setSelfPutAwayZone}
-            isLoading={zones.isPending}
-            placeholder="Select target zone"
-            emptyLabel="No warehouse zones yet — ask an Admin to add some in the web dashboard."
+            isLoading={locations.isPending}
+            placeholder="Select target location"
+            emptyLabel="No locations yet — ask an Admin to add some in the web dashboard."
           />
           {selfPutAway.error && <Text style={styles.error}>{selfPutAway.error.message}</Text>}
           <Pressable

@@ -7,6 +7,7 @@ import { acknowledgeDirective, fetchMyDirectives, resolveDirective } from '../ap
 import { DIRECTIVE_TYPE_LABELS, type Directive } from '../types';
 
 const MINE_KEY = ['directives', 'mine'];
+const OPEN_FLOOR_TASK_KEY = ['floor-tasks', 'mine', 'open'];
 
 /** Live-refreshes the moment Admin pushes one, or anyone (including someone else) acknowledges an "anyone available" one. */
 export function useMyDirectives() {
@@ -36,7 +37,11 @@ export function useAcknowledgeDirective() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => acknowledgeDirective(token!, id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: MINE_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MINE_KEY });
+      // The backend auto-pauses an active floor task on acknowledge — refresh it so the Floor Task screen (if open underneath) reflects that immediately.
+      queryClient.invalidateQueries({ queryKey: OPEN_FLOOR_TASK_KEY });
+    },
   });
 }
 
@@ -44,7 +49,8 @@ export function useResolveDirective() {
   const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, photoUrl }: { id: string; photoUrl?: string }) => resolveDirective(token!, id, photoUrl),
+    mutationFn: ({ id, completionPhotoUrl, completionComment }: { id: string; completionPhotoUrl: string; completionComment: string }) =>
+      resolveDirective(token!, id, completionPhotoUrl, completionComment),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MINE_KEY }),
   });
 }

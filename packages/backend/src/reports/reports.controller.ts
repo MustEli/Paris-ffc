@@ -29,6 +29,11 @@ export class ReportsController {
     return this.reportsService.attendance();
   }
 
+  @Get('staff-history')
+  staffHistory() {
+    return this.reportsService.staffHistory();
+  }
+
   @Get('reception')
   reception() {
     return this.reportsService.reception();

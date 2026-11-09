@@ -9,5 +9,7 @@ import { FloorTasksService } from './floor-tasks.service';
   imports: [AuthModule, ShiftsModule], // AuthModule for JwtStrategy; ShiftsModule for ActiveShiftGuard
   controllers: [FloorTasksController],
   providers: [FloorTasksService],
+  // Exported so Directives/OpenPool can auto-pause an active floor task on accept/claim — see FloorTasksService.pauseIfRunning.
+  exports: [FloorTasksService],
 })
 export class FloorTasksModule {}

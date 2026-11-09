@@ -80,16 +80,18 @@ describe('Directives (e2e)', () => {
     const resolved = await request(app.getHttpServer())
       .post(`/directives/${pushed.body.id}/resolve`)
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({})
+      .send({ completionPhotoUrl: '/uploads/evidence.jpg', completionComment: 'All checked out' })
       .expect(201);
     expect(resolved.body.status).toBe('resolved');
+    expect(resolved.body.completionPhotoUrl).toBe('/uploads/evidence.jpg');
+    expect(resolved.body.completionComment).toBe('All checked out');
   });
 
-  it('requires a photoUrl to resolve a photo_demand directive', async () => {
+  it('requires completionPhotoUrl and completionComment to resolve any directive type', async () => {
     const pushed = await request(app.getHttpServer())
       .post('/directives')
       .set('Authorization', `Bearer ${admin.token}`)
-      .send({ type: 'photo_demand', message: 'Photo of missing item', targetUserId: staff.id })
+      .send({ type: 'custom', message: 'Do the thing', targetUserId: staff.id })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/directives/${pushed.body.id}/acknowledge`)
@@ -102,12 +104,51 @@ describe('Directives (e2e)', () => {
       .send({})
       .expect(400);
 
+    await request(app.getHttpServer())
+      .post(`/directives/${pushed.body.id}/resolve`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ completionPhotoUrl: '/uploads/evidence.jpg' })
+      .expect(400);
+
     const resolved = await request(app.getHttpServer())
       .post(`/directives/${pushed.body.id}/resolve`)
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ photoUrl: '/uploads/evidence.jpg' })
+      .send({ completionPhotoUrl: '/uploads/evidence.jpg', completionComment: 'Done' })
       .expect(201);
-    expect(resolved.body.photoUrl).toBe('/uploads/evidence.jpg');
+    expect(resolved.body.completionPhotoUrl).toBe('/uploads/evidence.jpg');
+  });
+
+  it('shows the admin-attached creation photo/comment to staff, and auto-pauses an active floor task on acknowledge', async () => {
+    await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    const pushed = await request(app.getHttpServer())
+      .post('/directives')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        type: 'verify_location',
+        message: 'Check aisle 4',
+        targetUserId: staff.id,
+        creationPhotoUrl: '/uploads/reference.jpg',
+        creationComment: 'See the attached photo for the correct bin',
+      })
+      .expect(201);
+    expect(pushed.body.creationPhotoUrl).toBe('/uploads/reference.jpg');
+    expect(pushed.body.creationComment).toBe('See the attached photo for the correct bin');
+
+    await request(app.getHttpServer())
+      .post(`/directives/${pushed.body.id}/acknowledge`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const openFloorTask = await request(app.getHttpServer())
+      .get('/floor-tasks/mine/open')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+    expect(openFloorTask.body.pausedAt).not.toBeNull();
   });
 
   it('rejects a staff member acknowledging a directive targeted at someone else', async () => {
@@ -161,7 +202,7 @@ describe('Directives (e2e)', () => {
     return request(app.getHttpServer())
       .post(`/directives/${pushed.body.id}/resolve`)
       .set('Authorization', `Bearer ${management.token}`)
-      .send({})
+      .send({ completionPhotoUrl: '/uploads/evidence.jpg', completionComment: 'Done' })
       .expect(403);
   });
 });

@@ -19,8 +19,6 @@ const VALID_SCHEDULE = {
   shiftStartTime: '07:30',
   shiftEndTime: '15:30',
   requiredWorkingHours: 7,
-  paidBreakStartTime: '10:30',
-  lunchBreakStartTime: '12:30',
   lunchBreakDurationMinutes: 60,
 };
 

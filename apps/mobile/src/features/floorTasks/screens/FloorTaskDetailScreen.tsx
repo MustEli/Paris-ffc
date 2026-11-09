@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
+import { useActiveTaskGuardStore } from '../../../core/navigation/activeTaskGuardStore';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
@@ -68,6 +69,13 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
+  // Data-entry boxes are only relevant once the user is actually
+  // finishing the task — showing them the whole time (even before
+  // Start) was confusing. Pressing Stop reveals them instead of ending
+  // immediately; the real end only happens once this view is filled in
+  // and confirmed.
+  const [isEnding, setIsEnding] = useState(false);
+
   const start = useStartFloorTask();
   const end = useEndFloorTask(openTask?.id ?? '');
   const pause = usePauseFloorTask(openTask?.id ?? '');
@@ -115,10 +123,19 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     });
   }, [isRunning, navigation]);
 
+  // The Home icon jumps straight to StaffHome from a different part of
+  // the stack, which doesn't fire this screen's beforeRemove listener —
+  // mirror isRunning into a global store so it can block that path too.
+  const setIsTaskRunning = useActiveTaskGuardStore((state) => state.setIsTaskRunning);
+  useEffect(() => {
+    setIsTaskRunning(isRunning);
+    return () => setIsTaskRunning(false);
+  }, [isRunning, setIsTaskRunning]);
+
   // Once the number boxes are filled (required — see requireCountsThen),
-  // Stop always succeeds whatever else is or isn't filled in — no
+  // confirming always succeeds whatever else is or isn't filled in — no
   // silent substitution of some other action.
-  function handleStop() {
+  function handleConfirmEnd() {
     requireCountsThen(() => {
       const endInput = {
         count: meta.countLabel ? Number(count) : undefined,
@@ -127,11 +144,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
         comment: needsComment && comment.trim() ? comment.trim() : undefined,
         photoUrls: meta.needsPhotos ? photos : undefined,
       };
-
-      Alert.alert(t('floorTasks.stopConfirmTitle', { label: t(meta.label) }), t('floorTasks.stopConfirmMessage'), [
-        { text: t('floorTasks.keepGoing'), style: 'cancel' },
-        { text: t('floorTasks.stop'), style: 'destructive', onPress: () => end.mutate(endInput, { onSuccess: goToStaffHome }) },
-      ]);
+      end.mutate(endInput, { onSuccess: goToStaffHome });
     });
   }
 
@@ -160,65 +173,72 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
       {pause.error && <Text style={styles.error}>{translateError(pause.error, t)}</Text>}
       {resume.error && <Text style={styles.error}>{translateError(resume.error, t)}</Text>}
 
-      {meta.countLabel && (
+      {isEnding && (
         <>
-          <Text style={styles.label}>{t(meta.countLabel)}</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={count}
-            onChangeText={(text) => setCount(sanitizeDigits(text))}
-            placeholderTextColor={colors.textMuted}
-          />
+          <Text style={styles.finishTitle}>{t('floorTasks.stopConfirmTitle', { label: t(meta.label) })}</Text>
+          <Text style={styles.finishSubtitle}>{t('floorTasks.stopConfirmMessage')}</Text>
+
+          {meta.countLabel && (
+            <>
+              <Text style={styles.label}>{t(meta.countLabel)}</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="number-pad"
+                value={count}
+                onChangeText={(text) => setCount(sanitizeDigits(text))}
+                placeholderTextColor={colors.textMuted}
+              />
+            </>
+          )}
+
+          {meta.countExtraLabel && (
+            <>
+              <Text style={styles.label}>{t(meta.countExtraLabel)}</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="number-pad"
+                value={countExtra}
+                onChangeText={(text) => setCountExtra(sanitizeDigits(text))}
+                placeholderTextColor={colors.textMuted}
+              />
+            </>
+          )}
+
+          {meta.needsZone && (
+            <>
+              <Text style={styles.label}>{t('floorTasks.zoneLocation')}</Text>
+              <TextInput
+                style={styles.input}
+                value={zone}
+                onChangeText={setZone}
+                placeholder={t('floorTasks.zonePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+              />
+            </>
+          )}
+
+          {needsComment && (
+            <>
+              <Text style={styles.label}>{commentRequired ? t('floorTasks.comment') : t('floorTasks.commentOptional')}</Text>
+              <TextInput
+                style={[styles.input, styles.multiline]}
+                multiline
+                value={comment}
+                onChangeText={setComment}
+                placeholderTextColor={colors.textMuted}
+              />
+            </>
+          )}
+
+          {meta.needsPhotos && (
+            <View style={styles.photoSection}>
+              <MultiPhotoCapture label={t('floorTasks.photos')} photos={photos} onChange={setPhotos} maxPhotos={FLOOR_TASK_MAX_PHOTOS} />
+            </View>
+          )}
+
+          {end.error && <Text style={styles.error}>{translateError(end.error, t)}</Text>}
         </>
       )}
-
-      {meta.countExtraLabel && (
-        <>
-          <Text style={styles.label}>{t(meta.countExtraLabel)}</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={countExtra}
-            onChangeText={(text) => setCountExtra(sanitizeDigits(text))}
-            placeholderTextColor={colors.textMuted}
-          />
-        </>
-      )}
-
-      {meta.needsZone && (
-        <>
-          <Text style={styles.label}>{t('floorTasks.zoneLocation')}</Text>
-          <TextInput
-            style={styles.input}
-            value={zone}
-            onChangeText={setZone}
-            placeholder={t('floorTasks.zonePlaceholder')}
-            placeholderTextColor={colors.textMuted}
-          />
-        </>
-      )}
-
-      {needsComment && (
-        <>
-          <Text style={styles.label}>{commentRequired ? t('floorTasks.comment') : t('floorTasks.commentOptional')}</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            multiline
-            value={comment}
-            onChangeText={setComment}
-            placeholderTextColor={colors.textMuted}
-          />
-        </>
-      )}
-
-      {meta.needsPhotos && (
-        <View style={styles.photoSection}>
-          <MultiPhotoCapture label={t('floorTasks.photos')} photos={photos} onChange={setPhotos} maxPhotos={FLOOR_TASK_MAX_PHOTOS} />
-        </View>
-      )}
-
-      {end.error && <Text style={styles.error}>{translateError(end.error, t)}</Text>}
 
       {!openTask ? (
         <Pressable
@@ -232,13 +252,26 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             <Text style={styles.primaryButtonText}>{t('floorTasks.startCategory', { label: t(meta.label) })}</Text>
           )}
         </Pressable>
+      ) : isEnding ? (
+        <>
+          <Pressable
+            style={[styles.primaryButton, styles.confirmEndButton, end.isPending && styles.buttonBusy]}
+            disabled={end.isPending}
+            onPress={handleConfirmEnd}
+          >
+            {end.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmEndButtonText}>{t('floorTasks.confirmEnd')}</Text>}
+          </Pressable>
+          <Pressable style={styles.cancelEndButton} disabled={end.isPending} onPress={() => setIsEnding(false)}>
+            <Text style={styles.cancelEndButtonText}>{t('common.cancel')}</Text>
+          </Pressable>
+        </>
       ) : (
         <View style={styles.actionRow}>
           <View style={styles.iconButtonGroup}>
             <Pressable
               style={[styles.iconButton, styles.pauseIconButton, (pause.isPending || resume.isPending) && styles.buttonBusy]}
               disabled={pause.isPending || resume.isPending}
-              onPress={() => (isPaused ? resume.mutate() : requireCountsThen(() => pause.mutate()))}
+              onPress={() => (isPaused ? resume.mutate() : pause.mutate())}
             >
               {pause.isPending || resume.isPending ? (
                 <ActivityIndicator color={colors.brandOrange} />
@@ -250,12 +283,8 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.iconButtonGroup}>
-            <Pressable
-              style={[styles.iconButton, styles.stopIconButton, end.isPending && styles.buttonBusy]}
-              disabled={end.isPending}
-              onPress={handleStop}
-            >
-              {end.isPending ? <ActivityIndicator color="#fff" /> : <Ionicons name="stop" size={28} color="#fff" />}
+            <Pressable style={[styles.iconButton, styles.stopIconButton]} onPress={() => setIsEnding(true)}>
+              <Ionicons name="stop" size={28} color="#fff" />
             </Pressable>
             <Text style={styles.iconButtonLabel}>{t('floorTasks.stop')}</Text>
           </View>
@@ -304,6 +333,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: 12,
   },
+  finishTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: 20,
+  },
+  finishSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
   label: {
     fontSize: 13,
     fontWeight: '600',
@@ -347,6 +387,24 @@ const styles = StyleSheet.create({
     color: '#1a1200',
     fontSize: 16,
     fontWeight: '700',
+  },
+  confirmEndButton: {
+    backgroundColor: colors.alert,
+  },
+  confirmEndButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  cancelEndButton: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  cancelEndButtonText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '600',
   },
   actionRow: {
     flexDirection: 'row',

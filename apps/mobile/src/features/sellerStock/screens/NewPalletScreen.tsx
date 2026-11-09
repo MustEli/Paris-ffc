@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
+import { useWarehouseLocations } from '../../../core/hooks/useWarehouseLocations';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
@@ -50,6 +52,7 @@ export function NewPalletScreen({ navigation }: Props) {
   const [putAwayLocation, setPutAwayLocation] = useState('');
 
   const { mutate: submit, isPending, error } = useCreatePallet();
+  const locations = useWarehouseLocations();
 
   const weightValue = Number(weightKg);
   const isOverweight = !!weightKg && weightValue > OVERWEIGHT_THRESHOLD_KG;
@@ -159,12 +162,13 @@ export function NewPalletScreen({ navigation }: Props) {
       {skipsReview && (
         <>
           <Text style={styles.label}>{t('sellerStock.newPallet.putAwayLocation')}</Text>
-          <TextInput
-            style={styles.input}
-            value={putAwayLocation}
-            onChangeText={setPutAwayLocation}
-            placeholder={t('sellerStock.newPallet.putAwayLocationPlaceholder')}
-            placeholderTextColor={colors.textMuted}
+          <DropdownPicker
+            options={locations.data?.map((l) => l.location) ?? []}
+            value={putAwayLocation || null}
+            onChange={setPutAwayLocation}
+            isLoading={locations.isPending}
+            placeholder={t('sellerStock.newPallet.selectPutAwayLocation')}
+            emptyLabel={t('sellerStock.newPallet.noLocations')}
           />
         </>
       )}

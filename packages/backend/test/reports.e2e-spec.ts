@@ -63,7 +63,7 @@ describe('Reports (e2e)', () => {
   });
 
   it('rejects a staff member reading any report', async () => {
-    for (const path of ['overview', 'attendance', 'reception', 'put-away', 'order-prep', 'admin-dashboard']) {
+    for (const path of ['overview', 'attendance', 'staff-history', 'reception', 'put-away', 'order-prep', 'admin-dashboard']) {
       await request(app.getHttpServer())
         .get(`/reports/${path}`)
         .set('Authorization', `Bearer ${staff.token}`)
@@ -136,6 +136,60 @@ describe('Reports (e2e)', () => {
     expect(report.body.rows).toHaveLength(1);
     expect(report.body.rows[0]).toMatchObject({ userId: staff.id, userName: 'Sam Staff', totalShifts: 1 });
     expect(report.body.rows[0].totalHoursWorked).toBeGreaterThanOrEqual(0);
+  });
+
+  it('staff-history returns an empty day range when no shift has ever completed', async () => {
+    const report = await request(app.getHttpServer())
+      .get('/reports/staff-history')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    expect(report.body.days).toEqual([]);
+    expect(report.body.staff).toEqual([{ userId: staff.id, userName: 'Sam Staff', days: {} }]);
+  });
+
+  it('staff-history computes planned (from schedule + working days) vs actual (net of lunch) per day', async () => {
+    // 2026-01-01 is a Thursday.
+    await request(app.getHttpServer())
+      .put(`/schedules/${staff.id}`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        workingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+        shiftStartTime: '09:00',
+        shiftEndTime: '16:30',
+        requiredWorkingHours: 7,
+        lunchBreakDurationMinutes: 30,
+      })
+      .expect(200);
+
+    const shift = await rawPrisma.shift.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-01-01T09:00:00.000Z'),
+        endedAt: new Date('2026-01-01T13:00:00.000Z'), // 4 hours later
+      },
+    });
+    await rawPrisma.break.create({
+      data: {
+        id: randomUUID(),
+        shiftId: shift.id,
+        startedAt: new Date('2026-01-01T12:00:00.000Z'),
+        endedAt: new Date('2026-01-01T12:30:00.000Z'), // 30 minutes
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/staff-history')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    expect(report.body.days[0]).toBe('2026-01-01');
+    expect(report.body.days).toContain(new Date().toISOString().slice(0, 10));
+
+    const staffRow = report.body.staff.find((r: { userId: string }) => r.userId === staff.id);
+    // A working day with a 4h shift minus a 30-min lunch nets 3.5h actual, against the full 7h planned.
+    expect(staffRow.days['2026-01-01']).toEqual({ plannedHours: 7, actualHours: 3.5 });
+    // 2026-01-04 is a Sunday — not in workingDays, so nothing is planned, and nothing was worked.
+    expect(staffRow.days['2026-01-04']).toEqual({ plannedHours: 0, actualHours: 0 });
   });
 
   it('reception report breaks down by category, including flagged count', async () => {

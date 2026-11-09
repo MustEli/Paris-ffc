@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 import { ApiError } from '../core/api/client';
+import { dispatchReceptionsAsTasks } from '../core/api/openPool';
 import {
   addInstructions,
   bulkAddInstructions,
@@ -13,6 +14,7 @@ import {
   type Reception,
 } from '../core/api/receptions';
 import { useAuth } from '../core/auth/AuthContext';
+import { DispatchTaskPanel } from '../components/DispatchTaskPanel';
 
 interface TemplateRow {
   'Reception ID': string;
@@ -74,9 +76,22 @@ export function ReceptionInstructionsSection() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [results, setResults] = useState<BulkInstructionResult[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const pending = (data ?? []).filter((r) => r.status === 'arrived');
   const receptionById = new Map((data ?? []).map((r) => [r.id, r]));
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ['receptions'] });
@@ -196,14 +211,41 @@ export function ReceptionInstructionsSection() {
       <div className="card">
         {pending.length === 0 && <p className="hint-text">Nothing waiting on instructions right now.</p>}
         {pending.map((reception) => (
-          <PendingReceptionRow key={reception.id} reception={reception} onDone={refresh} />
+          <PendingReceptionRow
+            key={reception.id}
+            reception={reception}
+            onDone={refresh}
+            selected={selectedIds.has(reception.id)}
+            onToggleSelected={() => toggleSelected(reception.id)}
+          />
         ))}
       </div>
+
+      <DispatchTaskPanel
+        items={pending
+          .filter((r) => selectedIds.has(r.id))
+          .map((r) => ({ id: r.id, label: `${CATEGORY_LABELS[r.details.category]} — ${summarizeDetails(r)}` }))}
+        onDispatch={(items, targetUserId) => dispatchReceptionsAsTasks(token!, items, targetUserId)}
+        onAllSucceeded={() => {
+          setSelectedIds(new Set());
+          refresh();
+        }}
+      />
     </div>
   );
 }
 
-function PendingReceptionRow({ reception, onDone }: { reception: Reception; onDone: () => void }) {
+function PendingReceptionRow({
+  reception,
+  onDone,
+  selected,
+  onToggleSelected,
+}: {
+  reception: Reception;
+  onDone: () => void;
+  selected: boolean;
+  onToggleSelected: () => void;
+}) {
   const { token } = useAuth();
   const [draft, setDraft] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -225,7 +267,10 @@ function PendingReceptionRow({ reception, onDone }: { reception: Reception; onDo
 
   return (
     <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid #f1f5f9' }}>
-      <div style={{ fontWeight: 600, fontSize: 14 }}>{CATEGORY_LABELS[reception.details.category]}</div>
+      <div className="flex-row" style={{ alignItems: 'center', marginBottom: 4 }}>
+        <input type="checkbox" checked={selected} onChange={onToggleSelected} />
+        <div style={{ fontWeight: 600, fontSize: 14 }}>{CATEGORY_LABELS[reception.details.category]}</div>
+      </div>
       <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>{summarizeDetails(reception)}</div>
       <div className="flex-row">
         <input

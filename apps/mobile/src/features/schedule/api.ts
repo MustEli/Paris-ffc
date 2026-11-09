@@ -19,9 +19,6 @@ export interface StaffSchedule {
   shiftStartTime: string;
   shiftEndTime: string;
   requiredWorkingHours: number;
-  /** Reminder anchor only — see backend schema.prisma's StaffSchedule doc comment. */
-  paidBreakStartTime: string | null;
-  lunchBreakStartTime: string | null;
   lunchBreakDurationMinutes: number;
   updatedAt: string;
 }

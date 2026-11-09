@@ -2,9 +2,31 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '../core/api/client';
+import { fetchAttendanceReport } from '../core/api/reports';
 import { fetchSchedule, setSchedule, WEEKDAY_LABELS, WEEKDAYS, type Weekday } from '../core/api/schedules';
 import { fetchStaffUsers } from '../core/api/users';
 import { useAuth } from '../core/auth/AuthContext';
+
+/** "HH:MM" -> minutes since midnight. */
+function parseHHMM(value: string): number {
+  const [h, m] = value.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** Minutes since midnight -> "HH:MM", wrapping past midnight (e.g. a late shift start + a long total time). */
+function formatHHMM(totalMinutes: number): string {
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** e.g. 480 -> "8h 0m". */
+function formatDurationMinutes(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}h ${m}m`;
+}
 
 /**
  * Admin Conf doc: per-staff working days, shift hours, required daily
@@ -31,6 +53,8 @@ export function SchedulesPage() {
 
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
+
+      <AttendanceTotalsTable />
 
       {staff && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 280px) 1fr', gap: 20, alignItems: 'start' }}>
@@ -68,6 +92,45 @@ export function SchedulesPage() {
   );
 }
 
+/** Actual worked totals (completed shifts only, lunch time excluded) — distinct from the schedule editor below it, which only sets the *target* days/hours. See ReportsService.attendance() for how these are computed. */
+function AttendanceTotalsTable() {
+  const { token } = useAuth();
+  const { data, isPending, error } = useQuery({
+    queryKey: ['attendance-report'],
+    queryFn: () => fetchAttendanceReport(token!),
+    enabled: !!token,
+  });
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <h2 style={{ marginTop: 0 }}>Total shift days & hours per staff</h2>
+      {isPending && <p>Loading…</p>}
+      {error && <p className="error-text">{error.message}</p>}
+      {data && (
+        <table>
+          <thead>
+            <tr>
+              <th>Staff</th>
+              <th>Total shift days</th>
+              <th>Total hours worked</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((row) => (
+              <tr key={row.userId}>
+                <td>{row.userName}</td>
+                <td>{row.totalShifts}</td>
+                <td>{row.totalHoursWorked}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {data && data.rows.length === 0 && <p className="hint-text">No completed shifts yet.</p>}
+    </div>
+  );
+}
+
 function ScheduleEditor({ userId, staffName }: { userId: string; staffName: string }) {
   const { token } = useAuth();
   const { data: schedule, isPending, error, refetch } = useQuery({
@@ -78,10 +141,7 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
 
   const [workingDays, setWorkingDays] = useState<Weekday[]>([]);
   const [shiftStartTime, setShiftStartTime] = useState('07:30');
-  const [shiftEndTime, setShiftEndTime] = useState('15:30');
   const [requiredWorkingHours, setRequiredWorkingHours] = useState(7);
-  const [paidBreakStartTime, setPaidBreakStartTime] = useState('10:30');
-  const [lunchBreakStartTime, setLunchBreakStartTime] = useState('12:30');
   const [lunchBreakDurationMinutes, setLunchBreakDurationMinutes] = useState(60);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -89,24 +149,20 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
 
   // Load the existing schedule (if any) into the form whenever the
   // selected staff member changes or their data finishes loading.
+  // Shift end is no longer part of the form's own state — see
+  // totalMinutes/shiftEndTime below, computed fresh on every render.
   useEffect(() => {
     setSaved(false);
     setSaveError(null);
     if (schedule) {
       setWorkingDays(schedule.workingDays);
       setShiftStartTime(schedule.shiftStartTime);
-      setShiftEndTime(schedule.shiftEndTime);
       setRequiredWorkingHours(schedule.requiredWorkingHours);
-      setPaidBreakStartTime(schedule.paidBreakStartTime ?? '');
-      setLunchBreakStartTime(schedule.lunchBreakStartTime ?? '');
       setLunchBreakDurationMinutes(schedule.lunchBreakDurationMinutes);
     } else if (schedule === null) {
       setWorkingDays(['MON', 'TUE', 'WED', 'THU', 'FRI']);
       setShiftStartTime('07:30');
-      setShiftEndTime('15:30');
       setRequiredWorkingHours(7);
-      setPaidBreakStartTime('10:30');
-      setLunchBreakStartTime('12:30');
       setLunchBreakDurationMinutes(60);
     }
   }, [schedule, userId]);
@@ -114,6 +170,13 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
   function toggleDay(day: Weekday) {
     setWorkingDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
+
+  // Total time = required working hours + lunch duration (paid break is
+  // already inside required hours — it's paid, not subtracted from
+  // worked time — so it doesn't add extra span on top). Shift end is
+  // shift start + that total, so it's never typed in directly.
+  const totalMinutes = Math.round(requiredWorkingHours * 60) + lunchBreakDurationMinutes;
+  const shiftEndTime = formatHHMM(parseHHMM(shiftStartTime) + totalMinutes);
 
   async function handleSave() {
     setIsSaving(true);
@@ -125,8 +188,6 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
         shiftStartTime,
         shiftEndTime,
         requiredWorkingHours,
-        paidBreakStartTime: paidBreakStartTime || undefined,
-        lunchBreakStartTime: lunchBreakStartTime || undefined,
         lunchBreakDurationMinutes,
       });
       setSaved(true);
@@ -167,10 +228,6 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
           <input type="time" value={shiftStartTime} onChange={(e) => setShiftStartTime(e.target.value)} />
         </div>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Shift end</label>
-          <input type="time" value={shiftEndTime} onChange={(e) => setShiftEndTime(e.target.value)} />
-        </div>
-        <div className="form-row" style={{ flex: 1 }}>
           <label className="form-label">Required hours/day</label>
           <input
             type="number"
@@ -180,25 +237,29 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
             onChange={(e) => setRequiredWorkingHours(Number(e.target.value))}
           />
         </div>
-      </div>
-
-      <div className="flex-row" style={{ alignItems: 'flex-end' }}>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Paid break at (20 min, fixed)</label>
-          <input type="time" value={paidBreakStartTime} onChange={(e) => setPaidBreakStartTime(e.target.value)} />
-        </div>
-        <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Lunch break at</label>
-          <input type="time" value={lunchBreakStartTime} onChange={(e) => setLunchBreakStartTime(e.target.value)} />
-        </div>
-        <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Lunch duration (min)</label>
+          <label className="form-label">Lunch break duration (min)</label>
           <input
             type="number"
             min="1"
             value={lunchBreakDurationMinutes}
             onChange={(e) => setLunchBreakDurationMinutes(Number(e.target.value))}
           />
+        </div>
+      </div>
+
+      <div className="flex-row" style={{ alignItems: 'flex-end' }}>
+        <div className="form-row" style={{ flex: 1 }}>
+          <label className="form-label">Total time (required + lunch)</label>
+          <input type="text" value={formatDurationMinutes(totalMinutes)} disabled />
+        </div>
+        <div className="form-row" style={{ flex: 1 }}>
+          <label className="form-label">Shift end (calculated)</label>
+          <input type="time" value={shiftEndTime} disabled />
+        </div>
+        <div className="form-row" style={{ flex: 1 }}>
+          <label className="form-label">Paid break duration</label>
+          <input type="text" value="20 min (fixed)" disabled />
         </div>
       </div>
 

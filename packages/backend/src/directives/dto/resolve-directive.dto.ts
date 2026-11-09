@@ -1,8 +1,11 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
 
 export class ResolveDirectiveDto {
-  @IsOptional()
   @IsString()
   @MinLength(1)
-  photoUrl?: string;
+  completionPhotoUrl!: string;
+
+  @IsString()
+  @MinLength(1)
+  completionComment!: string;
 }

@@ -86,6 +86,20 @@ export class FloorTasksService {
     return this.toDomain(row);
   }
 
+  /**
+   * Called when a staff member accepts a Directive or claims an Open
+   * Pool task — auto-pauses whatever Floor Task they're currently
+   * running, so they aren't implicitly doing two things at once. A
+   * plain no-op if they have no open task, or it's already paused;
+   * never throws, since this is a side effect of someone else's action,
+   * not something the caller should be able to fail on.
+   */
+  async pauseIfRunning(userId: string): Promise<void> {
+    const task = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null, pausedAt: null } });
+    if (!task) return;
+    await this.prisma.floorTaskLog.update({ where: { id: task.id }, data: { pausedAt: new Date() } });
+  }
+
   async resume(id: string, user: PublicUser): Promise<FloorTaskLog> {
     const task = await this.findOneRow(id);
     this.assertOwnedAndOpen(task, user);

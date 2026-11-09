@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 import { fetchActiveFloorTasks, FLOOR_TASK_CATEGORY_LABELS } from '../core/api/floorTasks';
-import { fetchAdminDashboard, type AdminDashboardReport } from '../core/api/reports';
+import { fetchAdminDashboard, fetchStaffHistory, type AdminDashboardReport, type StaffHistoryReport } from '../core/api/reports';
 import { useAuth } from '../core/auth/AuthContext';
 
 function elapsedSince(iso: string): string {
@@ -23,6 +24,49 @@ function formatMinutesSeconds(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatDayHeader(day: string): string {
+  // "YYYY-MM-DD" -> "Nov 1" — parsed as UTC (the "Txx" suffix) so it doesn't shift a day depending on the viewer's timezone.
+  return new Date(`${day}T00:00:00.000Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+function formatHours(hours: number): string {
+  return `${hours}h`;
+}
+
+/** null when plannedHours is 0 — nothing to compare against (day off, or no schedule configured). */
+function ratioPercent(plannedHours: number, actualHours: number): number | null {
+  if (plannedHours === 0) return null;
+  return Math.round((actualHours / plannedHours) * 100);
+}
+
+function ratioPillClass(percent: number): string {
+  if (percent >= 100) return 'pill-green';
+  if (percent >= 75) return 'pill-amber';
+  return 'pill-red';
+}
+
+function downloadStaffHistory(report: StaffHistoryReport) {
+  const header: string[] = ['Staff'];
+  for (const day of report.days) {
+    header.push(`${day} Planned (h)`, `${day} Actual (h)`, `${day} Actual/Planned`);
+  }
+
+  const rows: (string | number)[][] = report.staff.map((staffRow) => {
+    const row: (string | number)[] = [staffRow.userName];
+    for (const day of report.days) {
+      const entry = staffRow.days[day] ?? { plannedHours: 0, actualHours: 0 };
+      const percent = ratioPercent(entry.plannedHours, entry.actualHours);
+      row.push(entry.plannedHours, entry.actualHours, percent === null ? '' : `${percent}%`);
+    }
+    return row;
+  });
+
+  const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, 'Staff History');
+  XLSX.writeFile(book, `elno-staff-history-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 function breakLabel(staff: AdminDashboardReport['staff'][number]): string {
@@ -224,8 +268,79 @@ export function DashboardPage() {
               </tbody>
             </table>
           </div>
+
+          <StaffHistorySection />
         </>
       )}
     </div>
+  );
+}
+
+/** Planned (from StaffSchedule) vs. actual (completed shifts, net of lunch) worked hours, one column per day since the app's first-ever completed shift. See ReportsService.staffHistory() for how each day's numbers are computed. */
+function StaffHistorySection() {
+  const { token } = useAuth();
+  const { data, isPending, error } = useQuery({
+    queryKey: ['staff-history'],
+    queryFn: () => fetchStaffHistory(token!),
+    enabled: !!token,
+  });
+
+  return (
+    <>
+      <div className="section-toolbar">
+        <h2 style={{ margin: 0 }}>Staff History</h2>
+        <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={() => data && downloadStaffHistory(data)} disabled={!data || data.days.length === 0}>
+          Download
+        </button>
+      </div>
+      <div className="card">
+        {isPending && <p>Loading…</p>}
+        {error && <p className="error-text">{error.message}</p>}
+        {data && data.days.length === 0 && <p className="hint-text">No completed shifts yet.</p>}
+        {data && data.days.length > 0 && (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: 'max-content' }}>
+              <thead>
+                <tr>
+                  <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }}>Staff</th>
+                  {data.days.map((day) => (
+                    <th key={day} style={{ textAlign: 'center', minWidth: 90 }}>
+                      {formatDayHeader(day)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.staff.map((staffRow) => (
+                  <tr key={staffRow.userId}>
+                    <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 600 }}>{staffRow.userName}</td>
+                    {data.days.map((day) => {
+                      const entry = staffRow.days[day] ?? { plannedHours: 0, actualHours: 0 };
+                      const percent = ratioPercent(entry.plannedHours, entry.actualHours);
+                      return (
+                        <td key={day} style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, color: '#6b7280' }}>P: {formatHours(entry.plannedHours)}</div>
+                          <div style={{ fontSize: 12, color: '#6b7280' }}>A: {formatHours(entry.actualHours)}</div>
+                          {percent === null ? (
+                            <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
+                          ) : (
+                            <span className={`pill ${ratioPillClass(percent)}`}>{percent}%</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {data.staff.length === 0 && (
+                  <tr>
+                    <td colSpan={data.days.length + 1}>No staff accounts yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

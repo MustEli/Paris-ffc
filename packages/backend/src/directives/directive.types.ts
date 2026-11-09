@@ -17,8 +17,13 @@ export interface Directive {
   message: string;
   status: DirectiveStatus;
   receivedByUserId: string | null;
-  photoUrl: string | null;
   pushedAt: string;
   receivedAt: string | null;
   resolvedAt: string | null;
+  /** Admin-attached at creation, optional. */
+  creationPhotoUrl: string | null;
+  creationComment: string | null;
+  /** Staff-attached at resolution — required for every directive type. */
+  completionPhotoUrl: string | null;
+  completionComment: string | null;
 }

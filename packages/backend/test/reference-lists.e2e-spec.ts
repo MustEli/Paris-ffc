@@ -50,7 +50,6 @@ describe('Reference Lists (e2e)', () => {
     expect(response.body).toEqual({
       transporter_company: [],
       packaging_type: [],
-      warehouse_zone: [],
       issue_type: [],
       color_tag: [],
       seller_name: [],

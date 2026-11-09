@@ -7,7 +7,6 @@
 export type ReferenceListCategory =
   | 'transporter_company'
   | 'packaging_type'
-  | 'warehouse_zone'
   | 'issue_type'
   | 'color_tag'
   | 'seller_name';
@@ -15,7 +14,6 @@ export type ReferenceListCategory =
 export const REFERENCE_LIST_CATEGORIES: ReferenceListCategory[] = [
   'transporter_company',
   'packaging_type',
-  'warehouse_zone',
   'issue_type',
   'color_tag',
   'seller_name',

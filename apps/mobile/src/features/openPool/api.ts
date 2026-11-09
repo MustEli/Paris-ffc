@@ -13,6 +13,10 @@ export function claimOpenPoolTask(token: string, id: string) {
   return apiRequest<OpenPoolTask>(`/open-pool-tasks/${id}/claim`, { method: 'POST', token });
 }
 
-export function completeOpenPoolTask(token: string, id: string) {
-  return apiRequest<OpenPoolTask>(`/open-pool-tasks/${id}/complete`, { method: 'POST', token });
+export function completeOpenPoolTask(token: string, id: string, completionPhotoUrl: string, completionComment: string) {
+  return apiRequest<OpenPoolTask>(`/open-pool-tasks/${id}/complete`, {
+    method: 'POST',
+    token,
+    body: { completionPhotoUrl, completionComment },
+  });
 }

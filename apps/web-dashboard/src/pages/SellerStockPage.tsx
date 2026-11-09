@@ -4,8 +4,10 @@ import JSZip from 'jszip';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { dispatchPalletsAsTasks } from '../core/api/openPool';
 import { CONDITION_FLAG_LABELS, fetchPallets, STATUS_LABELS, type SellerStockPallet } from '../core/api/sellerStock';
 import { useAuth } from '../core/auth/AuthContext';
+import { DispatchTaskPanel } from '../components/DispatchTaskPanel';
 
 function extensionFromUrl(url: string): string {
   const match = /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.exec(url);
@@ -207,6 +209,12 @@ export function SellerStockSection() {
           </table>
         </div>
       )}
+
+      <DispatchTaskPanel
+        items={selectedPallets.map((p) => ({ id: p.id, label: `${p.palletIndex} — ${p.sellerName}` }))}
+        onDispatch={(items, targetUserId) => dispatchPalletsAsTasks(token!, items, targetUserId)}
+        onAllSucceeded={() => setSelectedIds(new Set())}
+      />
 
       {galleryPallet && (
         <div className="modal-overlay" onClick={() => setGalleryPallet(null)}>

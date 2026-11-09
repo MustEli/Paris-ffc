@@ -23,6 +23,7 @@ import { ShiftsModule } from './shifts/shifts.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
+import { WarehouseLocationsModule } from './warehouse-locations/warehouse-locations.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { UsersModule } from './users/users.module';
     DirectivesModule,
     IssueReportsModule,
     SearchModule,
+    WarehouseLocationsModule,
   ],
   controllers: [AppController],
 })

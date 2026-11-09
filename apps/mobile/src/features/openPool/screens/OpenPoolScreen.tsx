@@ -1,5 +1,8 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { resolvePhotoUrl } from '../../../core/api/upload';
+import { PhotoCaptureButton } from '../../sellerStock/components/PhotoCaptureButton';
 import { useClaimOpenPoolTask, useCompleteOpenPoolTask, useMyOpenPoolTasks, useOpenPoolTasks } from '../hooks/useOpenPool';
 import { type OpenPoolTask } from '../types';
 
@@ -27,27 +30,7 @@ export function OpenPoolScreen() {
         <>
           <Text style={styles.sectionTitle}>My claimed tasks</Text>
           {myTasks.map((task) => (
-            <View key={task.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{task.title}</Text>
-                <View style={[styles.priorityPill, { backgroundColor: PRIORITY_COLORS[task.priority] }]}>
-                  <Text style={styles.priorityText}>{task.priority}</Text>
-                </View>
-              </View>
-              {task.description && <Text style={styles.cardDescription}>{task.description}</Text>}
-              {complete.error && <Text style={styles.error}>{complete.error.message}</Text>}
-              <Pressable
-                style={[styles.actionButton, complete.isPending && styles.actionButtonDisabled]}
-                disabled={complete.isPending}
-                onPress={() => complete.mutate(task.id)}
-              >
-                {complete.isPending ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.actionButtonText}>Mark complete</Text>
-                )}
-              </Pressable>
-            </View>
+            <ClaimedTaskCard key={task.id} task={task} complete={complete} />
           ))}
         </>
       )}
@@ -78,6 +61,66 @@ export function OpenPoolScreen() {
         </View>
       ))}
     </ScrollView>
+  );
+}
+
+/** Shows the admin's creation photo/comment automatically (no separate detail screen/tap needed), and requires a photo + comment to mark the task done. */
+function ClaimedTaskCard({ task, complete }: { task: OpenPoolTask; complete: ReturnType<typeof useCompleteOpenPoolTask> }) {
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
+
+  function handleComplete() {
+    if (!photoUrl || !comment.trim()) return;
+    complete.mutate(
+      { id: task.id, completionPhotoUrl: photoUrl, completionComment: comment.trim() },
+      {
+        onSuccess: () => {
+          setPhotoUrl(null);
+          setComment('');
+        },
+      },
+    );
+  }
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{task.title}</Text>
+        <View style={[styles.priorityPill, { backgroundColor: PRIORITY_COLORS[task.priority] }]}>
+          <Text style={styles.priorityText}>{task.priority}</Text>
+        </View>
+      </View>
+      {task.description && <Text style={styles.cardDescription}>{task.description}</Text>}
+
+      {(task.creationPhotoUrl || task.creationComment) && (
+        <View style={styles.creationBox}>
+          {task.creationComment && <Text style={styles.creationComment}>{task.creationComment}</Text>}
+          {task.creationPhotoUrl && (
+            <Image source={{ uri: resolvePhotoUrl(task.creationPhotoUrl) }} style={styles.creationPhoto} />
+          )}
+        </View>
+      )}
+
+      <View style={styles.photoWrap}>
+        <PhotoCaptureButton label="Photo" value={photoUrl} onChange={setPhotoUrl} />
+      </View>
+      <TextInput
+        style={styles.commentInput}
+        placeholder="Comment"
+        placeholderTextColor="#9ca3af"
+        multiline
+        value={comment}
+        onChangeText={setComment}
+      />
+      {complete.error && <Text style={styles.error}>{complete.error.message}</Text>}
+      <Pressable
+        style={[styles.actionButton, (!photoUrl || !comment.trim() || complete.isPending) && styles.actionButtonDisabled]}
+        disabled={!photoUrl || !comment.trim() || complete.isPending}
+        onPress={handleComplete}
+      >
+        {complete.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>Mark complete</Text>}
+      </Pressable>
+    </View>
   );
 }
 
@@ -142,6 +185,38 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 12,
+  },
+  creationBox: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+  },
+  creationComment: {
+    fontSize: 13,
+    color: '#334155',
+    marginBottom: 8,
+  },
+  creationPhoto: {
+    width: '100%',
+    height: 140,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+  },
+  photoWrap: {
+    marginTop: 12,
+  },
+  commentInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0f172a',
+    minHeight: 60,
+    textAlignVertical: 'top',
+    marginTop: 10,
   },
   actionButton: {
     backgroundColor: '#16a34a',
