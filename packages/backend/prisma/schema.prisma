@@ -60,25 +60,6 @@ model ReferenceListValue {
   @@index([category])
 }
 
-/**
- * Put-away target locations, managed from the web dashboard's "Put-Away
- * & Location Assignment" page and fed to every mobile "Put-away
- * location" dropdown (Seller Stock's self put-away, and the instant
- * put-away on Return Parcels / Packaging Stock / Equipment & Other /
- * Good-Condition Seller Stock pallets). A dedicated table rather than a
- * ReferenceListCategory because it needs more than a single value
- * column (Description now, more later) and a bulk Excel-upload path.
- */
-model WarehouseLocation {
-  id          String   @id @default(uuid())
-  location    String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([location])
-}
-
 enum ReceptionCategory {
   return_parcels
   packaging_stock
@@ -274,13 +255,49 @@ model Reception {
   invoicePhotoUrls     String[]          @default([])
   /** packaging_stock's seller, picked from the admin-managed `seller_name` reference list. */
   sellerName           String?
-  /** return_parcels only — staff records where they put it themselves, same submission as logging it (no admin instructions step for this category). */
-  putAwayLocation      String?
   arrivedAt            DateTime
   instructions         String?
   putAwayAt            DateTime?
   processingDurationMs Int?
   flaggedForReview     Boolean           @default(false)
+
+  /** Task Board direct-assignment (drag a pending "needs instructions" reception onto an on-shift staff member) — same shape as PutAwayTask/OrderPrepTask's assignment fields, not an Open Pool task. */
+  assignedToUserId String?
+  assignedByUserId String?
+  assignedAt       DateTime?
+  priority         TaskPriority @default(normal)
+
+  @@index([assignedToUserId])
+}
+
+enum ReceptionTaskOutcome {
+  /** Staff pressed "Log Delivery" — receptionId is set to the Reception that created. */
+  completed
+  /** Staff left (Back/Home) without logging a delivery and chose "Leave Unfinished" — flagged for admin as having no confirmed delivery. */
+  unfinished
+}
+
+/**
+ * Times a staff member's trip into the Reception flow, from pressing
+ * Start (before they've even picked a category) to either logging a
+ * delivery (`completed`, linked to the Reception it created) or
+ * explicitly abandoning it (`unfinished`) — see the leave-without-
+ * logging dialog in ReceptionStartScreen. Pausing is the same
+ * start/pause/resume shape as FloorTaskLog (pausedAt + totalPausedMs);
+ * a paused task shows up in the staff's own Pending Tasks list, same as
+ * any other resumable work.
+ */
+model ReceptionTask {
+  id            String                @id @default(uuid())
+  userId        String
+  startedAt     DateTime
+  endedAt       DateTime?
+  pausedAt      DateTime?
+  totalPausedMs Int                   @default(0)
+  outcome       ReceptionTaskOutcome?
+  receptionId   String?
+
+  @@index([userId])
 }
 
 /**
@@ -315,6 +332,7 @@ model SellerStockPallet {
   damageEvidencePhotoUrls String[]
   labelPhotoUrls          String[]
   status                  SellerStockStatus
+  /** No longer set by staff themselves (customer request — locations are predefined/obvious) — still written by PutAwayService when Admin assigns a reviewed pallet a location, mirroring PutAwayTask.location for display. */
   putAwayLocation         String?
   createdByUserId         String
   createdAt               DateTime          @default(now())
@@ -382,6 +400,8 @@ model OrderPrepTask {
 enum FloorTaskCategory {
   pick
   pack
+  /** Scan-one-barcode-then-end — no counts/zone/comment/photos, see FloorTaskLog.scannedBarcode. */
+  dispatch
   return_processing
   box_prep
   warehousing_inventory_check
@@ -402,6 +422,8 @@ model FloorTaskLog {
   zone       String?
   comment    String?
   photoUrls  String[]          @default([])
+  /** 'dispatch' category only — the one barcode staff scans before the task can end, kept visible to admin. */
+  scannedBarcode String?
   /** Set while paused (e.g. pulled away for ad-hoc work mid-task), null otherwise — see FloorTasksService.pause/resume. */
   pausedAt     DateTime?
   /** Cumulative paused time across every pause/resume cycle this task has had, so a duration computed from startedAt/endedAt can subtract it back out. */

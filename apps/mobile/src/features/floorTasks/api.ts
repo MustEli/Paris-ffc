@@ -7,6 +7,8 @@ export interface EndFloorTaskInput {
   zone?: string;
   comment?: string;
   photoUrls?: string[];
+  /** 'dispatch' category only. */
+  scannedBarcode?: string;
 }
 
 export function startFloorTask(token: string, category: FloorTaskCategory) {
@@ -24,6 +26,11 @@ export function pauseFloorTask(token: string, id: string) {
 
 export function resumeFloorTask(token: string, id: string) {
   return apiRequest<FloorTaskLog>(`/floor-tasks/${id}/resume`, { method: 'POST', token });
+}
+
+/** Self-service pause with no task id needed — a no-op if nothing's open or it's already paused. Used by the global Home-icon leaving-guard, which doesn't know a specific task id. */
+export function pauseMyFloorTask(token: string) {
+  return apiRequest<void>('/floor-tasks/pause-mine', { method: 'POST', token });
 }
 
 /** Null when nothing is currently open — a normal state, not an error. */

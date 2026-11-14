@@ -96,7 +96,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
             onChange={(e) => setBulkComment(e.target.value)}
             placeholder="e.g. Stack in aisle 4, bay 2"
           />
-          <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={applyToAll}>
+          <button className="btn btn-outline" onClick={applyToAll}>
             Apply to all
           </button>
         </div>

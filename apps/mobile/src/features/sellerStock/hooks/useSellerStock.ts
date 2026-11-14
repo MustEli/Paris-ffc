@@ -37,7 +37,7 @@ export function useSelfPutAway(id: string) {
   const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (zone: string) => selfPutAway(token!, id, zone),
+    mutationFn: () => selfPutAway(token!, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PALLETS_KEY });
       queryClient.invalidateQueries({ queryKey: palletKey(id) });

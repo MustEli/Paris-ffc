@@ -43,10 +43,4 @@ export class CreatePalletDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   damageEvidencePhotoUrls?: string[];
-
-  /** Required only when the pallet is Good Condition and not overweight — see SellerStockService.create(). */
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  putAwayLocation?: string;
 }

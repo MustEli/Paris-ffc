@@ -5,6 +5,7 @@ import {
   endFloorTask,
   fetchMyOpenFloorTask,
   pauseFloorTask,
+  pauseMyFloorTask,
   resumeFloorTask,
   startFloorTask,
   type EndFloorTaskInput,
@@ -54,6 +55,16 @@ export function useResumeFloorTask(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => resumeFloorTask(token!, id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: OPEN_TASK_KEY }),
+  });
+}
+
+/** See pauseMyFloorTask's doc comment — no task id needed, used by the global Home-icon leaving-guard. */
+export function usePauseMyFloorTask() {
+  const token = useAuthStore((state) => state.token);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => pauseMyFloorTask(token!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: OPEN_TASK_KEY }),
   });
 }

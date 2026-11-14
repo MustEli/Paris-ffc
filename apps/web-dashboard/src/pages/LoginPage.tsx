@@ -53,7 +53,7 @@ export function LoginPage() {
 
           {error && <p className="error-text">{error}</p>}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={isLoading || !email || !password}>
+          <button type="submit" className="btn btn-primary" disabled={isLoading || !email || !password}>
             {isLoading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>

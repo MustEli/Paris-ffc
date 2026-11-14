@@ -63,7 +63,20 @@ describe('Reports (e2e)', () => {
   });
 
   it('rejects a staff member reading any report', async () => {
-    for (const path of ['overview', 'attendance', 'staff-history', 'reception', 'put-away', 'order-prep', 'admin-dashboard']) {
+    for (const path of [
+      'overview',
+      'attendance',
+      'staff-history',
+      'reception',
+      'reception-volume',
+      'reception-duration',
+      'seller-stock-quality',
+      'reception-sources',
+      'reception-reliability',
+      'put-away',
+      'order-prep',
+      'admin-dashboard',
+    ]) {
       await request(app.getHttpServer())
         .get(`/reports/${path}`)
         .set('Authorization', `Bearer ${staff.token}`)
@@ -138,13 +151,24 @@ describe('Reports (e2e)', () => {
     expect(report.body.rows[0].totalHoursWorked).toBeGreaterThanOrEqual(0);
   });
 
+  const ZERO_CUMULATIVE = {
+    plannedHours: 0,
+    actualHours: 0,
+    floorTaskHours: 0,
+    receptionHours: 0,
+    openPoolHours: 0,
+    urgentTaskHours: 0,
+  };
+
   it('staff-history returns an empty day range when no shift has ever completed', async () => {
     const report = await request(app.getHttpServer())
       .get('/reports/staff-history')
       .set('Authorization', `Bearer ${admin.token}`)
       .expect(200);
     expect(report.body.days).toEqual([]);
-    expect(report.body.staff).toEqual([{ userId: staff.id, userName: 'Sam Staff', days: {} }]);
+    expect(report.body.staff).toEqual([
+      { userId: staff.id, userName: 'Sam Staff', days: {}, cumulative: ZERO_CUMULATIVE },
+    ]);
   });
 
   it('staff-history computes planned (from schedule + working days) vs actual (net of lunch) per day', async () => {
@@ -187,9 +211,211 @@ describe('Reports (e2e)', () => {
 
     const staffRow = report.body.staff.find((r: { userId: string }) => r.userId === staff.id);
     // A working day with a 4h shift minus a 30-min lunch nets 3.5h actual, against the full 7h planned.
-    expect(staffRow.days['2026-01-01']).toEqual({ plannedHours: 7, actualHours: 3.5 });
+    // No Floor Task/Reception/Open Pool/Directive data was seeded here, so the 4 category breakdowns are all 0.
+    expect(staffRow.days['2026-01-01']).toEqual({
+      plannedHours: 7,
+      actualHours: 3.5,
+      floorTaskHours: 0,
+      receptionHours: 0,
+      openPoolHours: 0,
+      urgentTaskHours: 0,
+    });
     // 2026-01-04 is a Sunday — not in workingDays, so nothing is planned, and nothing was worked.
-    expect(staffRow.days['2026-01-04']).toEqual({ plannedHours: 0, actualHours: 0 });
+    expect(staffRow.days['2026-01-04']).toEqual({
+      plannedHours: 0,
+      actualHours: 0,
+      floorTaskHours: 0,
+      receptionHours: 0,
+      openPoolHours: 0,
+      urgentTaskHours: 0,
+    });
+    expect(staffRow.cumulative.actualHours).toBe(3.5);
+    expect(staffRow.cumulative.plannedHours).toBeGreaterThan(0);
+  });
+
+  it('staff-history breaks down actual hours by category (Floor Task / Reception / Open Pool / Urgent Task) and sums a cumulative total', async () => {
+    await rawPrisma.shift.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-02-02T08:00:00.000Z'),
+        endedAt: new Date('2026-02-02T16:00:00.000Z'), // 8h, no break
+      },
+    });
+
+    await rawPrisma.floorTaskLog.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        category: 'pick',
+        startedAt: new Date('2026-02-02T09:00:00.000Z'),
+        endedAt: new Date('2026-02-02T10:00:00.000Z'), // 1h
+      },
+    });
+
+    await rawPrisma.receptionTask.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-02-02T10:00:00.000Z'),
+        endedAt: new Date('2026-02-02T10:30:00.000Z'), // 30 min
+        outcome: 'unfinished', // still counts as worked time even though no delivery was logged
+      },
+    });
+
+    await rawPrisma.openPoolTask.create({
+      data: {
+        id: randomUUID(),
+        title: 'Test task',
+        createdByUserId: admin.id,
+        claimedByUserId: staff.id,
+        status: 'completed',
+        claimedAt: new Date('2026-02-02T11:00:00.000Z'),
+        completedAt: new Date('2026-02-02T11:45:00.000Z'), // 45 min
+        completionPhotoUrl: '/uploads/x.jpg',
+        completionComment: 'done',
+      },
+    });
+
+    await rawPrisma.directive.create({
+      data: {
+        id: randomUUID(),
+        issuerUserId: admin.id,
+        type: 'custom',
+        message: 'Go check this',
+        status: 'resolved',
+        receivedByUserId: staff.id,
+        receivedAt: new Date('2026-02-02T12:00:00.000Z'),
+        resolvedAt: new Date('2026-02-02T12:20:00.000Z'), // 20 min
+        completionPhotoUrl: '/uploads/y.jpg',
+        completionComment: 'checked',
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/staff-history')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    const staffRow = report.body.staff.find((r: { userId: string }) => r.userId === staff.id);
+    const dayEntry = staffRow.days['2026-02-02'];
+    expect(dayEntry.actualHours).toBe(8);
+    expect(dayEntry.floorTaskHours).toBe(1);
+    expect(dayEntry.receptionHours).toBe(0.5);
+    expect(dayEntry.openPoolHours).toBe(0.75);
+    expect(dayEntry.urgentTaskHours).toBe(0.33); // 20 min, rounded to 2 decimals
+
+    expect(staffRow.cumulative.actualHours).toBe(8);
+    expect(staffRow.cumulative.floorTaskHours).toBe(1);
+    expect(staffRow.cumulative.receptionHours).toBe(0.5);
+    expect(staffRow.cumulative.openPoolHours).toBe(0.75);
+    expect(staffRow.cumulative.urgentTaskHours).toBe(0.33);
+  });
+
+  it('staff-activity "recent" lists each of the 4 finished-activity sources newest-first, including a completed Dispatch Floor Task\'s scannedBarcode', async () => {
+    await rawPrisma.floorTaskLog.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        category: 'dispatch',
+        startedAt: new Date('2026-02-02T09:00:00.000Z'),
+        endedAt: new Date('2026-02-02T09:05:00.000Z'),
+        scannedBarcode: 'ABC123',
+      },
+    });
+    await rawPrisma.receptionTask.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-02-02T10:00:00.000Z'),
+        endedAt: new Date('2026-02-02T10:30:00.000Z'),
+        outcome: 'completed',
+      },
+    });
+    await rawPrisma.openPoolTask.create({
+      data: {
+        id: randomUUID(),
+        title: 'Test task',
+        createdByUserId: admin.id,
+        claimedByUserId: staff.id,
+        status: 'completed',
+        claimedAt: new Date('2026-02-02T11:00:00.000Z'),
+        completedAt: new Date('2026-02-02T11:45:00.000Z'),
+        completionPhotoUrl: '/uploads/x.jpg',
+        completionComment: 'done',
+      },
+    });
+    await rawPrisma.directive.create({
+      data: {
+        id: randomUUID(),
+        issuerUserId: admin.id,
+        type: 'custom',
+        message: 'Go check this',
+        status: 'resolved',
+        receivedByUserId: staff.id,
+        receivedAt: new Date('2026-02-02T12:00:00.000Z'),
+        resolvedAt: new Date('2026-02-02T12:20:00.000Z'),
+        completionPhotoUrl: '/uploads/y.jpg',
+        completionComment: 'checked',
+      },
+    });
+
+    const recent = await request(app.getHttpServer())
+      .get('/reports/staff-activity?scope=recent')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    expect(recent.body.entries).toHaveLength(4);
+    // Newest-finished first: directive (12:20) -> open_pool (11:45) -> reception (10:30) -> floor_task (09:05).
+    expect(recent.body.entries.map((e: { type: string }) => e.type)).toEqual([
+      'directive',
+      'open_pool',
+      'reception',
+      'floor_task',
+    ]);
+    const dispatchEntry = recent.body.entries.find((e: { type: string }) => e.type === 'floor_task');
+    expect(dispatchEntry.floorTaskCategory).toBe('dispatch');
+    expect(dispatchEntry.scannedBarcode).toBe('ABC123');
+    expect(dispatchEntry.durationMs).toBe(5 * 60_000);
+
+    await request(app.getHttpServer())
+      .get('/reports/staff-activity?scope=recent')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(403);
+  });
+
+  it('staff-activity "live" lists in-progress rows only, oldest-started first, with null end/duration', async () => {
+    await rawPrisma.floorTaskLog.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        category: 'pick',
+        startedAt: new Date('2026-02-02T09:00:00.000Z'),
+        endedAt: null,
+      },
+    });
+    await rawPrisma.openPoolTask.create({
+      data: {
+        id: randomUUID(),
+        title: 'Still open',
+        createdByUserId: admin.id,
+        claimedByUserId: staff.id,
+        status: 'claimed',
+        claimedAt: new Date('2026-02-02T10:00:00.000Z'),
+      },
+    });
+
+    const live = await request(app.getHttpServer())
+      .get('/reports/staff-activity')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    expect(live.body.entries).toHaveLength(2);
+    expect(live.body.entries.map((e: { type: string }) => e.type)).toEqual(['floor_task', 'open_pool']);
+    for (const entry of live.body.entries) {
+      expect(entry.endedAt).toBeNull();
+      expect(entry.durationMs).toBeNull();
+    }
   });
 
   it('reception report breaks down by category, including flagged count', async () => {
@@ -219,6 +445,243 @@ describe('Reports (e2e)', () => {
     const returns = report.body.categories.find((c: { category: string }) => c.category === 'return_parcels');
     expect(returns.totalCount).toBe(0);
     expect(returns.averageProcessingMinutes).toBeNull();
+  });
+
+  it('reception-volume totals deliveries by period/category and computes latest-vs-previous-period change', async () => {
+    // 2026-03-02 is a Monday: 1 delivery. 2026-03-03 is a Tuesday: 2 deliveries (+100%).
+    await rawPrisma.reception.create({
+      data: {
+        id: randomUUID(),
+        createdByUserId: staff.id,
+        status: 'completed',
+        category: 'return_parcels',
+        parcelCount: 3,
+        transporterCompany: 'DHL',
+        arrivedAt: new Date('2026-03-02T10:00:00.000Z'),
+        putAwayAt: new Date('2026-03-02T10:00:00.000Z'),
+        processingDurationMs: 0,
+      },
+    });
+    await rawPrisma.reception.create({
+      data: {
+        id: randomUUID(),
+        createdByUserId: staff.id,
+        status: 'completed',
+        category: 'return_parcels',
+        parcelCount: 2,
+        transporterCompany: 'DHL',
+        arrivedAt: new Date('2026-03-03T10:00:00.000Z'),
+        putAwayAt: new Date('2026-03-03T10:00:00.000Z'),
+        processingDurationMs: 0,
+      },
+    });
+    await rawPrisma.reception.create({
+      data: {
+        id: randomUUID(),
+        createdByUserId: staff.id,
+        status: 'completed',
+        category: 'packaging_stock',
+        parcelCount: 1,
+        packagingType: 'Boxes',
+        arrivedAt: new Date('2026-03-03T11:00:00.000Z'),
+        putAwayAt: new Date('2026-03-03T11:00:00.000Z'),
+        processingDurationMs: 0,
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/reception-volume?granularity=day')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    expect(report.body.granularity).toBe('day');
+    const day1 = report.body.byPeriod.find((p: { period: string }) => p.period === '2026-03-02');
+    const day2 = report.body.byPeriod.find((p: { period: string }) => p.period === '2026-03-03');
+    expect(day1.total).toBe(1);
+    expect(day2.total).toBe(2);
+    expect(day2.byCategory.return_parcels).toBe(1);
+    expect(day2.byCategory.packaging_stock).toBe(1);
+    expect(report.body.percentChangeVsPreviousPeriod).toBe(100);
+    const monday = report.body.byWeekday.find((w: { weekday: string }) => w.weekday === 'MON');
+    expect(monday.total).toBe(1);
+  });
+
+  it('reception-duration averages ReceptionTask worked time by period/category/staff, completed outcomes only', async () => {
+    const reception = await rawPrisma.reception.create({
+      data: {
+        id: randomUUID(),
+        createdByUserId: staff.id,
+        status: 'completed',
+        category: 'packaging_stock',
+        parcelCount: 1,
+        packagingType: 'Boxes',
+        arrivedAt: new Date('2026-03-02T09:30:00.000Z'),
+        putAwayAt: new Date('2026-03-02T09:30:00.000Z'),
+        processingDurationMs: 0,
+      },
+    });
+    await rawPrisma.receptionTask.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-03-02T09:00:00.000Z'),
+        endedAt: new Date('2026-03-02T09:30:00.000Z'), // 30 min
+        outcome: 'completed',
+        receptionId: reception.id,
+      },
+    });
+    // Unfinished — must NOT count toward any average here.
+    await rawPrisma.receptionTask.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-03-02T10:00:00.000Z'),
+        endedAt: new Date('2026-03-02T10:10:00.000Z'),
+        outcome: 'unfinished',
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/reception-duration')
+      .set('Authorization', `Bearer ${management.token}`)
+      .expect(200);
+
+    expect(report.body.byPeriod).toHaveLength(1);
+    expect(report.body.byPeriod[0]).toMatchObject({ period: '2026-03-02', averageMinutes: 30, completedCount: 1 });
+    const packaging = report.body.byCategory.find((c: { category: string }) => c.category === 'packaging_stock');
+    expect(packaging).toMatchObject({ averageMinutes: 30, completedCount: 1 });
+    const staffRow = report.body.byStaff.find((s: { userId: string }) => s.userId === staff.id);
+    expect(staffRow).toMatchObject({ userName: 'Sam Staff', averageMinutes: 30, completedCount: 1 });
+  });
+
+  it('seller-stock-quality computes problem and overweight rates by seller/problem-type/period', async () => {
+    await rawPrisma.sellerStockPallet.create({
+      data: {
+        id: randomUUID(),
+        boxNumber: 'B-1',
+        sellerName: 'Acme',
+        weightKg: 100,
+        overweightFlag: false,
+        condition: 'good',
+        conditionFlags: ['good'],
+        labelPhotoUrls: ['/uploads/a.jpg'],
+        damageEvidencePhotoUrls: [],
+        status: 'put_away',
+        createdByUserId: staff.id,
+        createdAt: new Date('2026-03-02T09:00:00.000Z'),
+        putAwayAt: new Date('2026-03-02T09:00:00.000Z'),
+      },
+    });
+    await rawPrisma.sellerStockPallet.create({
+      data: {
+        id: randomUUID(),
+        boxNumber: 'B-2',
+        sellerName: 'Acme',
+        weightKg: 750,
+        overweightFlag: true,
+        condition: 'damaged',
+        conditionFlags: ['overweight', 'damaged'],
+        damageRemarks: 'dented',
+        labelPhotoUrls: ['/uploads/b.jpg'],
+        damageEvidencePhotoUrls: ['/uploads/c.jpg'],
+        status: 'pending_admin_review',
+        createdByUserId: staff.id,
+        createdAt: new Date('2026-03-02T09:30:00.000Z'),
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/seller-stock-quality')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    const acme = report.body.bySeller.find((s: { sellerName: string }) => s.sellerName === 'Acme');
+    expect(acme).toMatchObject({ totalCount: 2, problemCount: 1, problemRatePercent: 50 });
+    const damagedFlag = report.body.byProblemType.find((p: { flag: string }) => p.flag === 'damaged');
+    expect(damagedFlag.count).toBe(1);
+    const overweightFlag = report.body.byProblemType.find((p: { flag: string }) => p.flag === 'overweight');
+    expect(overweightFlag.count).toBe(1);
+    const acmeOverweight = report.body.overweight.bySeller.find((s: { sellerName: string }) => s.sellerName === 'Acme');
+    expect(acmeOverweight).toMatchObject({ totalCount: 2, overweightCount: 1, overweightRatePercent: 50 });
+  });
+
+  it('reception-sources totals Return Parcels quantity by transporter company, by period', async () => {
+    await rawPrisma.reception.create({
+      data: {
+        id: randomUUID(),
+        createdByUserId: staff.id,
+        status: 'completed',
+        category: 'return_parcels',
+        parcelCount: 5,
+        transporterCompany: 'DHL',
+        arrivedAt: new Date('2026-03-02T09:00:00.000Z'),
+        putAwayAt: new Date('2026-03-02T09:00:00.000Z'),
+        processingDurationMs: 0,
+      },
+    });
+    await rawPrisma.reception.create({
+      data: {
+        id: randomUUID(),
+        createdByUserId: staff.id,
+        status: 'completed',
+        category: 'return_parcels',
+        parcelCount: 3,
+        transporterCompany: 'UPS',
+        arrivedAt: new Date('2026-03-02T09:30:00.000Z'),
+        putAwayAt: new Date('2026-03-02T09:30:00.000Z'),
+        processingDurationMs: 0,
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/reception-sources')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    expect(report.body.topTransporters).toEqual(
+      expect.arrayContaining([
+        { transporterCompany: 'DHL', totalQuantity: 5 },
+        { transporterCompany: 'UPS', totalQuantity: 3 },
+      ]),
+    );
+    const day = report.body.byPeriod.find((p: { period: string }) => p.period === '2026-03-02');
+    expect(day.byTransporter).toEqual(
+      expect.arrayContaining([
+        { transporterCompany: 'DHL', quantity: 5 },
+        { transporterCompany: 'UPS', quantity: 3 },
+      ]),
+    );
+  });
+
+  it('reception-reliability rates unfinished ReceptionTasks by period/staff', async () => {
+    await rawPrisma.receptionTask.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-03-02T09:00:00.000Z'),
+        endedAt: new Date('2026-03-02T09:10:00.000Z'),
+        outcome: 'unfinished',
+      },
+    });
+    await rawPrisma.receptionTask.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-03-02T09:30:00.000Z'),
+        endedAt: new Date('2026-03-02T09:40:00.000Z'),
+        outcome: 'completed',
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/reception-reliability')
+      .set('Authorization', `Bearer ${management.token}`)
+      .expect(200);
+
+    const day = report.body.byPeriod.find((p: { period: string }) => p.period === '2026-03-02');
+    expect(day).toMatchObject({ unfinishedCount: 1, totalCount: 2, unfinishedRatePercent: 50 });
+    const staffRow = report.body.byStaff.find((s: { userId: string }) => s.userId === staff.id);
+    expect(staffRow).toMatchObject({ userName: 'Sam Staff', unfinishedCount: 1, totalCount: 2, unfinishedRatePercent: 50 });
   });
 
   it('put-away report counts tasks by outcome and averages completion time', async () => {

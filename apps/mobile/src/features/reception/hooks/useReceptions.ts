@@ -9,6 +9,7 @@ import {
   listReceptions,
   type CreateReceptionInput,
 } from '../api';
+import { ACTIVE_RECEPTION_TASK_KEY } from './useReceptionTasks';
 
 const RECEPTIONS_KEY = ['receptions'];
 const receptionKey = (id: string) => ['receptions', id];
@@ -37,8 +38,27 @@ export function useCreateReception() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateReceptionInput) => createReception(token!, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: RECEPTIONS_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: RECEPTIONS_KEY });
+      // A receptionTaskId (if any was sent) just got marked completed server-side.
+      queryClient.invalidateQueries({ queryKey: ACTIVE_RECEPTION_TASK_KEY });
+    },
   });
+}
+
+/**
+ * Receptions directly assigned to me via the Task Board (see
+ * ReceptionsService.assign()) that I still need to act on — surfaced on
+ * the Putaway screen alongside pallet put-away tasks. No dedicated
+ * "mine, assigned" endpoint exists, so this filters the same full list
+ * ReceptionListScreen already fetches (shared query cache — no extra
+ * network cost).
+ */
+export function useMyAssignedReceptions() {
+  const userId = useAuthStore((state) => state.user?.id);
+  const query = useReceptions();
+  const data = query.data?.filter((r) => r.assignedToUserId === userId && r.status !== 'completed');
+  return { ...query, data };
 }
 
 export function useAddInstructions(id: string) {

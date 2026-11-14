@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { type ReceptionCategory } from '../receptions/reception.types';
 import { type OnShiftStaffMember, type PendingTaskItem, type TaskBoard } from './tasks.types';
+
+const RECEPTION_CATEGORY_LABELS: Record<ReceptionCategory, string> = {
+  return_parcels: 'Return Parcels',
+  packaging_stock: 'Packaging Stock',
+  sellers_stock: 'Sellers Stock',
+  equipment_other: 'Equipment & Other',
+};
 
 /**
  * Backs the Task Board (web dashboard) — see the module doc comment on
@@ -12,13 +20,18 @@ export class TasksService {
   constructor(private readonly prisma: PrismaService) {}
 
   async board(): Promise<TaskBoard> {
-    const [activeShifts, pendingPallets, sessions] = await Promise.all([
+    const [activeShifts, pendingPallets, sessions, pendingReceptions] = await Promise.all([
       this.prisma.shift.findMany({ where: { endedAt: null } }),
       this.prisma.sellerStockPallet.findMany({
         where: { status: { in: ['ready_for_putaway', 'pending_admin_review'] } },
         orderBy: { createdAt: 'asc' },
       }),
       this.prisma.orderPrepSession.findMany({ orderBy: { createdAt: 'asc' } }),
+      // Still waiting on Admin's instructions and not yet assigned — see ReceptionsService.assign().
+      this.prisma.reception.findMany({
+        where: { status: 'arrived', assignedToUserId: null },
+        orderBy: { arrivedAt: 'asc' },
+      }),
     ]);
 
     const onShiftUserIds = activeShifts.map((s) => s.userId);
@@ -83,9 +96,17 @@ export class TasksService {
       }
     }
 
+    const pendingReceptionItems: PendingTaskItem[] = pendingReceptions.map((r) => ({
+      type: 'reception',
+      receptionId: r.id,
+      category: r.category,
+      summary: `${r.parcelCount ?? r.palletCount ?? '?'} — ${RECEPTION_CATEGORY_LABELS[r.category]}`,
+      createdAt: r.arrivedAt.toISOString(),
+    }));
+
     return {
       onShiftStaff,
-      pendingItems: [...pendingPutAway, ...pendingOrderPrep],
+      pendingItems: [...pendingPutAway, ...pendingOrderPrep, ...pendingReceptionItems],
     };
   }
 }

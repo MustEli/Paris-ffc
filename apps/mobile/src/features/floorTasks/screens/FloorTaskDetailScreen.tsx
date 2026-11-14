@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BarcodeScanButton } from '../../../core/components/BarcodeScanButton';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { useActiveTaskGuardStore } from '../../../core/navigation/activeTaskGuardStore';
@@ -30,6 +31,9 @@ interface Props {
 function metaFor(category: string): CategoryMeta {
   return CATEGORY_META.find((m) => m.category === category)!;
 }
+
+/** Same format rule as the backend's EndFloorTaskDto / Issue Reporting's Tracking ID scanner. */
+const BARCODE_PATTERN = /^[A-Z0-9]+$/;
 
 /** Digits only — strips anything else (decimals, minus signs, letters, pasted junk). */
 function sanitizeDigits(text: string): string {
@@ -68,6 +72,8 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const [zone, setZone] = useState('');
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [scannedBarcode, setScannedBarcode] = useState('');
+  const [barcodeError, setBarcodeError] = useState<string | null>(null);
 
   // Data-entry boxes are only relevant once the user is actually
   // finishing the task — showing them the whole time (even before
@@ -103,11 +109,24 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   }
 
   function requireCountsThen(action: () => void) {
+    if (meta.needsBarcodeScan && !scannedBarcode) {
+      Alert.alert(t('floorTasks.missingBarcodeTitle'), t('floorTasks.missingBarcodeMessage'));
+      return;
+    }
     if (!hasRequiredCounts()) {
       Alert.alert(t('floorTasks.missingCountsTitle'), t('floorTasks.missingCountsMessage'));
       return;
     }
     action();
+  }
+
+  function handleScanBarcode(value: string) {
+    if (!BARCODE_PATTERN.test(value)) {
+      setBarcodeError(t('floorTasks.barcodeInvalid'));
+      return;
+    }
+    setBarcodeError(null);
+    setScannedBarcode(value);
   }
 
   // Running (open and not paused) blocks leaving this page entirely —
@@ -119,9 +138,15 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     if (!isRunning) return;
     return navigation.addListener('beforeRemove', (e) => {
       e.preventDefault();
-      Alert.alert(t('floorTasks.pauseFirstTitle'), t('floorTasks.pauseFirstMessage'));
+      Alert.alert(t('floorTasks.leavingTitle'), t('floorTasks.leavingMessage'), [
+        { text: t('floorTasks.keepWorking'), style: 'cancel' },
+        {
+          text: t('floorTasks.pause'),
+          onPress: () => pause.mutate(undefined, { onSuccess: () => navigation.dispatch(e.data.action) }),
+        },
+      ]);
     });
-  }, [isRunning, navigation]);
+  }, [isRunning, navigation, pause]);
 
   // The Home icon jumps straight to StaffHome from a different part of
   // the stack, which doesn't fire this screen's beforeRemove listener —
@@ -143,6 +168,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
         zone: meta.needsZone ? zone.trim() : undefined,
         comment: needsComment && comment.trim() ? comment.trim() : undefined,
         photoUrls: meta.needsPhotos ? photos : undefined,
+        scannedBarcode: meta.needsBarcodeScan ? scannedBarcode : undefined,
       };
       end.mutate(endInput, { onSuccess: goToStaffHome });
     });
@@ -233,6 +259,23 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
           {meta.needsPhotos && (
             <View style={styles.photoSection}>
               <MultiPhotoCapture label={t('floorTasks.photos')} photos={photos} onChange={setPhotos} maxPhotos={FLOOR_TASK_MAX_PHOTOS} />
+            </View>
+          )}
+
+          {meta.needsBarcodeScan && (
+            <View style={styles.barcodeSection}>
+              <View style={styles.barcodeRow}>
+                <BarcodeScanButton onScan={handleScanBarcode} />
+                <Text style={styles.barcodeText}>
+                  {scannedBarcode ? t('floorTasks.scannedBarcode', { value: scannedBarcode }) : t('floorTasks.scanBarcode')}
+                </Text>
+              </View>
+              {scannedBarcode && (
+                <Pressable onPress={() => setScannedBarcode('')}>
+                  <Text style={styles.rescanLink}>{t('floorTasks.rescan')}</Text>
+                </Pressable>
+              )}
+              {barcodeError && <Text style={styles.error}>{barcodeError}</Text>}
             </View>
           )}
 
@@ -367,6 +410,25 @@ const styles = StyleSheet.create({
   },
   photoSection: {
     marginTop: 16,
+  },
+  barcodeSection: {
+    marginTop: 16,
+  },
+  barcodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  barcodeText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    flexShrink: 1,
+  },
+  rescanLink: {
+    fontSize: 13,
+    color: colors.brandOrange,
+    fontWeight: '600',
+    marginTop: 8,
   },
   error: {
     color: colors.alert,

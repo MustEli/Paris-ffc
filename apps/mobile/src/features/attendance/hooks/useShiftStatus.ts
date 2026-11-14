@@ -20,13 +20,13 @@ export function useShiftStatus() {
     queryKey: SHIFT_STATUS_QUERY_KEY,
     queryFn: () => fetchShiftStatus(token!),
     enabled: !!token,
-    // Poll while an actual short break is running, so the on-screen
-    // countdown stays accurate and the "allowance ran out" auto-end
-    // (see ShiftScreen) fires promptly — not needed the rest of the
-    // time, so this doesn't otherwise add any background network use.
+    // Poll while any break is running, so the on-screen countdown stays
+    // accurate (and, for short break, so the "allowance ran out"
+    // auto-end in ShiftScreen fires promptly) — not needed the rest of
+    // the time, so this doesn't otherwise add any background network use.
     refetchInterval: (query) => {
       const data = query.state.data;
-      return data?.onBreak && data.breakType === 'short' ? 5_000 : false;
+      return data?.onBreak ? 5_000 : false;
     },
   });
 

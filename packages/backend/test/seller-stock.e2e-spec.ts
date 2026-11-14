@@ -133,7 +133,7 @@ describe('Seller Stock (e2e)', () => {
     expect(created.body.status).toBe('pending_admin_review');
   });
 
-  it('logs a good-condition pallet with multiple label photos, already put away', async () => {
+  it('logs a good-condition pallet with multiple label photos, already put away, with no putAwayLocation collected', async () => {
     const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
     const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
     const created = await request(app.getHttpServer())
@@ -145,11 +145,10 @@ describe('Seller Stock (e2e)', () => {
         sellerName: 'Acme Parts',
         weightKg: 120,
         conditionFlags: ['good'],
-        putAwayLocation: 'Zone A, Rack 2',
       })
       .expect(201);
     expect(created.body.status).toBe('put_away');
-    expect(created.body.putAwayLocation).toBe('Zone A, Rack 2');
+    expect(created.body.putAwayLocation).toBeNull();
     expect(created.body.putAwayAt).not.toBeNull();
     expect(created.body.palletIndex).toMatch(/^PLT-\d{6}$/);
     expect(created.body.labelPhotoUrls).toEqual([labelPhotoUrl1, labelPhotoUrl2]);
@@ -159,22 +158,6 @@ describe('Seller Stock (e2e)', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(200);
     expect(listed.body.some((p: { id: string }) => p.id === created.body.id)).toBe(true);
-  });
-
-  it('rejects a good-condition, non-overweight pallet missing putAwayLocation', async () => {
-    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
-    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
-    return request(app.getHttpServer())
-      .post('/seller-stock')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
-        boxNumber: 'B-3b',
-        sellerName: 'Acme Parts',
-        weightKg: 120,
-        conditionFlags: ['good'], // no putAwayLocation
-      })
-      .expect(400);
   });
 
   it('rejects a pallet flagged good + damaged together without damage remarks/evidence', async () => {
@@ -221,10 +204,8 @@ describe('Seller Stock (e2e)', () => {
     const putAway = await request(app.getHttpServer())
       .post(`/seller-stock/${readyId}/self-putaway`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ zone: 'Zone A - Rack 04' })
       .expect(201);
     expect(putAway.body.status).toBe('put_away');
-    expect(putAway.body.putAwayLocation).toBe('Zone A - Rack 04');
     expect(putAway.body.putAwayAt).not.toBeNull();
 
     const damagedLabel1 = await uploadFakePhoto(app, staffToken);
@@ -248,7 +229,6 @@ describe('Seller Stock (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/seller-stock/${flagged.body.id}/self-putaway`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ zone: 'Zone A - Rack 04' })
       .expect(409);
   });
 
@@ -346,5 +326,78 @@ describe('Seller Stock (e2e)', () => {
       .get('/seller-stock')
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(200);
+  });
+
+  it('deletes a single pallet, and rejects a non-admin trying to', async () => {
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
+    const created = await request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-DEL-1',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        conditionFlags: ['good'],
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/seller-stock/${created.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(403);
+
+    const adminToken = await loginAs(app, 'admin@warehousehq.dev');
+    await request(app.getHttpServer())
+      .delete(`/seller-stock/${created.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/seller-stock/${created.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(404);
+  });
+
+  it('bulk-deletes several pallets at once', async () => {
+    const labelPhotoUrl1 = await uploadFakePhoto(app, staffToken);
+    const labelPhotoUrl2 = await uploadFakePhoto(app, staffToken);
+    const first = await request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-DEL-2',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        conditionFlags: ['good'],
+      })
+      .expect(201);
+    const second = await request(app.getHttpServer())
+      .post('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        labelPhotoUrls: [labelPhotoUrl1, labelPhotoUrl2],
+        boxNumber: 'B-DEL-3',
+        sellerName: 'Acme Parts',
+        weightKg: 50,
+        conditionFlags: ['good'],
+      })
+      .expect(201);
+
+    const adminToken = await loginAs(app, 'admin@warehousehq.dev');
+    const result = await request(app.getHttpServer())
+      .delete('/seller-stock')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ids: [first.body.id, second.body.id] })
+      .expect(200);
+    expect(result.body.deletedCount).toBe(2);
+
+    const listed = await request(app.getHttpServer())
+      .get('/seller-stock')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(listed.body.some((p: { id: string }) => p.id === first.body.id || p.id === second.body.id)).toBe(false);
   });
 });

@@ -8,12 +8,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { useReferenceList } from '../../../core/hooks/useReferenceList';
-import { useWarehouseLocations } from '../../../core/hooks/useWarehouseLocations';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
+import { useMyActiveReceptionTask } from '../hooks/useReceptionTasks';
 import { useCreateReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS, type ReceptionCategory } from '../types';
 
@@ -39,7 +39,6 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
   const [parcelCount, setParcelCount] = useState('');
   const [palletCount, setPalletCount] = useState('');
   const [transporterCompany, setTransporterCompany] = useState('');
-  const [putAwayLocation, setPutAwayLocation] = useState('');
   const [packagingType, setPackagingType] = useState('');
   const [itemDescription, setItemDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
@@ -48,18 +47,18 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
   const { mutate: submit, isPending, error } = useCreateReception();
   const transporterCompanies = useReferenceList('transporter_company');
   const packagingTypes = useReferenceList('packaging_type');
-  const locations = useWarehouseLocations();
+  const { data: activeReceptionTask } = useMyActiveReceptionTask();
 
   function isFormValid(): boolean {
     switch (category) {
       case 'return_parcels':
-        return !!parcelCount && !!transporterCompany && !!putAwayLocation.trim();
+        return !!parcelCount && !!transporterCompany;
       case 'packaging_stock':
-        return !!parcelCount && !!packagingType && !!putAwayLocation.trim();
+        return !!parcelCount && !!packagingType;
       case 'sellers_stock':
         return !!palletCount;
       case 'equipment_other':
-        return !!parcelCount && !!itemDescription && photos.length > 0 && !!putAwayLocation.trim();
+        return !!parcelCount && !!itemDescription && photos.length > 0;
       default:
         return false;
     }
@@ -75,13 +74,10 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         transporterCompany: transporterCompany || undefined,
         packagingType: packagingType || undefined,
         itemDescription: itemDescription || undefined,
-        putAwayLocation:
-          category === 'return_parcels' || category === 'packaging_stock' || category === 'equipment_other'
-            ? putAwayLocation.trim()
-            : undefined,
         photoUrls: category === 'equipment_other' ? photos : undefined,
         invoicePhotoUrls:
           category === 'equipment_other' || category === 'packaging_stock' ? invoicePhotos : undefined,
+        receptionTaskId: activeReceptionTask?.id,
       },
       { onSuccess: goToStaffHome },
     );
@@ -147,16 +143,6 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
             placeholder={t('reception.selectTransporterCompany')}
             emptyLabel={t('reception.noTransporterCompanies')}
           />
-
-          <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
-          <DropdownPicker
-            options={locations.data?.map((l) => l.location) ?? []}
-            value={putAwayLocation || null}
-            onChange={setPutAwayLocation}
-            isLoading={locations.isPending}
-            placeholder={t('reception.selectPutAwayLocation')}
-            emptyLabel={t('reception.noLocations')}
-          />
         </>
       )}
 
@@ -170,16 +156,6 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
             isLoading={packagingTypes.isPending}
             placeholder={t('reception.selectPackagingType')}
             emptyLabel={t('reception.noPackagingTypes')}
-          />
-
-          <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
-          <DropdownPicker
-            options={locations.data?.map((l) => l.location) ?? []}
-            value={putAwayLocation || null}
-            onChange={setPutAwayLocation}
-            isLoading={locations.isPending}
-            placeholder={t('reception.selectPutAwayLocation')}
-            emptyLabel={t('reception.noLocations')}
           />
 
           <View style={styles.photoSection}>
@@ -197,16 +173,6 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         <>
           <Text style={styles.label}>{t('reception.itemDescription')}</Text>
           <TextInput style={styles.input} value={itemDescription} onChangeText={setItemDescription} />
-
-          <Text style={styles.label}>{t('reception.putAwayLocation')}</Text>
-          <DropdownPicker
-            options={locations.data?.map((l) => l.location) ?? []}
-            value={putAwayLocation || null}
-            onChange={setPutAwayLocation}
-            isLoading={locations.isPending}
-            placeholder={t('reception.selectPutAwayLocation')}
-            emptyLabel={t('reception.noLocations')}
-          />
 
           <View style={styles.photoSection}>
             <MultiPhotoCapture label={t('reception.photoOfEquipment')} photos={photos} onChange={setPhotos} maxPhotos={6} />

@@ -30,6 +30,7 @@ export class FloorTasksService {
       zone: row.zone,
       comment: row.comment,
       photoUrls: row.photoUrls,
+      scannedBarcode: row.scannedBarcode,
       pausedAt: row.pausedAt ? row.pausedAt.toISOString() : null,
       totalPausedMs: row.totalPausedMs,
     };
@@ -139,6 +140,7 @@ export class FloorTasksService {
         zone: dto.zone ?? null,
         comment: dto.comment ?? null,
         photoUrls: dto.photoUrls ?? [],
+        scannedBarcode: dto.scannedBarcode ?? null,
         pausedAt: null,
         totalPausedMs: { increment: stillOpenPauseMs },
       },

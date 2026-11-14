@@ -1,6 +1,8 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { fontSize, fontWeight } from '../theme/typography';
 
 interface Props {
   label: string;
@@ -10,10 +12,12 @@ interface Props {
   variant?: 'default' | 'alert';
   /** Extra top margin — e.g. separating Issue Reporting from the three boxes above it. */
   spacedAbove?: boolean;
+  /** A small count pill in the top-right corner — e.g. Open Pool Tasks' current unclaimed count. Hidden entirely at 0/undefined. */
+  badgeCount?: number;
 }
 
 /** The main menu's and Reception's shared tile — tap it, either do the thing or land on more boxes/rows. */
-export function MenuBox({ label, description, onPress, variant = 'default', spacedAbove }: Props) {
+export function MenuBox({ label, description, onPress, variant = 'default', spacedAbove, badgeCount }: Props) {
   const isAlert = variant === 'alert';
   return (
     <Pressable
@@ -25,6 +29,11 @@ export function MenuBox({ label, description, onPress, variant = 'default', spac
       ]}
       onPress={onPress}
     >
+      {!!badgeCount && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
+        </View>
+      )}
       <Text style={[styles.label, isAlert && styles.labelAlert]}>{label}</Text>
       {description && <Text style={styles.description}>{description}</Text>}
     </Pressable>
@@ -37,22 +46,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
-    padding: 20,
+    padding: spacing[5],
     alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: spacing[4],
+    backgroundColor: colors.brandOrange,
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: spacing[2],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#1a1200',
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.strong,
   },
   boxAlert: {
     backgroundColor: colors.alertSurface,
     borderColor: colors.alertBorder,
   },
   spacedAbove: {
-    marginTop: 28,
+    marginTop: spacing[8],
   },
   boxPressed: {
     opacity: 0.8,
   },
   label: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.strong,
     color: colors.textPrimary,
     textAlign: 'center',
   },
@@ -60,9 +86,9 @@ const styles = StyleSheet.create({
     color: colors.alert,
   },
   description: {
-    fontSize: 13,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: spacing[1],
     textAlign: 'center',
   },
 });

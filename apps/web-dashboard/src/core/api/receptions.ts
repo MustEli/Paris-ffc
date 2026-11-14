@@ -1,4 +1,5 @@
 import { apiRequest } from './client';
+import { type TaskPriority } from './tasks';
 
 /** Mirrors packages/backend/src/receptions/reception.types.ts (and apps/mobile's copy of the same). */
 export type ReceptionCategory = 'return_parcels' | 'packaging_stock' | 'sellers_stock' | 'equipment_other';
@@ -8,7 +9,6 @@ export interface ReturnParcelsDetails {
   category: 'return_parcels';
   parcelCount: number;
   transporterCompany: string;
-  putAwayLocation: string;
 }
 export interface PackagingStockDetails {
   category: 'packaging_stock';
@@ -17,7 +17,6 @@ export interface PackagingStockDetails {
   /** No longer collected (customer request) — stays nullable so older receptions that do have one still display it. */
   sellerName: string | null;
   invoicePhotoUrls: string[];
-  putAwayLocation: string;
 }
 export interface SellersStockDetails {
   category: 'sellers_stock';
@@ -29,7 +28,6 @@ export interface EquipmentOtherDetails {
   itemDescription: string;
   photoUrls: string[];
   invoicePhotoUrls: string[];
-  putAwayLocation: string;
 }
 export type ReceptionDetails = ReturnParcelsDetails | PackagingStockDetails | SellersStockDetails | EquipmentOtherDetails;
 
@@ -43,6 +41,12 @@ export interface Reception {
   putAwayAt: string | null;
   processingDurationMs: number | null;
   flaggedForReview: boolean;
+
+  /** Task Board direct-assignment (see assignReception()) — a drag-a-pending-reception-onto-a-staff-member action, not an Open Pool task. */
+  assignedToUserId: string | null;
+  assignedByUserId: string | null;
+  assignedAt: string | null;
+  priority: TaskPriority;
 }
 
 export const CATEGORY_LABELS: Record<ReceptionCategory, string> = {
@@ -62,13 +66,13 @@ export function summarizeDetails(reception: Reception): string {
   const { details } = reception;
   switch (details.category) {
     case 'return_parcels':
-      return `${details.parcelCount} parcel(s) from ${details.transporterCompany} — put away at ${details.putAwayLocation}`;
+      return `${details.parcelCount} parcel(s) from ${details.transporterCompany}`;
     case 'packaging_stock':
-      return `${details.parcelCount} parcel(s) — ${details.packagingType} — put away at ${details.putAwayLocation}`;
+      return `${details.parcelCount} parcel(s) — ${details.packagingType}`;
     case 'sellers_stock':
       return `${details.palletCount} pallet(s)`;
     case 'equipment_other':
-      return `${details.parcelCount} parcel(s) — ${details.itemDescription} — put away at ${details.putAwayLocation}`;
+      return `${details.parcelCount} parcel(s) — ${details.itemDescription}`;
   }
 }
 
@@ -98,4 +102,23 @@ export function bulkAddInstructions(token: string, items: BulkInstructionItem[])
     token,
     body: { items },
   });
+}
+
+export interface AssignReceptionInput {
+  assignedToUserId: string;
+  instructions: string;
+  priority?: TaskPriority;
+}
+
+/** Task Board's third pending-item type — drag a reception still awaiting instructions onto an on-shift staff member. Not an Open Pool task. */
+export function assignReception(token: string, id: string, input: AssignReceptionInput) {
+  return apiRequest<Reception>(`/receptions/${id}/assign`, { method: 'POST', token, body: input });
+}
+
+export function deleteReception(token: string, id: string) {
+  return apiRequest<void>(`/receptions/${id}`, { method: 'DELETE', token });
+}
+
+export function deleteReceptions(token: string, ids: string[]) {
+  return apiRequest<{ deletedCount: number }>('/receptions', { method: 'DELETE', token, body: { ids } });
 }

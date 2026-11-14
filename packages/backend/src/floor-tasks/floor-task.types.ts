@@ -5,6 +5,7 @@
  * schema:
  *   pick                         -> count: picked,            countExtra: not found
  *   pack                         -> count: packed
+ *   dispatch                     -> scannedBarcode only (no count/zone/comment/photos)
  *   return_processing            -> count: non-fulfillment,    countExtra: fulfillment
  *   box_prep                     -> count: prepared
  *   warehousing_inventory_check  -> count: locations checked,  zone + comment
@@ -16,6 +17,7 @@
 export type FloorTaskCategory =
   | 'pick'
   | 'pack'
+  | 'dispatch'
   | 'return_processing'
   | 'box_prep'
   | 'warehousing_inventory_check'
@@ -27,6 +29,7 @@ export type FloorTaskCategory =
 export const FLOOR_TASK_CATEGORIES: FloorTaskCategory[] = [
   'pick',
   'pack',
+  'dispatch',
   'return_processing',
   'box_prep',
   'warehousing_inventory_check',
@@ -63,6 +66,8 @@ export interface FloorTaskLog {
   zone: string | null;
   comment: string | null;
   photoUrls: string[];
+  /** 'dispatch' category only — see this file's doc comment above. */
+  scannedBarcode: string | null;
   /** Set while paused, null otherwise — see FloorTasksService.pause/resume. */
   pausedAt: string | null;
   /** Cumulative paused time across every pause/resume cycle, in ms. */

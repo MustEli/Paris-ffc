@@ -43,6 +43,8 @@ export type StaffStackParamList = ReceptionStackParamList &
     StaffHome: undefined;
     /** Once-ever selfie capture, triggered right after the first-ever Start Shift — see StaffAppShell. */
     SelfieCapture: undefined;
+    /** The Start gate in front of Reception's category menu — see features/reception/screens/ReceptionStartScreen.tsx. */
+    ReceptionStart: undefined;
     /** Reception's 4-category split — see features/reception/screens/ReceptionMenuScreen.tsx. */
     ReceptionMenu: undefined;
     /** Self-serve Pick/Pack/Return/Warehousing/Backup, plus the Putaway and assigned-Order-Prep entry points — see features/floorTasks/screens/FloorTasksScreen.tsx. */

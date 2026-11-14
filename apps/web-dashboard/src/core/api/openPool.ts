@@ -55,7 +55,7 @@ export interface DispatchItemResult {
   error?: string;
 }
 
-/** Dispatches selected Pending Instructions receptions as Open Pool tasks — see ReceptionIntakePage's ReceptionInstructionsSection. */
+/** Dispatches selected receptions as Open Pool tasks — see ReceptionsPage's DeliveriesSection. */
 export function dispatchReceptionsAsTasks(token: string, items: DispatchTaskItemInput[], targetUserId?: string) {
   return apiRequest<DispatchItemResult[]>('/open-pool-tasks/dispatch-receptions', {
     method: 'POST',

@@ -33,7 +33,16 @@ export interface PendingOrderPrepItem {
   createdAt: string;
 }
 
-export type PendingTaskItem = PendingPutAwayItem | PendingOrderPrepItem;
+/** A reception still waiting on Admin's instructions (status `arrived`, not yet assigned) — see receptions.ts's assignReception(). */
+export interface PendingReceptionItem {
+  type: 'reception';
+  receptionId: string;
+  category: 'return_parcels' | 'packaging_stock' | 'sellers_stock' | 'equipment_other';
+  summary: string;
+  createdAt: string;
+}
+
+export type PendingTaskItem = PendingPutAwayItem | PendingOrderPrepItem | PendingReceptionItem;
 
 export interface TaskBoard {
   onShiftStaff: OnShiftStaffMember[];

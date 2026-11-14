@@ -1,9 +1,11 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { ReportDateRangeQuery } from './dto/report-date-range.dto';
 import { ReportsService } from './reports.service';
+import { type StaffActivityScope } from './reports.types';
 
 /**
  * Admin + management, read-only — same convention as GET /users. Admin
@@ -34,9 +36,45 @@ export class ReportsController {
     return this.reportsService.staffHistory();
   }
 
+  /** `scope` defaults to 'live' when omitted. */
+  @Get('staff-activity')
+  staffActivity(@Query('scope') scope?: StaffActivityScope) {
+    return this.reportsService.staffActivity(scope === 'recent' ? 'recent' : 'live');
+  }
+
   @Get('reception')
   reception() {
     return this.reportsService.reception();
+  }
+
+  /** Reception Reports section: total deliveries by period/category, latest-vs-previous-period change, day-of-week pattern. */
+  @Get('reception-volume')
+  receptionVolume(@Query() query: ReportDateRangeQuery) {
+    return this.reportsService.receptionVolume(query);
+  }
+
+  /** Reception Reports section: average Reception-task duration by period/category/staff. */
+  @Get('reception-duration')
+  receptionDuration(@Query() query: ReportDateRangeQuery) {
+    return this.reportsService.receptionDuration(query);
+  }
+
+  /** Reception Reports section: Seller Stock condition-problem and overweight rates, by seller/problem-type/period. */
+  @Get('seller-stock-quality')
+  sellerStockQuality(@Query() query: ReportDateRangeQuery) {
+    return this.reportsService.sellerStockQuality(query);
+  }
+
+  /** Reception Reports section: Return Parcels quantity by transporter company, by period. */
+  @Get('reception-sources')
+  receptionSources(@Query() query: ReportDateRangeQuery) {
+    return this.reportsService.receptionSources(query);
+  }
+
+  /** Reception Reports section: rate of Reception tasks left with no confirmed delivery, by period/staff. */
+  @Get('reception-reliability')
+  receptionReliability(@Query() query: ReportDateRangeQuery) {
+    return this.reportsService.receptionReliability(query);
   }
 
   @Get('put-away')

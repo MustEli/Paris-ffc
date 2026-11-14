@@ -68,17 +68,11 @@ export class SellerStockService {
     const needsReview = !isGoodOnly || overweightFlag;
 
     // A pallet that doesn't need review (Good Condition, not overweight)
-    // used to land in 'ready_for_putaway' and wait for a separate
-    // self-put-away step (still available via selfPutAway(), for any
-    // pallet that reached that status before this change). Now staff
-    // record the put-away location in the same submission that logs the
-    // pallet, so it's created already 'put_away' — no separate step at
-    // all. Anything needing review is untouched: still
-    // 'pending_admin_review', no location yet.
-    if (!needsReview && !dto.putAwayLocation) {
-      throw new BadRequestException('A Good Condition, non-overweight pallet requires putAwayLocation');
-    }
-
+    // goes straight to 'put_away' — locations are predefined/obvious to
+    // staff (customer request), so there's nothing left to collect or
+    // confirm for this path. Anything needing review is untouched: still
+    // 'pending_admin_review', no location (that still comes from Admin
+    // via PutAwayService — see giveInstructions/updateLocation below).
     const row = await this.prisma.sellerStockPallet.create({
       data: {
         id: randomUUID(),
@@ -92,7 +86,7 @@ export class SellerStockService {
         damageEvidencePhotoUrls: dto.damageEvidencePhotoUrls ?? [],
         labelPhotoUrls: dto.labelPhotoUrls,
         status: needsReview ? 'pending_admin_review' : 'put_away',
-        putAwayLocation: needsReview ? null : dto.putAwayLocation!,
+        putAwayLocation: null,
         createdByUserId: userId,
         putAwayAt: needsReview ? null : new Date(),
       },
@@ -115,6 +109,16 @@ export class SellerStockService {
 
   async findOne(id: string): Promise<SellerStockPallet> {
     return this.toDomain(await this.findOneRow(id));
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.findOneRow(id);
+    await this.prisma.sellerStockPallet.delete({ where: { id } });
+  }
+
+  async removeMany(ids: string[]): Promise<{ deletedCount: number }> {
+    const result = await this.prisma.sellerStockPallet.deleteMany({ where: { id: { in: ids } } });
+    return { deletedCount: result.count };
   }
 
   async giveInstructions(id: string, location: string): Promise<SellerStockPallet> {
@@ -148,14 +152,17 @@ export class SellerStockService {
    * 'ready_for_putaway' (Good Condition only, not overweight — see
    * create()'s needsReview) never needed Admin's review to get there, so
    * it doesn't need Admin's instruction to get put away either — staff
-   * picks their own target zone and confirms directly. Deliberately a
-   * separate, simpler path from PutAwayService's assign→start→complete
-   * flow (which stays exactly as-is for anything that DID need review):
-   * no PutAwayTask row, no per-staff task tracking, since Admin isn't
-   * meant to act on or monitor this path at all — just see the
-   * aggregate counts (Reports/Admin dashboard already do that).
+   * just confirms directly (locations are predefined/obvious, nothing
+   * to pick — customer request). Deliberately a separate, simpler path
+   * from PutAwayService's assign→start→complete flow (which stays
+   * exactly as-is for anything that DID need review): no PutAwayTask
+   * row, no per-staff task tracking, since Admin isn't meant to act on
+   * or monitor this path at all — just see the aggregate counts
+   * (Reports/Admin dashboard already do that). In practice this is now
+   * largely a legacy path — see create()'s comment — kept for any
+   * pallet that reached 'ready_for_putaway' before that change.
    */
-  async selfPutAway(id: string, zone: string): Promise<SellerStockPallet> {
+  async selfPutAway(id: string): Promise<SellerStockPallet> {
     const pallet = await this.findOneRow(id);
     if (pallet.status !== 'ready_for_putaway') {
       throw new ConflictException({
@@ -165,7 +172,7 @@ export class SellerStockService {
     }
     const row = await this.prisma.sellerStockPallet.update({
       where: { id },
-      data: { status: 'put_away', putAwayLocation: zone, putAwayAt: new Date() },
+      data: { status: 'put_away', putAwayAt: new Date() },
     });
     return this.toDomain(row);
   }

@@ -1,10 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
-import { fetchActiveFloorTasks, FLOOR_TASK_CATEGORY_LABELS } from '../core/api/floorTasks';
-import { fetchAdminDashboard, fetchStaffHistory, type AdminDashboardReport, type StaffHistoryReport } from '../core/api/reports';
+import { DIRECTIVE_TYPE_LABELS } from '../core/api/directives';
+import { FLOOR_TASK_CATEGORY_LABELS } from '../core/api/floorTasks';
+import {
+  fetchAdminDashboard,
+  fetchStaffActivity,
+  fetchStaffHistory,
+  type AdminDashboardReport,
+  type StaffActivityEntry,
+  type StaffHistoryDay,
+  type StaffHistoryReport,
+} from '../core/api/reports';
 import { useAuth } from '../core/auth/AuthContext';
 
 function elapsedSince(iso: string): string {
@@ -35,30 +44,37 @@ function formatHours(hours: number): string {
   return `${hours}h`;
 }
 
-/** null when plannedHours is 0 — nothing to compare against (day off, or no schedule configured). */
-function ratioPercent(plannedHours: number, actualHours: number): number | null {
-  if (plannedHours === 0) return null;
-  return Math.round((actualHours / plannedHours) * 100);
-}
-
-function ratioPillClass(percent: number): string {
-  if (percent >= 100) return 'pill-green';
-  if (percent >= 75) return 'pill-amber';
-  return 'pill-red';
-}
+const STAFF_HISTORY_CATEGORY_COLUMNS: { key: keyof StaffHistoryDay; label: string }[] = [
+  { key: 'plannedHours', label: 'Planned' },
+  { key: 'floorTaskHours', label: 'Floor Task' },
+  { key: 'receptionHours', label: 'Reception' },
+  { key: 'openPoolHours', label: 'Open Pool' },
+  { key: 'urgentTaskHours', label: 'Urgent Task' },
+  { key: 'actualHours', label: 'Actual' },
+];
 
 function downloadStaffHistory(report: StaffHistoryReport) {
+  const orderedDays = [...report.days].reverse();
   const header: string[] = ['Staff'];
-  for (const day of report.days) {
-    header.push(`${day} Planned (h)`, `${day} Actual (h)`, `${day} Actual/Planned`);
+  for (const day of orderedDays) {
+    for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
+      header.push(`${day} ${col.label} (h)`);
+    }
+  }
+  for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
+    header.push(`Cumulative ${col.label} (h)`);
   }
 
   const rows: (string | number)[][] = report.staff.map((staffRow) => {
     const row: (string | number)[] = [staffRow.userName];
-    for (const day of report.days) {
-      const entry = staffRow.days[day] ?? { plannedHours: 0, actualHours: 0 };
-      const percent = ratioPercent(entry.plannedHours, entry.actualHours);
-      row.push(entry.plannedHours, entry.actualHours, percent === null ? '' : `${percent}%`);
+    for (const day of orderedDays) {
+      const entry = staffRow.days[day] ?? { plannedHours: 0, actualHours: 0, floorTaskHours: 0, receptionHours: 0, openPoolHours: 0, urgentTaskHours: 0 };
+      for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
+        row.push(entry[col.key]);
+      }
+    }
+    for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
+      row.push(staffRow.cumulative[col.key]);
     }
     return row;
   });
@@ -98,16 +114,6 @@ export function DashboardPage() {
     refetchInterval: 30_000,
   });
 
-  // Staff View / Integration docs: "not all items need Admin's
-  // instructions... she needs just to see who is on the task, duration
-  // since start, and declared counts so far" — read-only, no action here.
-  const { data: activeFloorTasks } = useQuery({
-    queryKey: ['floor-tasks-active'],
-    queryFn: () => fetchActiveFloorTasks(token!),
-    enabled: !!token,
-    refetchInterval: 15_000,
-  });
-
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const highlightRef = useRef<HTMLTableRowElement>(null);
@@ -116,7 +122,7 @@ export function DashboardPage() {
     if (highlightId && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [highlightId, data, activeFloorTasks]);
+  }, [highlightId, data]);
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -137,7 +143,7 @@ export function DashboardPage() {
         <>
           <div className="section-toolbar">
             <h2 style={{ margin: 0 }}>Current status</h2>
-            <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={() => refetch()} disabled={isRefetching}>
+            <button className="btn btn-outline" onClick={() => refetch()} disabled={isRefetching}>
               {isRefetching ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
@@ -186,38 +192,7 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <h2>Floor Tasks — Live</h2>
-          <div className="card">
-            <table>
-              <thead>
-                <tr>
-                  <th>Staff</th>
-                  <th>Task</th>
-                  <th>Started</th>
-                  <th>Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(!activeFloorTasks || activeFloorTasks.length === 0) && (
-                  <tr>
-                    <td colSpan={4}>No one is on a floor task right now.</td>
-                  </tr>
-                )}
-                {activeFloorTasks?.map((t) => (
-                  <tr
-                    key={t.id}
-                    ref={t.id === highlightId ? highlightRef : undefined}
-                    className={t.id === highlightId ? 'highlight-row' : undefined}
-                  >
-                    <td>{t.userName}</td>
-                    <td>{FLOOR_TASK_CATEGORY_LABELS[t.category]}</td>
-                    <td>{formatLocalTime(t.startedAt)}</td>
-                    <td>{elapsedSince(t.startedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <StaffActivitySection highlightId={highlightId} highlightRef={highlightRef} />
 
           <h2>Staff</h2>
           <div className="card">
@@ -276,7 +251,56 @@ export function DashboardPage() {
   );
 }
 
-/** Planned (from StaffSchedule) vs. actual (completed shifts, net of lunch) worked hours, one column per day since the app's first-ever completed shift. See ReportsService.staffHistory() for how each day's numbers are computed. */
+/** Reusable 6-sub-column group header + body cells, shared by every day-group and the final Cumulative group. */
+function StaffHistoryGroupHeader({ title }: { title: string }) {
+  return (
+    <th colSpan={STAFF_HISTORY_CATEGORY_COLUMNS.length} style={{ textAlign: 'center', borderLeft: '1px solid var(--gray-150)' }}>
+      {title}
+    </th>
+  );
+}
+
+function StaffHistorySubHeaderRow({ groupCount }: { groupCount: number }) {
+  return (
+    <tr>
+      <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }} />
+      {Array.from({ length: groupCount }).map((_, groupIndex) =>
+        STAFF_HISTORY_CATEGORY_COLUMNS.map((col, i) => (
+          <th
+            key={`${groupIndex}-${col.key}`}
+            style={{ textAlign: 'center', fontSize: 11, fontWeight: 'var(--weight-regular)', color: 'var(--gray-500)', minWidth: 64, borderLeft: i === 0 ? '1px solid var(--gray-150)' : undefined }}
+          >
+            {col.label}
+          </th>
+        )),
+      )}
+    </tr>
+  );
+}
+
+function StaffHistoryCells({ entry }: { entry: StaffHistoryDay }) {
+  return (
+    <>
+      {STAFF_HISTORY_CATEGORY_COLUMNS.map((col, i) => (
+        <td key={col.key} style={{ textAlign: 'center', fontSize: 'var(--text-xs)', borderLeft: i === 0 ? '1px solid var(--gray-100)' : undefined }}>
+          {formatHours(entry[col.key])}
+        </td>
+      ))}
+    </>
+  );
+}
+
+const EMPTY_DAY: StaffHistoryDay = { plannedHours: 0, actualHours: 0, floorTaskHours: 0, receptionHours: 0, openPoolHours: 0, urgentTaskHours: 0 };
+
+/**
+ * Today-first (admin scrolls right/left to see older days — a plain
+ * reverse of the backend's ascending order), each day broken down by
+ * category (Floor Task / Reception / Open Pool / Urgent Task), plus a
+ * final Cumulative group summing every day since the app's first-ever
+ * completed shift. No ratio/percentage column — dropped per customer
+ * request. See ReportsService.staffHistory() for how each number's
+ * computed.
+ */
 function StaffHistorySection() {
   const { token } = useAuth();
   const { data, isPending, error } = useQuery({
@@ -285,11 +309,13 @@ function StaffHistorySection() {
     enabled: !!token,
   });
 
+  const orderedDays = data ? [...data.days].reverse() : [];
+
   return (
     <>
       <div className="section-toolbar">
         <h2 style={{ margin: 0 }}>Staff History</h2>
-        <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={() => data && downloadStaffHistory(data)} disabled={!data || data.days.length === 0}>
+        <button className="btn btn-outline" onClick={() => data && downloadStaffHistory(data)} disabled={!data || data.days.length === 0}>
           Download
         </button>
       </div>
@@ -302,44 +328,148 @@ function StaffHistorySection() {
             <table style={{ width: 'max-content' }}>
               <thead>
                 <tr>
-                  <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }}>Staff</th>
-                  {data.days.map((day) => (
-                    <th key={day} style={{ textAlign: 'center', minWidth: 90 }}>
-                      {formatDayHeader(day)}
-                    </th>
+                  <th rowSpan={2} style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, verticalAlign: 'bottom' }}>
+                    Staff
+                  </th>
+                  {orderedDays.map((day, i) => (
+                    <StaffHistoryGroupHeader key={day} title={i === 0 ? `${formatDayHeader(day)} (Today)` : formatDayHeader(day)} />
                   ))}
+                  <StaffHistoryGroupHeader title="Cumulative" />
                 </tr>
+                <StaffHistorySubHeaderRow groupCount={orderedDays.length + 1} />
               </thead>
               <tbody>
                 {data.staff.map((staffRow) => (
                   <tr key={staffRow.userId}>
-                    <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 600 }}>{staffRow.userName}</td>
-                    {data.days.map((day) => {
-                      const entry = staffRow.days[day] ?? { plannedHours: 0, actualHours: 0 };
-                      const percent = ratioPercent(entry.plannedHours, entry.actualHours);
-                      return (
-                        <td key={day} style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 12, color: '#6b7280' }}>P: {formatHours(entry.plannedHours)}</div>
-                          <div style={{ fontSize: 12, color: '#6b7280' }}>A: {formatHours(entry.actualHours)}</div>
-                          {percent === null ? (
-                            <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
-                          ) : (
-                            <span className={`pill ${ratioPillClass(percent)}`}>{percent}%</span>
-                          )}
-                        </td>
-                      );
-                    })}
+                    <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 'var(--weight-strong)' }}>{staffRow.userName}</td>
+                    {orderedDays.map((day) => (
+                      <StaffHistoryCells key={day} entry={staffRow.days[day] ?? EMPTY_DAY} />
+                    ))}
+                    <StaffHistoryCells entry={staffRow.cumulative} />
                   </tr>
                 ))}
                 {data.staff.length === 0 && (
                   <tr>
-                    <td colSpan={data.days.length + 1}>No staff accounts yet.</td>
+                    <td colSpan={(orderedDays.length + 1) * STAFF_HISTORY_CATEGORY_COLUMNS.length + 1}>No staff accounts yet.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+const STAFF_ACTIVITY_TYPE_LABELS: Record<StaffActivityEntry['type'], string> = {
+  floor_task: 'Floor Task',
+  reception: 'Reception',
+  open_pool: 'Open Pool',
+  directive: 'Urgent Task',
+};
+
+function staffActivityDetail(entry: StaffActivityEntry): string {
+  switch (entry.type) {
+    case 'floor_task': {
+      const label = entry.floorTaskCategory ? FLOOR_TASK_CATEGORY_LABELS[entry.floorTaskCategory as keyof typeof FLOOR_TASK_CATEGORY_LABELS] : '—';
+      return entry.scannedBarcode !== undefined
+        ? `${label}${entry.scannedBarcode ? ` — scanned: ${entry.scannedBarcode}` : ' — not yet scanned'}`
+        : label;
+    }
+    case 'reception':
+      return entry.receptionOutcome === 'unfinished' ? 'Reception — no confirmed delivery' : 'Reception';
+    case 'open_pool':
+      return entry.openPoolTitle ?? '—';
+    case 'directive':
+      return entry.directiveType ? (DIRECTIVE_TYPE_LABELS[entry.directiveType as keyof typeof DIRECTIVE_TYPE_LABELS] ?? entry.directiveType) : '—';
+  }
+}
+
+function formatDurationMs(ms: number): string {
+  const totalMinutes = Math.round(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+/**
+ * Merges the 4 "someone is doing something" sources (Floor Task, the
+ * Reception timer, a claimed Open Pool task, an acknowledged Directive)
+ * that used to only ever show Floor Tasks — see
+ * packages/backend/src/reports/reports.types.ts's StaffActivityEntry
+ * doc comment. "Recent" is also the only place a completed Dispatch
+ * Floor Task's scanned barcode becomes visible, since it drops out of
+ * "Live" the instant it ends.
+ */
+function StaffActivitySection({
+  highlightId,
+  highlightRef,
+}: {
+  highlightId: string | null;
+  highlightRef: React.RefObject<HTMLTableRowElement | null>;
+}) {
+  const { token } = useAuth();
+  const [scope, setScope] = useState<'live' | 'recent'>('live');
+  const { data, isPending, error } = useQuery({
+    queryKey: ['staff-activity', scope],
+    queryFn: () => fetchStaffActivity(token!, scope),
+    enabled: !!token,
+    refetchInterval: scope === 'live' ? 15_000 : false,
+  });
+
+  return (
+    <>
+      <div className="section-toolbar">
+        <h2 style={{ margin: 0 }}>Staff Activity</h2>
+        <div className="flex-row">
+          <button className={`btn ${scope === 'live' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setScope('live')}>
+            Live
+          </button>
+          <button className={`btn ${scope === 'recent' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setScope('recent')}>
+            Recent
+          </button>
+        </div>
+      </div>
+      <div className="card">
+        {isPending && <p>Loading…</p>}
+        {error && <p className="error-text">{error.message}</p>}
+        <table>
+          <thead>
+            <tr>
+              <th>Staff</th>
+              <th>Type</th>
+              <th>Detail</th>
+              <th>Started</th>
+              <th>{scope === 'live' ? 'Duration' : 'Finished'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data && data.entries.length === 0 && (
+              <tr>
+                <td colSpan={5}>{scope === 'live' ? 'No one is on anything right now.' : 'Nothing finished yet.'}</td>
+              </tr>
+            )}
+            {data?.entries.map((entry) => (
+              <tr
+                key={entry.id}
+                ref={entry.id === highlightId ? highlightRef : undefined}
+                className={entry.id === highlightId ? 'highlight-row' : undefined}
+              >
+                <td>{entry.userName}</td>
+                <td>{STAFF_ACTIVITY_TYPE_LABELS[entry.type]}</td>
+                <td>{staffActivityDetail(entry)}</td>
+                <td>{formatLocalTime(entry.startedAt)}</td>
+                <td>
+                  {scope === 'live' ? elapsedSince(entry.startedAt) : entry.endedAt ? formatLocalTime(entry.endedAt) : '—'}
+                  {scope === 'recent' && entry.durationMs !== null && (
+                    <span style={{ color: 'var(--gray-500)', marginLeft: 6 }}>({formatDurationMs(entry.durationMs)})</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );

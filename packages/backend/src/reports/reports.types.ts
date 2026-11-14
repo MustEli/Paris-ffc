@@ -1,4 +1,7 @@
+import { type FloorTaskCategory } from '../floor-tasks/floor-task.types';
 import { type ReceptionCategory } from '../receptions/reception.types';
+import { type Weekday } from '../schedules/schedule.types';
+import { type PalletConditionFlag } from '../seller-stock/seller-stock.types';
 
 /**
  * Feature 0's Management interface requirement ("Reporting tools and
@@ -37,21 +40,77 @@ export interface AttendanceReport {
 export interface StaffHistoryDay {
   /** 0 on a day outside the staff member's configured working days (or if they have no schedule at all). */
   plannedHours: number;
-  /** Net of lunch break. Only from completed (clocked-out) shifts that started on this day. */
+  /** Net of lunch break. Only from completed (clocked-out) shifts that started on this day — unchanged meaning. NOT guaranteed to equal the sum of the 4 category hours below: those only cover time spent in a tracked task, so unattributed/idle shift time means the sum can be less than this. */
   actualHours: number;
+  /** FloorTaskLog worked time (endedAt set only), bucketed by startedAt's day. */
+  floorTaskHours: number;
+  /** ReceptionTask worked time (endedAt set only, completed or unfinished), bucketed by startedAt's day. */
+  receptionHours: number;
+  /** OpenPoolTask claimed→completed time, bucketed by claimedAt's day. */
+  openPoolHours: number;
+  /** "Urgent Task" in the UI — Directive received→resolved time, bucketed by receivedAt's day. */
+  urgentTaskHours: number;
 }
+
+/** Sums of every StaffHistoryDay field across the full day range — so the web dashboard doesn't have to add up every column itself. */
+export type StaffHistoryCumulative = StaffHistoryDay;
 
 export interface StaffHistoryRow {
   userId: string;
   userName: string;
-  /** Keyed by "YYYY-MM-DD" (UTC) — every key in StaffHistoryReport.days is present here, 0/0 for days with nothing recorded. */
+  /** Keyed by "YYYY-MM-DD" (UTC) — every key in StaffHistoryReport.days is present here, 0s for days with nothing recorded. */
   days: Record<string, StaffHistoryDay>;
+  cumulative: StaffHistoryCumulative;
 }
 
 export interface StaffHistoryReport {
   /** "YYYY-MM-DD" (UTC), ascending, from the app's first-ever completed shift to today. Empty if no shift has ever completed. */
   days: string[];
   staff: StaffHistoryRow[];
+}
+
+export type ReportGranularity = 'day' | 'week' | 'month' | 'quarter';
+
+export interface ReceptionVolumeReport {
+  granularity: ReportGranularity;
+  byPeriod: { period: string; total: number; byCategory: Partial<Record<ReceptionCategory, number>> }[];
+  /** (most recent period's total − previous period's total) / previous period's total × 100. Null if fewer than 2 periods have data, or the previous period's total was 0. */
+  percentChangeVsPreviousPeriod: number | null;
+  /** Total deliveries per weekday across the whole selected range — a plain sum, not divided by week count (see ReportsService.receptionVolume's doc comment for why). */
+  byWeekday: { weekday: Weekday; total: number }[];
+}
+
+export interface ReceptionDurationReport {
+  granularity: ReportGranularity;
+  /** Average ReceptionTask worked-minutes per period — 'completed' outcomes only. */
+  byPeriod: { period: string; averageMinutes: number | null; completedCount: number }[];
+  byCategory: { category: ReceptionCategory; averageMinutes: number | null; completedCount: number }[];
+  byStaff: { userId: string; userName: string; averageMinutes: number | null; completedCount: number }[];
+}
+
+export interface SellerStockQualityReport {
+  granularity: ReportGranularity;
+  bySeller: { sellerName: string; totalCount: number; problemCount: number; problemRatePercent: number }[];
+  /** A pallet can count toward more than one flag — counts aren't mutually exclusive. */
+  byProblemType: { flag: PalletConditionFlag; count: number }[];
+  byPeriod: { period: string; totalCount: number; problemCount: number; problemRatePercent: number }[];
+  overweight: {
+    bySeller: { sellerName: string; totalCount: number; overweightCount: number; overweightRatePercent: number }[];
+    byPeriod: { period: string; totalCount: number; overweightCount: number; overweightRatePercent: number }[];
+  };
+}
+
+export interface ReceptionSourcesReport {
+  granularity: ReportGranularity;
+  byPeriod: { period: string; byTransporter: { transporterCompany: string; quantity: number }[] }[];
+  /** Top 8 transporter companies by total quantity across the whole selected range — everything else folds into "Other". */
+  topTransporters: { transporterCompany: string; totalQuantity: number }[];
+}
+
+export interface ReceptionReliabilityReport {
+  granularity: ReportGranularity;
+  byPeriod: { period: string; unfinishedCount: number; totalCount: number; unfinishedRatePercent: number }[];
+  byStaff: { userId: string; userName: string; unfinishedCount: number; totalCount: number; unfinishedRatePercent: number }[];
 }
 
 export interface ReceptionCategoryStats {
@@ -90,6 +149,54 @@ export interface OrderPrepReport {
    * own scope-cut comment says isn't built. Task duration is the closest
    * honest proxy available from data actually being recorded.
    */
+}
+
+export type StaffActivityScope = 'live' | 'recent';
+export type StaffActivityType = 'floor_task' | 'reception' | 'open_pool' | 'directive';
+
+/**
+ * Powers the web dashboard's "Staff Activity" section — a merge of the
+ * 4 different "someone is actively doing something" sources in this
+ * app (Floor Task, the Reception timer, a claimed Open Pool task, an
+ * acknowledged Directive), since none of them alone told the full
+ * story of "what is everyone doing right now" (that used to be just
+ * Floor Tasks). `scope: 'live'` is the 4 sources' in-progress rows
+ * (oldest-started first); `scope: 'recent'` is their most recently
+ * *finished* rows instead (newest-first, capped — see
+ * ReportsService.staffActivity's RECENT_LIMIT), which is also the only
+ * place a completed 'dispatch' Floor Task's scannedBarcode becomes
+ * visible to Admin (it disappears from 'live' the instant it ends).
+ * Only one of the type-specific fields below is ever populated, per
+ * `type` — same "raw, typed, category-specific fields" convention as
+ * ActiveFloorTask/ReceptionCategoryStats rather than a computed label
+ * string, so the frontend decides how to display each type.
+ */
+export interface StaffActivityEntry {
+  type: StaffActivityType;
+  id: string;
+  userId: string;
+  userName: string;
+  startedAt: string;
+  /** null while still live. */
+  endedAt: string | null;
+  /** ms; null while still live. */
+  durationMs: number | null;
+  /** type === 'floor_task' only. */
+  floorTaskCategory?: FloorTaskCategory;
+  /** type === 'floor_task' && floorTaskCategory === 'dispatch' only. */
+  scannedBarcode?: string | null;
+  /** type === 'reception' only — null while still live (only set once ended). */
+  receptionOutcome?: 'completed' | 'unfinished' | null;
+  /** type === 'open_pool' only. */
+  openPoolTitle?: string;
+  openPoolDescription?: string | null;
+  /** type === 'directive' only. */
+  directiveType?: string;
+  directiveMessage?: string;
+}
+
+export interface StaffActivityReport {
+  entries: StaffActivityEntry[];
 }
 
 export interface StaffStatus {

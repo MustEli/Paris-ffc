@@ -181,9 +181,9 @@ export class ShiftsService {
     return updated;
   }
 
-  /** Cumulative "short" break time for a shift, including any currently in progress (counted up to `now`). */
-  private async shortBreakUsedMs(shiftId: string, now: Date): Promise<number> {
-    const breaks = await this.prisma.break.findMany({ where: { shiftId, type: 'short' } });
+  /** Cumulative break time of one type for a shift, including any currently in progress (counted up to `now`). Shared by short (capped) and lunch (display-only target) — see their respective doc comments in shift.types.ts. */
+  private async breakUsedMs(shiftId: string, type: BreakType, now: Date): Promise<number> {
+    const breaks = await this.prisma.break.findMany({ where: { shiftId, type } });
     return breaks.reduce((total, b) => total + ((b.endedAt ?? now).getTime() - b.startedAt.getTime()), 0);
   }
 
@@ -191,10 +191,14 @@ export class ShiftsService {
     const now = new Date();
     const shift = await this.getEffectiveActiveShift(userId);
     const activeBreak = shift ? await this.findActiveBreak(shift.id) : undefined;
-    const shortBreakUsedMs = shift ? await this.shortBreakUsedMs(shift.id, now) : 0;
+    const shortBreakUsedMs = shift ? await this.breakUsedMs(shift.id, 'short', now) : 0;
+    // Cumulative across every lunch break taken this shift, not just the
+    // currently-open one — so ending a lunch break and starting another
+    // later continues counting down from where it left off, same as
+    // Short Break, instead of resetting to the full suggested duration.
     const lunchBreakRemainingMs =
       activeBreak?.type === 'lunch'
-        ? LUNCH_BREAK_SUGGESTED_DURATION_MS - (now.getTime() - activeBreak.startedAt.getTime())
+        ? LUNCH_BREAK_SUGGESTED_DURATION_MS - (await this.breakUsedMs(shift!.id, 'lunch', now))
         : null;
 
     return {
@@ -252,7 +256,7 @@ export class ShiftsService {
 
     const now = new Date();
     if (type === 'short') {
-      const usedMs = await this.shortBreakUsedMs(shift.id, now);
+      const usedMs = await this.breakUsedMs(shift.id, 'short', now);
       if (usedMs >= SHORT_BREAK_LIMIT_MS) {
         throw new ConflictException({
           message: 'Short break allowance for this shift has already been used up',

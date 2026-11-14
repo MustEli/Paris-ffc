@@ -25,6 +25,7 @@ export async function resetDatabase(): Promise<void> {
   await prisma.directive.deleteMany();
   await prisma.openPoolTask.deleteMany();
   await prisma.floorTaskLog.deleteMany();
+  await prisma.receptionTask.deleteMany();
   await prisma.orderPrepTask.deleteMany();
   await prisma.orderPrepSession.deleteMany();
   await prisma.putAwayTask.deleteMany();
@@ -34,7 +35,6 @@ export async function resetDatabase(): Promise<void> {
   await prisma.shift.deleteMany();
   await prisma.staffSchedule.deleteMany();
   await prisma.referenceListValue.deleteMany();
-  await prisma.warehouseLocation.deleteMany();
   await prisma.user.deleteMany();
 
   const passwordHash = seedPasswordHash();

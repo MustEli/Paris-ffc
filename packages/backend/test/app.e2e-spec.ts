@@ -286,6 +286,41 @@ describe('Warehouse HQ backend (e2e)', () => {
       .expect(201);
   });
 
+  it('a second lunch break this shift continues counting down from where the first one left off, not from the full 60 minutes again', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    const start = await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+    const shiftId = start.body.id as string;
+
+    // Seed a completed 20-minute lunch break directly, same style as the
+    // short-break seed above.
+    await rawPrisma.break.create({
+      data: {
+        id: randomUUID(),
+        shiftId,
+        type: 'lunch',
+        startedAt: new Date('2026-01-01T10:00:00.000Z'),
+        endedAt: new Date('2026-01-01T10:20:00.000Z'),
+      },
+    });
+
+    // Starting a second lunch break should see ~40 minutes remaining
+    // (60 suggested - 20 already used), not reset to the full 60.
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', auth)
+      .send({ type: 'lunch' })
+      .expect(201);
+
+    const status = await request(app.getHttpServer()).get('/shifts/status').set('Authorization', auth).expect(200);
+    expect(status.body.lunchBreakRemainingMs).toBeLessThanOrEqual(40 * 60_000);
+    expect(status.body.lunchBreakRemainingMs).toBeGreaterThan(39 * 60_000);
+  });
+
   it('lunch and short breaks are mutually exclusive — only one open break at a time, regardless of type', async () => {
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')

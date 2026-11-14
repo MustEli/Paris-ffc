@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
+import { colors } from '../../../core/theme/colors';
 import { PhotoCaptureButton } from '../../sellerStock/components/PhotoCaptureButton';
 import { useClaimOpenPoolTask, useCompleteOpenPoolTask, useMyOpenPoolTasks, useOpenPoolTasks } from '../hooks/useOpenPool';
 import { type OpenPoolTask } from '../types';
 
 const PRIORITY_COLORS: Record<string, string> = {
-  normal: '#64748b',
-  high: '#d97706',
-  urgent: '#dc2626',
+  normal: colors.textSecondary,
+  high: colors.brandOrange,
+  urgent: colors.alert,
 };
 
 /**
@@ -107,7 +108,7 @@ function ClaimedTaskCard({ task, complete }: { task: OpenPoolTask; complete: Ret
       <TextInput
         style={styles.commentInput}
         placeholder="Comment"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={colors.textMuted}
         multiline
         value={comment}
         onChangeText={setComment}
@@ -128,6 +129,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     gap: 4,
+    backgroundColor: colors.background,
   },
   spinner: {
     marginTop: 20,
@@ -135,21 +137,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.textPrimary,
     marginTop: 20,
     marginBottom: 10,
   },
   empty: {
-    color: '#9ca3af',
+    color: colors.textSecondary,
     fontSize: 13,
     marginTop: 4,
   },
   card: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    backgroundColor: colors.surface,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -159,12 +162,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0f172a',
+    color: colors.textPrimary,
     flexShrink: 1,
   },
   cardDescription: {
     fontSize: 13,
-    color: '#4b5563',
+    color: colors.textSecondary,
     marginTop: 6,
   },
   priorityPill: {
@@ -180,46 +183,47 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   claimButton: {
-    backgroundColor: '#fd8c1e',
+    backgroundColor: colors.brandOrange,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 12,
   },
   creationBox: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 10,
     padding: 12,
     marginTop: 10,
   },
   creationComment: {
     fontSize: 13,
-    color: '#334155',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   creationPhoto: {
     width: '100%',
     height: 140,
     borderRadius: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.surface,
   },
   photoWrap: {
     marginTop: 12,
   },
   commentInput: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#0f172a',
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceElevated,
     minHeight: 60,
     textAlignVertical: 'top',
     marginTop: 10,
   },
   actionButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.success,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
@@ -234,7 +238,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   error: {
-    color: '#dc2626',
+    color: colors.alert,
     fontSize: 13,
     marginTop: 8,
   },

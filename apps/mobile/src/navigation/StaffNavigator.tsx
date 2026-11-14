@@ -16,6 +16,7 @@ import { NewDeliveryScreen } from '../features/reception/screens/NewDeliveryScre
 import { ReceptionDetailScreen } from '../features/reception/screens/ReceptionDetailScreen';
 import { ReceptionListScreen } from '../features/reception/screens/ReceptionListScreen';
 import { ReceptionMenuScreen } from '../features/reception/screens/ReceptionMenuScreen';
+import { ReceptionStartScreen } from '../features/reception/screens/ReceptionStartScreen';
 import { NewPalletScreen } from '../features/sellerStock/screens/NewPalletScreen';
 import { SellerStockDetailScreen } from '../features/sellerStock/screens/SellerStockDetailScreen';
 import { SellerStockListScreen } from '../features/sellerStock/screens/SellerStockListScreen';
@@ -51,6 +52,7 @@ export function StaffNavigator() {
         <Stack.Screen name="StaffHome" component={StaffHomeScreen} />
         <Stack.Screen name="SelfieCapture" component={SelfieCaptureScreen} />
 
+        <Stack.Screen name="ReceptionStart" component={ReceptionStartScreen} />
         <Stack.Screen name="ReceptionMenu" component={ReceptionMenuScreen} />
         <Stack.Screen name="ReceptionList" component={ReceptionListScreen} />
         <Stack.Screen name="NewDelivery" component={NewDeliveryScreen} />

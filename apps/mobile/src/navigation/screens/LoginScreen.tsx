@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../core/components/KeyboardAwareScreen';
 import { useAuthStore } from '../../core/auth/authStore';
+import { spacing } from '../../core/theme/spacing';
+import { fontSize, fontWeight } from '../../core/theme/typography';
 
 const elnoLogo = require('../../../assets/elno-logo.png');
 
@@ -97,10 +99,16 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    // Deliberately NOT the Staff-only dark `colors` palette — this
+    // screen is shared by all 3 roles (Staff/Admin/Management), and
+    // Admin/Management stay on a light theme app-wide (see colors.ts's
+    // own doc comment). A separate, intentional light palette, not an
+    // oversight — left as literal values rather than forced onto the
+    // dark token set.
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing[6],
   },
   logo: {
     // Fixed dp dimensions rather than width:'%' + aspectRatio — the
@@ -111,42 +119,48 @@ const styles = StyleSheet.create({
     // 240x65 matches its real ~3.68:1 ratio.
     width: 240,
     height: 65,
-    marginBottom: 4,
+    marginBottom: spacing[1],
   },
   poweredBy: {
-    fontSize: 13,
+    fontSize: fontSize.sm,
     color: '#6b7280',
-    // Half of the original 28 — brings "Sign in" and everything below it
-    // up closer to the subtitle, per feedback.
+    // Deliberately left as a literal 14, not snapped to the spacing
+    // scale's 12/16 neighbors — this exact value was tuned to "half of
+    // the original 28" per specific client feedback (see git history),
+    // and nudging it either way would quietly undo that tuning.
     marginBottom: 14,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 32,
+    fontSize: fontSize.display,
+    fontWeight: fontWeight.strong,
+    marginBottom: spacing[8],
   },
   form: {
     width: '100%',
-    gap: 12,
+    gap: spacing[3],
   },
   input: {
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    // 16 in the original — nudged to the scale's nearest step rather
+    // than keeping a near-duplicate size one step off from the rest of
+    // the app's "larger body text" (imperceptible, same consolidation
+    // applied to buttonText below).
+    fontSize: fontSize.lg,
   },
   error: {
     color: '#dc2626',
-    fontSize: 13,
+    fontSize: fontSize.sm,
   },
   button: {
     backgroundColor: '#0f172a',
-    paddingVertical: 14,
+    paddingVertical: spacing[4],
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing[2],
   },
   buttonPressed: {
     opacity: 0.8,
@@ -156,12 +170,12 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.strong,
   },
   devNotice: {
-    marginTop: 40,
-    fontSize: 12,
+    marginTop: spacing[10],
+    fontSize: fontSize.xs,
     color: '#9ca3af',
     textAlign: 'center',
   },

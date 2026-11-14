@@ -1,12 +1,9 @@
 import { useNavigation, type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useState } from 'react';
 import { Image, ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 
-import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
-import { useWarehouseLocations } from '../../../core/hooks/useWarehouseLocations';
 import { type PutAwayStackParamList, type SellerStockStackParamList } from '../../../navigation/types';
 import { useSelfPutAway, usePallet } from '../hooks/useSellerStock';
 import { CONDITION_FLAG_LABELS, OVERWEIGHT_THRESHOLD_KG, STATUS_LABELS } from '../types';
@@ -31,8 +28,6 @@ export function SellerStockDetailScreen({ route }: Props) {
   const { data: pallet, isPending, error } = usePallet(id);
   const navigation = useNavigation<NativeStackNavigationProp<PutAwayStackParamList>>();
 
-  const locations = useWarehouseLocations();
-  const [selfPutAwayZone, setSelfPutAwayZone] = useState<string | null>(null);
   const selfPutAway = useSelfPutAway(id);
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
@@ -94,19 +89,11 @@ export function SellerStockDetailScreen({ route }: Props) {
       {canSelfPutAway && (
         <View style={styles.selfPutAwayBox}>
           <Text style={styles.label}>Ready for put-away — no admin instruction needed</Text>
-          <DropdownPicker
-            options={locations.data?.map((l) => l.location) ?? []}
-            value={selfPutAwayZone}
-            onChange={setSelfPutAwayZone}
-            isLoading={locations.isPending}
-            placeholder="Select target location"
-            emptyLabel="No locations yet — ask an Admin to add some in the web dashboard."
-          />
           {selfPutAway.error && <Text style={styles.error}>{selfPutAway.error.message}</Text>}
           <Pressable
-            style={[styles.confirmButton, (!selfPutAwayZone || selfPutAway.isPending) && styles.buttonDisabled]}
-            disabled={!selfPutAwayZone || selfPutAway.isPending}
-            onPress={() => selfPutAwayZone && selfPutAway.mutate(selfPutAwayZone)}
+            style={[styles.confirmButton, selfPutAway.isPending && styles.buttonDisabled]}
+            disabled={selfPutAway.isPending}
+            onPress={() => selfPutAway.mutate()}
           >
             {selfPutAway.isPending ? (
               <ActivityIndicator color="#fff" />

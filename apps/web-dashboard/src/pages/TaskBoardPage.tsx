@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '../core/api/client';
 import { createDirective, DIRECTIVE_TYPE_LABELS, DIRECTIVE_TYPES, fetchAllDirectives } from '../core/api/directives';
 import { createOpenPoolTask, fetchAllOpenPoolTasks } from '../core/api/openPool';
+import { assignReception, CATEGORY_LABELS } from '../core/api/receptions';
 import {
   assignOrderPrep,
   assignPutAway,
@@ -18,24 +19,13 @@ import {
 import { resolvePhotoUrl } from '../core/api/upload';
 import { fetchStaffUsers } from '../core/api/users';
 import { useAuth } from '../core/auth/AuthContext';
+import { useStaffNames } from '../core/hooks/useStaffNames';
 import { PhotoUploadField } from '../components/PhotoUploadField';
-
-/** Shared by both sections below — resolves a user id to a name, including staff who have since gone off-shift. */
-function useStaffNames() {
-  const { token } = useAuth();
-  const { data } = useQuery({
-    queryKey: ['staff-users'],
-    queryFn: () => fetchStaffUsers(token!),
-    enabled: !!token,
-  });
-  const nameById = new Map((data ?? []).map((s) => [s.id, s.name]));
-  return (userId: string | null) => (userId ? (nameById.get(userId) ?? userId) : '—');
-}
 
 function PhotoThumbnailLink({ url }: { url: string }) {
   return (
     <a href={resolvePhotoUrl(url)} target="_blank" rel="noreferrer">
-      <img src={resolvePhotoUrl(url)} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
+      <img src={resolvePhotoUrl(url)} alt="" style={{ width: 40, height: 40, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
     </a>
   );
 }
@@ -48,12 +38,59 @@ function pendingItemLabel(item: PendingTaskItem): string {
     const statusLabel = item.status === 'pending_admin_review' ? 'Pending admin review' : 'Ready for put-away';
     return `${item.palletIndex} — ${item.sellerName} (${statusLabel})`;
   }
-  const roleLabel = item.role === 'picker' ? 'Picker' : 'Packer';
-  return `${roleLabel} needed — Order Prep (${item.totalParts} parts)`;
+  if (item.type === 'order_prep') {
+    const roleLabel = item.role === 'picker' ? 'Picker' : 'Packer';
+    return `${roleLabel} needed — Order Prep (${item.totalParts} parts)`;
+  }
+  return `${CATEGORY_LABELS[item.category]} — ${item.summary}`;
 }
 
 function pendingItemKey(item: PendingTaskItem): string {
-  return item.type === 'put_away' ? `put_away:${item.palletId}` : `order_prep:${item.sessionId}:${item.role}`;
+  if (item.type === 'put_away') return `put_away:${item.palletId}`;
+  if (item.type === 'order_prep') return `order_prep:${item.sessionId}:${item.role}`;
+  return `reception:${item.receptionId}`;
+}
+
+/** The taller card body — more at a glance than the one-line pendingItemLabel, without any extra network round trip (text fields already on the pending item only). */
+function PendingItemCard({ item }: { item: PendingTaskItem }) {
+  if (item.type === 'put_away') {
+    const statusLabel = item.status === 'pending_admin_review' ? 'Pending admin review' : 'Ready for put-away';
+    return (
+      <>
+        <div className="task-card-title">{item.palletIndex}</div>
+        <div className="task-card-meta">
+          {item.sellerName}
+          <br />
+          {statusLabel}
+          <br />
+          Logged {new Date(item.createdAt).toLocaleString()}
+        </div>
+      </>
+    );
+  }
+  if (item.type === 'order_prep') {
+    const roleLabel = item.role === 'picker' ? 'Picker' : 'Packer';
+    return (
+      <>
+        <div className="task-card-title">{roleLabel} needed — Order Prep</div>
+        <div className="task-card-meta">
+          {item.totalParts} parts
+          <br />
+          Created {new Date(item.createdAt).toLocaleString()}
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="task-card-title">{CATEGORY_LABELS[item.category]}</div>
+      <div className="task-card-meta">
+        {item.summary}
+        <br />
+        Logged {new Date(item.createdAt).toLocaleString()}
+      </div>
+    </>
+  );
 }
 
 interface AssignDraft {
@@ -125,6 +162,10 @@ export function TaskBoardPage() {
       setSubmitError('Location is required to assign a put-away task.');
       return;
     }
+    if (draft.pendingItem.type === 'reception' && !instructions.trim()) {
+      setSubmitError('Instructions are required to assign a reception.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -136,13 +177,19 @@ export function TaskBoardPage() {
           priority,
           instructions: instructions.trim() || undefined,
         });
-      } else {
+      } else if (draft.pendingItem.type === 'order_prep') {
         await assignOrderPrep(token!, {
           sessionId: draft.pendingItem.sessionId,
           assignedToUserId: draft.staff.userId,
           role: draft.pendingItem.role,
           priority,
           instructions: instructions.trim() || undefined,
+        });
+      } else {
+        await assignReception(token!, draft.pendingItem.receptionId, {
+          assignedToUserId: draft.staff.userId,
+          priority,
+          instructions: instructions.trim(),
         });
       }
       setDraft(null);
@@ -165,7 +212,7 @@ export function TaskBoardPage() {
       {data && (
         <div className="task-board-columns">
           <div className="card task-board-column">
-            <h2 style={{ margin: 0, marginBottom: 12 }}>Pending tasks ({pendingItems.length})</h2>
+            <h2 style={{ margin: 0, marginBottom: 'var(--space-3)' }}>Pending tasks ({pendingItems.length})</h2>
             {pendingItems.length === 0 && <p className="hint-text">Nothing waiting on assignment right now.</p>}
             {pendingItems.map((item) => {
               const key = pendingItemKey(item);
@@ -182,14 +229,14 @@ export function TaskBoardPage() {
                   onDragLeave={() => setDraggedOverKey((k) => (k === key ? null : k))}
                   onDrop={(e) => handleDropOnPendingItem(e, item)}
                 >
-                  {pendingItemLabel(item)}
+                  <PendingItemCard item={item} />
                 </div>
               );
             })}
           </div>
 
           <div className="card task-board-column">
-            <h2 style={{ margin: 0, marginBottom: 12 }}>On-shift staff ({onShiftStaff.length})</h2>
+            <h2 style={{ margin: 0, marginBottom: 'var(--space-3)' }}>On-shift staff ({onShiftStaff.length})</h2>
             {onShiftStaff.length === 0 && <p className="hint-text">No staff currently on shift.</p>}
             {onShiftStaff.map((staff) => {
               const key = `staff:${staff.userId}`;
@@ -250,7 +297,6 @@ export function TaskBoardPage() {
                     key={p}
                     type="button"
                     className={`btn ${priority === p ? 'btn-primary' : 'btn-outline'}`}
-                    style={priority === p ? undefined : { color: '#0f172a', borderColor: '#d1d5db' }}
                     onClick={() => setPriority(p)}
                   >
                     {PRIORITY_LABELS[p]}
@@ -260,7 +306,9 @@ export function TaskBoardPage() {
             </div>
 
             <div className="form-row">
-              <label className="form-label">Instructions (optional)</label>
+              <label className="form-label">
+                {draft.pendingItem.type === 'reception' ? 'Instructions' : 'Instructions (optional)'}
+              </label>
               <textarea
                 rows={3}
                 placeholder="Anything the assignee should know"
@@ -275,7 +323,7 @@ export function TaskBoardPage() {
               <button className="btn btn-primary" onClick={handleConfirm} disabled={isSubmitting}>
                 {isSubmitting ? 'Assigning…' : 'Confirm assignment'}
               </button>
-              <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={() => setDraft(null)} disabled={isSubmitting}>
+              <button className="btn btn-outline" onClick={() => setDraft(null)} disabled={isSubmitting}>
                 Cancel
               </button>
             </div>
@@ -356,9 +404,9 @@ function DirectivesSection({
   }
 
   return (
-    <div className="card" style={{ marginTop: 24 }}>
+    <div className="card" style={{ marginTop: 'var(--space-6)' }}>
       <h2 style={{ marginTop: 0 }}>Admin Directives</h2>
-      <p className="page-subtitle" style={{ marginBottom: 16 }}>
+      <p className="page-subtitle" style={{ marginBottom: 'var(--space-4)' }}>
         Push an urgent demand to a specific on-shift staff member, or anyone available — they get a real-time alert with
         sound.
       </p>
@@ -382,7 +430,6 @@ function DirectivesSection({
               key={t}
               type="button"
               className={`btn ${type === t ? 'btn-primary' : 'btn-outline'}`}
-              style={type === t ? undefined : { color: '#0f172a', borderColor: '#d1d5db' }}
               onClick={() => setType(t)}
             >
               {DIRECTIVE_TYPE_LABELS[t]}
@@ -414,7 +461,7 @@ function DirectivesSection({
         {isSubmitting ? 'Sending…' : 'Send Alert to Staff'}
       </button>
 
-      <h2 style={{ marginTop: 24 }}>Directive status</h2>
+      <h2 style={{ marginTop: 'var(--space-6)' }}>Directive status</h2>
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
       <table>
@@ -529,9 +576,9 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
   }
 
   return (
-    <div className="card" style={{ marginTop: 24 }}>
+    <div className="card" style={{ marginTop: 'var(--space-6)' }}>
       <h2 style={{ marginTop: 0 }}>Open Pool Tasks</h2>
-      <p className="page-subtitle" style={{ marginBottom: 16 }}>
+      <p className="page-subtitle" style={{ marginBottom: 'var(--space-4)' }}>
         Publish a task for any active staff member to claim — first to tap wins, no specific assignment needed.
       </p>
 
@@ -562,7 +609,6 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
               key={p}
               type="button"
               className={`btn ${priority === p ? 'btn-primary' : 'btn-outline'}`}
-              style={priority === p ? undefined : { color: '#0f172a', borderColor: '#d1d5db' }}
               onClick={() => setPriority(p)}
             >
               {PRIORITY_LABELS[p]}
@@ -585,7 +631,7 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
         {isSubmitting ? 'Publishing…' : 'Publish to Open Pool'}
       </button>
 
-      <h2 style={{ marginTop: 24 }}>Open Pool status</h2>
+      <h2 style={{ marginTop: 'var(--space-6)' }}>Open Pool status</h2>
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
       <table>

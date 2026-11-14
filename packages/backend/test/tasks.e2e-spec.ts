@@ -1,10 +1,29 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
+import { PrismaService } from '../src/prisma/prisma.service';
 import { AppModule } from './../src/app.module';
 import { closeTestDb, resetDatabase } from './utils/db';
+
+/** Same seeding approach as receptions.e2e-spec.ts — sellers_stock is the only category that can still reach `arrived` (see ReceptionsService.create()). */
+async function seedArrivedSellersStockReception(app: INestApplication<App>, palletCount: number): Promise<string> {
+  const prisma = app.get(PrismaService);
+  const id = randomUUID();
+  await prisma.reception.create({
+    data: {
+      id,
+      createdByUserId: 'seed-test-user',
+      status: 'arrived',
+      category: 'sellers_stock',
+      palletCount,
+      arrivedAt: new Date(),
+    },
+  });
+  return id;
+}
 
 async function loginAs(app: INestApplication<App>, email: string): Promise<{ token: string; id: string }> {
   const response = await request(app.getHttpServer())
@@ -172,5 +191,35 @@ describe('Task Board (e2e)', () => {
         i.type === 'order_prep' && i.sessionId === session.body.id && i.role === 'picker',
     );
     expect(pickerSlotsAfter).toHaveLength(1);
+  });
+
+  it('lists an arrived, unassigned reception as a pending item, disappearing once assigned', async () => {
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', `Bearer ${staff.token}`).expect(201);
+    const receptionId = await seedArrivedSellersStockReception(app, 7);
+
+    const before = await request(app.getHttpServer())
+      .get('/tasks/board')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    const pendingBefore = before.body.pendingItems.filter(
+      (i: { type: string; receptionId?: string }) => i.type === 'reception' && i.receptionId === receptionId,
+    );
+    expect(pendingBefore).toHaveLength(1);
+    expect(pendingBefore[0].category).toBe('sellers_stock');
+
+    await request(app.getHttpServer())
+      .post(`/receptions/${receptionId}/assign`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ assignedToUserId: staff.id, instructions: 'Stack in aisle 2' })
+      .expect(201);
+
+    const after = await request(app.getHttpServer())
+      .get('/tasks/board')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    const pendingAfter = after.body.pendingItems.filter(
+      (i: { type: string; receptionId?: string }) => i.type === 'reception' && i.receptionId === receptionId,
+    );
+    expect(pendingAfter).toHaveLength(0);
   });
 });

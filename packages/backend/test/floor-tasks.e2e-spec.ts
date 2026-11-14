@@ -66,6 +66,29 @@ describe('Floor Tasks (e2e)', () => {
     expect(ended.body.endedAt).not.toBeNull();
   });
 
+  it('runs the dispatch happy path: start -> end with a scanned barcode, and rejects a badly-formatted one', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'dispatch' })
+      .expect(201);
+    expect(started.body.category).toBe('dispatch');
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ scannedBarcode: 'not valid!' })
+      .expect(400);
+
+    const ended = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/end`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ scannedBarcode: 'ABC123' })
+      .expect(201);
+    expect(ended.body.scannedBarcode).toBe('ABC123');
+    expect(ended.body.endedAt).not.toBeNull();
+  });
+
   it('ends a count-required category even with no count given — Stop must always succeed', async () => {
     const started = await request(app.getHttpServer())
       .post('/floor-tasks/start')
@@ -133,6 +156,38 @@ describe('Floor Tasks (e2e)', () => {
       .expect(201);
     expect(resumed.body.pausedAt).toBeNull();
     expect(resumed.body.totalPausedMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('pause-mine pauses the caller\'s own open task with no id needed, and is a harmless no-op with nothing open or already paused', async () => {
+    // Nothing open yet — must not throw.
+    await request(app.getHttpServer())
+      .post('/floor-tasks/pause-mine')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/floor-tasks/pause-mine')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const mineOpen = await request(app.getHttpServer())
+      .get('/floor-tasks/mine/open')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+    expect(mineOpen.body.id).toBe(started.body.id);
+    expect(mineOpen.body.pausedAt).not.toBeNull();
+
+    // Already paused — calling again must still be a no-op, not a 409.
+    await request(app.getHttpServer())
+      .post('/floor-tasks/pause-mine')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
   });
 
   it('rejects pausing an already-paused task, and resuming one that is not paused', async () => {

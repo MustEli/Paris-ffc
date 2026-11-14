@@ -4,9 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DropdownPicker } from '../../../core/components/DropdownPicker';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
-import { useWarehouseLocations } from '../../../core/hooks/useWarehouseLocations';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
@@ -49,21 +47,14 @@ export function NewPalletScreen({ navigation }: Props) {
   const [conditionFlags, setConditionFlags] = useState<PalletConditionFlag[]>(['good']);
   const [damageRemarks, setDamageRemarks] = useState('');
   const [damagePhotos, setDamagePhotos] = useState<string[]>([]);
-  const [putAwayLocation, setPutAwayLocation] = useState('');
 
   const { mutate: submit, isPending, error } = useCreatePallet();
-  const locations = useWarehouseLocations();
 
   const weightValue = Number(weightKg);
   const isOverweight = !!weightKg && weightValue > OVERWEIGHT_THRESHOLD_KG;
   // Exactly ['good'] is the only combination that skips Admin review —
   // matches the backend's SellerStockService.create() exactly.
   const isGoodOnly = conditionFlags.length === 1 && conditionFlags[0] === 'good';
-  // Matches the backend's `!needsReview` exactly — Good Condition AND
-  // not overweight. This is the only case staff record a put-away
-  // location themselves; anything else still goes to Admin review with
-  // no location yet.
-  const skipsReview = isGoodOnly && !isOverweight;
 
   const isValid =
     labelPhotos.length >= DELIVERY_PROOF_PHOTOS_MIN &&
@@ -72,8 +63,7 @@ export function NewPalletScreen({ navigation }: Props) {
     !!weightKg &&
     weightValue > 0 &&
     conditionFlags.length > 0 &&
-    (isGoodOnly || (!!damageRemarks && damagePhotos.length > 0)) &&
-    (!skipsReview || !!putAwayLocation.trim());
+    (isGoodOnly || (!!damageRemarks && damagePhotos.length > 0));
 
   // "Good Condition" and the problem flags are mutually exclusive — a
   // pallet either arrived fine or has one or more specific problems,
@@ -101,7 +91,6 @@ export function NewPalletScreen({ navigation }: Props) {
         conditionFlags,
         damageRemarks: isGoodOnly ? undefined : damageRemarks,
         damageEvidencePhotoUrls: isGoodOnly ? undefined : damagePhotos,
-        putAwayLocation: skipsReview ? putAwayLocation.trim() : undefined,
       },
       { onSuccess: goToStaffHome },
     );
@@ -158,20 +147,6 @@ export function NewPalletScreen({ navigation }: Props) {
           </Pressable>
         ))}
       </View>
-
-      {skipsReview && (
-        <>
-          <Text style={styles.label}>{t('sellerStock.newPallet.putAwayLocation')}</Text>
-          <DropdownPicker
-            options={locations.data?.map((l) => l.location) ?? []}
-            value={putAwayLocation || null}
-            onChange={setPutAwayLocation}
-            isLoading={locations.isPending}
-            placeholder={t('sellerStock.newPallet.selectPutAwayLocation')}
-            emptyLabel={t('sellerStock.newPallet.noLocations')}
-          />
-        </>
-      )}
 
       {!isGoodOnly && (
         <>

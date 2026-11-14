@@ -88,11 +88,11 @@ describe('Receptions (e2e)', () => {
       .expect(400);
   });
 
-  it('requires at least one equipment photo and a putAwayLocation for equipment_other, and accepts an optional invoice photo', async () => {
+  it('requires at least one equipment photo for equipment_other, and accepts an optional invoice photo', async () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' }) // no photoUrls, no putAwayLocation
+      .send({ category: 'equipment_other', parcelCount: 1, itemDescription: 'Pallet jack' }) // no photoUrls
       .expect(400);
 
     const created = await request(app.getHttpServer())
@@ -104,29 +104,28 @@ describe('Receptions (e2e)', () => {
         itemDescription: 'Pallet jack',
         photoUrls: ['https://example.com/jack.jpg'],
         invoicePhotoUrls: ['https://example.com/invoice.jpg'],
-        putAwayLocation: 'Zone D, Rack 3',
       })
       .expect(201);
     expect(created.body.status).toBe('completed');
     expect(created.body.details.photoUrls).toEqual(['https://example.com/jack.jpg']);
     expect(created.body.details.invoicePhotoUrls).toEqual(['https://example.com/invoice.jpg']);
-    expect(created.body.details.putAwayLocation).toBe('Zone D, Rack 3');
+    expect(created.body.details.putAwayLocation).toBeUndefined();
   });
 
-  it('requires putAwayLocation for packaging_stock, no longer collects sellerName, and defaults invoicePhotoUrls to empty when omitted', async () => {
+  it('no longer requires or collects putAwayLocation for packaging_stock, no longer collects sellerName, and defaults invoicePhotoUrls to empty when omitted', async () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes' }) // no putAwayLocation
+      .send({ category: 'packaging_stock', parcelCount: 5 }) // no packagingType
       .expect(400);
 
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes', putAwayLocation: 'Zone B, Rack 1' })
+      .send({ category: 'packaging_stock', parcelCount: 5, packagingType: 'Boxes' })
       .expect(201);
     expect(created.body.details.sellerName).toBeNull();
-    expect(created.body.details.putAwayLocation).toBe('Zone B, Rack 1');
+    expect(created.body.details.putAwayLocation).toBeUndefined();
     expect(created.body.details.invoicePhotoUrls).toEqual([]);
     expect(created.body.status).toBe('completed');
   });
@@ -141,15 +140,15 @@ describe('Receptions (e2e)', () => {
       .expect(403);
   });
 
-  it('rejects return_parcels missing putAwayLocation', () => {
+  it('rejects return_parcels missing transporterCompany', () => {
     return request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'return_parcels', parcelCount: 3, transporterCompany: 'Acme Logistics' }) // missing putAwayLocation
+      .send({ category: 'return_parcels', parcelCount: 3 }) // missing transporterCompany
       .expect(400);
   });
 
-  it('creates return_parcels already completed, with no admin instructions step', async () => {
+  it('creates return_parcels already completed, with no admin instructions step and no putAwayLocation collected', async () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
@@ -157,7 +156,6 @@ describe('Receptions (e2e)', () => {
         category: 'return_parcels',
         parcelCount: 3,
         transporterCompany: 'Acme Logistics',
-        putAwayLocation: 'Zone A, Rack 2',
       })
       .expect(201);
 
@@ -166,7 +164,7 @@ describe('Receptions (e2e)', () => {
     expect(created.body.putAwayAt).not.toBeNull();
     expect(created.body.processingDurationMs).toBe(0);
     expect(created.body.flaggedForReview).toBe(false);
-    expect(created.body.details.putAwayLocation).toBe('Zone A, Rack 2');
+    expect(created.body.details.putAwayLocation).toBeUndefined();
 
     // Never passed through arrived, so there's nothing for Admin to instruct on.
     await request(app.getHttpServer())
@@ -176,11 +174,11 @@ describe('Receptions (e2e)', () => {
       .expect(409);
   });
 
-  it('creates packaging_stock already completed, with no admin instructions step', async () => {
+  it('creates packaging_stock already completed, with no admin instructions step and no putAwayLocation collected', async () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 10, packagingType: 'Cardboard boxes', putAwayLocation: 'Zone C, Rack 4' })
+      .send({ category: 'packaging_stock', parcelCount: 10, packagingType: 'Cardboard boxes' })
       .expect(201);
 
     expect(created.body.status).toBe('completed');
@@ -188,7 +186,7 @@ describe('Receptions (e2e)', () => {
     expect(created.body.putAwayAt).not.toBeNull();
     expect(created.body.processingDurationMs).toBe(0);
     expect(created.body.flaggedForReview).toBe(false);
-    expect(created.body.details.putAwayLocation).toBe('Zone C, Rack 4');
+    expect(created.body.details.putAwayLocation).toBeUndefined();
 
     await request(app.getHttpServer())
       .post(`/receptions/${created.body.id}/instructions`)
@@ -197,7 +195,7 @@ describe('Receptions (e2e)', () => {
       .expect(409);
   });
 
-  it('creates equipment_other already completed, with no admin instructions step', async () => {
+  it('creates equipment_other already completed, with no admin instructions step and no putAwayLocation collected', async () => {
     const created = await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
@@ -206,7 +204,6 @@ describe('Receptions (e2e)', () => {
         parcelCount: 2,
         itemDescription: 'Pallet jack',
         photoUrls: ['https://example.com/jack.jpg'],
-        putAwayLocation: 'Zone D, Rack 3',
       })
       .expect(201);
 
@@ -215,7 +212,7 @@ describe('Receptions (e2e)', () => {
     expect(created.body.putAwayAt).not.toBeNull();
     expect(created.body.processingDurationMs).toBe(0);
     expect(created.body.flaggedForReview).toBe(false);
-    expect(created.body.details.putAwayLocation).toBe('Zone D, Rack 3');
+    expect(created.body.details.putAwayLocation).toBeUndefined();
 
     await request(app.getHttpServer())
       .post(`/receptions/${created.body.id}/instructions`)
@@ -292,7 +289,7 @@ describe('Receptions (e2e)', () => {
     await request(app.getHttpServer())
       .post('/receptions')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes', putAwayLocation: 'Zone B, Rack 1' })
+      .send({ category: 'packaging_stock', parcelCount: 1, packagingType: 'Boxes' })
       .expect(403);
 
     // Admin has no shift at all, ever — never gated by this.
@@ -360,5 +357,73 @@ describe('Receptions (e2e)', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ items: [{ id: 'irrelevant', instructions: 'x' }] })
       .expect(403);
+  });
+
+  it('assigns an arrived reception directly to a staff member (Task Board drag — not Open Pool)', async () => {
+    const id = await seedArrivedSellersStockReception(app, 4);
+
+    const management = await loginAs(app, 'management@warehousehq.dev');
+    const staffUser = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const staffId = staffUser.body.user.id as string;
+
+    const assigned = await request(app.getHttpServer())
+      .post(`/receptions/${id}/assign`)
+      .set('Authorization', `Bearer ${management}`)
+      .send({ assignedToUserId: staffId, instructions: 'Stack in aisle 7', priority: 'high' })
+      .expect(201);
+    expect(assigned.body.status).toBe('ready_for_putaway');
+    expect(assigned.body.instructions).toBe('Stack in aisle 7');
+    expect(assigned.body.assignedToUserId).toBe(staffId);
+    expect(assigned.body.priority).toBe('high');
+    expect(assigned.body.assignedAt).not.toBeNull();
+  });
+
+  it('rejects Staff from assigning a reception', async () => {
+    const id = await seedArrivedSellersStockReception(app, 1);
+    return request(app.getHttpServer())
+      .post(`/receptions/${id}/assign`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ assignedToUserId: 'irrelevant', instructions: 'x' })
+      .expect(403);
+  });
+
+  it('deletes a single reception, and rejects a non-admin trying to', async () => {
+    const id = await seedArrivedSellersStockReception(app, 1);
+
+    await request(app.getHttpServer())
+      .delete(`/receptions/${id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/receptions/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/receptions/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(404);
+  });
+
+  it('bulk-deletes several receptions at once', async () => {
+    const firstId = await seedArrivedSellersStockReception(app, 2);
+    const secondId = await seedArrivedSellersStockReception(app, 3);
+
+    const result = await request(app.getHttpServer())
+      .delete('/receptions')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ids: [firstId, secondId] })
+      .expect(200);
+    expect(result.body.deletedCount).toBe(2);
+
+    const listed = await request(app.getHttpServer())
+      .get('/receptions')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(listed.body.some((r: { id: string }) => r.id === firstId || r.id === secondId)).toBe(false);
   });
 });

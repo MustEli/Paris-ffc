@@ -6,7 +6,6 @@ import { useAuthStore } from '../../../core/auth/authStore';
 import { navigationRef } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { ActiveFloorTaskIndicator } from '../../floorTasks/components/ActiveFloorTaskIndicator';
-import { LUNCH_BREAK_SUGGESTED_DURATION_MS } from '../api';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 import { ShiftStatusBar } from './ShiftStatusBar';
 import { LockedGate } from '../../../core/components/LockedGate';
@@ -50,16 +49,17 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [onBreak]);
 
-  // Short break ticks down from whatever the last status fetch reported
-  // (that poll already accounts for usage across earlier short breaks
-  // this shift), offset by real time elapsed since that fetch so it
-  // doesn't just jump every 5s. Lunch has no running total to carry —
-  // it's a plain countdown from this one break's own start time.
+  // Both break types tick down from whatever the last status fetch
+  // reported — that poll already accounts for usage across earlier
+  // breaks of the same type this shift (ending one and starting another
+  // later continues from the remaining time, it doesn't reset) — offset
+  // by real time elapsed since that fetch so it doesn't just jump on
+  // every poll.
   const breakCounter =
     status?.breakType === 'short'
       ? formatCountdown(status.shortBreakRemainingMs - (now - statusUpdatedAt))
-      : status?.breakType === 'lunch' && status.breakStartedAt
-        ? formatCountdown(LUNCH_BREAK_SUGGESTED_DURATION_MS - (now - new Date(status.breakStartedAt).getTime()))
+      : status?.breakType === 'lunch' && status.lunchBreakRemainingMs !== null
+        ? formatCountdown(status.lunchBreakRemainingMs - (now - statusUpdatedAt))
         : undefined;
 
   function handleStartShift() {

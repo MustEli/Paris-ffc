@@ -49,9 +49,10 @@ export class CreateReceptionDto {
   @IsString()
   sellerName?: string;
 
+  /** Links this submission back to the staff member's Reception-flow timer (see ReceptionTasksService) so it can be marked completed. Omitted by old clients/tests — skipped silently when absent. */
   @IsOptional()
   @IsString()
-  putAwayLocation?: string;
+  receptionTaskId?: string;
 
   @IsOptional()
   @IsArray()

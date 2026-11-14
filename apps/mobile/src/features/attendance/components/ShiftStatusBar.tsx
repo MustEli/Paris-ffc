@@ -8,14 +8,17 @@ import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { APP_LANGUAGES, type AppLanguage } from '../../../core/i18n/i18n';
 import { useLanguageStore } from '../../../core/i18n/languageStore';
+import { useActiveReceptionTaskStore } from '../../../core/navigation/activeReceptionTaskStore';
 import { useActiveTaskGuardStore } from '../../../core/navigation/activeTaskGuardStore';
 import { useCurrentRouteStore } from '../../../core/navigation/currentRouteStore';
 import { navigationRef } from '../../../core/navigation/navigationRef';
 import { useUnsavedChangesStore } from '../../../core/navigation/unsavedChangesStore';
 import { colors } from '../../../core/theme/colors';
-import { useMyOpenPoolTasks } from '../../openPool/hooks/useOpenPool';
+import { usePauseMyFloorTask } from '../../floorTasks/hooks/useFloorTasks';
+import { useMyOpenPoolTasks, useOpenPoolTasks } from '../../openPool/hooks/useOpenPool';
 import { useOrderPrepTasks } from '../../orderPrep/hooks/useOrderPrep';
 import { useTasks as usePutAwayTasks } from '../../putAway/hooks/usePutAwayTasks';
+import { useMyActiveReceptionTask, useLeaveUnfinishedReceptionTask, usePauseReceptionTask } from '../../reception/hooks/useReceptionTasks';
 import { useMySchedule } from '../../schedule/hooks/useMySchedule';
 import { useShiftStatus } from '../hooks/useShiftStatus';
 
@@ -27,6 +30,17 @@ function formatDate(date: Date, locale: AppLanguage): string {
 
 /** The main-menu route — the one screen that never shows the Home icon. */
 const MAIN_MENU_ROUTE = 'StaffHome';
+
+/**
+ * `navigationRef` has no global param-list augmentation (see its own
+ * doc comment), so a route taking params needs this small typed escape
+ * hatch rather than fighting the overload resolution with per-argument
+ * `as never` casts.
+ */
+function navigateTo(name: string, params?: object) {
+  if (!navigationRef.isReady()) return;
+  (navigationRef.navigate as (name: string, params?: object) => void)(name, params);
+}
 
 /**
  * Persistent header, shown on every Staff screen once a shift starts —
@@ -44,6 +58,10 @@ export function ShiftStatusBar() {
   const logout = useAuthStore((state) => state.logout);
   const routeName = useCurrentRouteStore((state) => state.routeName);
   const { data: schedule } = useMySchedule();
+  const pauseMyFloorTask = usePauseMyFloorTask();
+  const { data: activeReceptionTask } = useMyActiveReceptionTask();
+  const pauseReceptionTask = usePauseReceptionTask(activeReceptionTask?.id ?? '');
+  const leaveUnfinishedReceptionTask = useLeaveUnfinishedReceptionTask(activeReceptionTask?.id ?? '');
   const {
     status,
     end,
@@ -67,14 +85,55 @@ export function ShiftStatusBar() {
   const { data: putAwayTasks } = usePutAwayTasks();
   const { data: orderPrepTasks } = useOrderPrepTasks();
   const { data: openPoolTasks } = useMyOpenPoolTasks();
+  // Mounting this here (not just inside OpenPoolScreen) is what makes the
+  // "new task in Open Pool" notification fire app-wide instead of only
+  // while that screen happens to be open — see useOpenPoolLiveSync's doc
+  // comment. The returned list also feeds the badge/banner below.
+  const { data: availableOpenPoolTasks } = useOpenPoolTasks();
   const pendingItems = [
     ...(putAwayTasks ?? [])
       .filter((t) => t.status !== 'completed')
-      .map((t) => ({ key: `put-away:${t.id}`, label: `Put-away — ${t.location}` })),
+      .map((t) => ({
+        key: `put-away:${t.id}`,
+        label: `Put-away — ${t.location}`,
+        onPress: () => navigateTo('PutAwayTaskDetail', { id: t.id }),
+      })),
     ...(orderPrepTasks ?? [])
       .filter((t) => t.status !== 'completed')
-      .map((t) => ({ key: `order-prep:${t.id}`, label: `Order prep — ${t.role === 'picker' ? 'Picker' : 'Packer'}` })),
-    ...(openPoolTasks ?? []).map((t) => ({ key: `open-pool:${t.id}`, label: t.title })),
+      .map((t) => ({
+        key: `order-prep:${t.id}`,
+        label: `Order prep — ${t.role === 'picker' ? 'Picker' : 'Packer'}`,
+        onPress: () => navigateTo('OrderPrepTaskDetail', { id: t.id }),
+      })),
+    ...(openPoolTasks ?? []).map((t) => ({
+      key: `open-pool:${t.id}`,
+      label: t.title,
+      // No per-task detail screen for Open Pool — the task itself lives
+      // inline in "My claimed tasks" on this screen once claimed.
+      onPress: () => navigateTo('OpenPool'),
+    })),
+    // Not yet claimed by anyone (or specifically by me) — distinct from
+    // the "my claimed tasks" entries above, which are already mine to
+    // finish. This is "something new showed up, go claim it."
+    ...(availableOpenPoolTasks ?? []).map((task) => ({
+      key: `open-pool-available:${task.id}`,
+      // Note: `t` (the translator) would be shadowed by a same-named map
+      // parameter here, unlike the other blocks above that don't call it.
+      label: t('shiftBar.newInOpenPool', { title: task.title }),
+      onPress: () => navigateTo('OpenPool'),
+    })),
+    // Paused via the Reception leaving-guard's "Pause" choice — tapping
+    // this re-enters ReceptionStart, which sees the paused task and
+    // auto-resumes it before landing back on the category menu.
+    ...(activeReceptionTask?.pausedAt
+      ? [
+          {
+            key: `reception-paused:${activeReceptionTask.id}`,
+            label: t('shiftBar.receptionPaused'),
+            onPress: () => navigateTo('ReceptionStart'),
+          },
+        ]
+      : []),
   ];
 
   if (!status?.active || !status.startedAt) return null;
@@ -108,23 +167,42 @@ export function ShiftStatusBar() {
   }
 
   function goHome() {
+    // Floor Task takes priority if somehow both were running at once —
+    // in practice a staff member is only ever in one of these flows at
+    // a time, since starting either doesn't stop the other.
     if (useActiveTaskGuardStore.getState().isTaskRunning) {
-      Alert.alert(t('floorTasks.pauseFirstTitle'), t('floorTasks.pauseFirstMessage'));
+      Alert.alert(t('floorTasks.leavingTitle'), t('floorTasks.leavingMessage'), [
+        { text: t('floorTasks.keepWorking'), style: 'cancel' },
+        {
+          text: t('floorTasks.pause'),
+          onPress: () => pauseMyFloorTask.mutate(undefined, { onSuccess: () => navigateHome() }),
+        },
+      ]);
       return;
     }
+    if (useActiveReceptionTaskStore.getState().activeReceptionTaskId) {
+      Alert.alert(t('reception.leavingTitle'), t('reception.leavingMessage'), [
+        { text: t('reception.keepWorking'), style: 'cancel' },
+        {
+          text: t('reception.pause'),
+          onPress: () => pauseReceptionTask.mutate(undefined, { onSuccess: () => navigateHome() }),
+        },
+        {
+          text: t('reception.leaveUnfinished'),
+          style: 'destructive',
+          onPress: () => leaveUnfinishedReceptionTask.mutate(undefined, { onSuccess: () => navigateHome() }),
+        },
+      ]);
+      return;
+    }
+    navigateHome();
+  }
+
+  function navigateHome() {
     withUnsavedGuard(() => {
       setIsOpen(false);
       if (navigationRef.isReady()) {
         navigationRef.navigate(MAIN_MENU_ROUTE as never);
-      }
-    });
-  }
-
-  function goBack() {
-    withUnsavedGuard(() => {
-      setIsOpen(false);
-      if (navigationRef.isReady() && navigationRef.canGoBack()) {
-        navigationRef.goBack();
       }
     });
   }
@@ -157,11 +235,6 @@ export function ShiftStatusBar() {
       </View>
       <View style={[styles.bar, pendingItems.length > 0 && styles.barPending]}>
         <View style={styles.row}>
-          {showNavIcons && (
-            <Pressable style={styles.navButton} onPress={goBack} hitSlop={8}>
-              <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-            </Pressable>
-          )}
           {showNavIcons && (
             <Pressable style={styles.navButton} onPress={goHome} hitSlop={8}>
               <Ionicons name="home" size={22} color={colors.textPrimary} />
@@ -218,9 +291,16 @@ export function ShiftStatusBar() {
               <View style={styles.pendingSection}>
                 <Text style={styles.pendingSectionTitle}>{t('shiftBar.pendingTasksTitle')}</Text>
                 {pendingItems.map((item) => (
-                  <Text key={item.key} style={styles.pendingItem}>
-                    •  {item.label}
-                  </Text>
+                  <Pressable
+                    key={item.key}
+                    onPress={() => {
+                      setIsOpen(false);
+                      item.onPress();
+                    }}
+                    hitSlop={4}
+                  >
+                    <Text style={styles.pendingItem}>•  {item.label}</Text>
+                  </Pressable>
                 ))}
               </View>
             )}

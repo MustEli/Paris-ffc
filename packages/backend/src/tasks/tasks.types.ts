@@ -1,4 +1,5 @@
 import { type OrderPrepTaskRole } from '../order-prep/order-prep.types';
+import { type ReceptionCategory } from '../receptions/reception.types';
 
 /**
  * A "pending" item is deliberately NOT a database row — Put-Away and
@@ -27,7 +28,21 @@ export interface PendingOrderPrepItem {
   createdAt: string;
 }
 
-export type PendingTaskItem = PendingPutAwayItem | PendingOrderPrepItem;
+/**
+ * A reception still waiting on Admin's instructions (status `arrived`,
+ * not yet assigned) — see ReceptionsService.assign(). Unlike the two
+ * items above, this one IS a real database row already (a Reception),
+ * just filtered by status/assignment the same "derived on read" way.
+ */
+export interface PendingReceptionItem {
+  type: 'reception';
+  receptionId: string;
+  category: ReceptionCategory;
+  summary: string;
+  createdAt: string;
+}
+
+export type PendingTaskItem = PendingPutAwayItem | PendingOrderPrepItem | PendingReceptionItem;
 
 export interface OnShiftStaffMember {
   userId: string;

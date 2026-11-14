@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ActiveShiftGuard } from '../shifts/active-shift.guard';
 import { type PublicUser } from '../users/user.types';
 import { CreatePalletDto } from './dto/create-pallet.dto';
-import { SelfPutAwayDto } from './dto/self-put-away.dto';
+import { DeletePalletsDto } from './dto/delete-pallets.dto';
 import { SellerStockService } from './seller-stock.service';
 
 /**
@@ -38,9 +39,21 @@ export class SellerStockController {
     return this.sellerStockService.findOne(id);
   }
 
-  /** Good-condition, non-overweight pallets only — see SellerStockService.selfPutAway's doc comment. */
+  /** Largely legacy now — see SellerStockService.selfPutAway's doc comment. No body: locations are predefined/obvious, nothing left to confirm but the action itself. */
   @Post(':id/self-putaway')
-  selfPutAway(@Param('id') id: string, @Body() dto: SelfPutAwayDto) {
-    return this.sellerStockService.selfPutAway(id, dto.zone);
+  selfPutAway(@Param('id') id: string) {
+    return this.sellerStockService.selfPutAway(id);
+  }
+
+  @Delete(':id')
+  @Roles('admin', 'management')
+  remove(@Param('id') id: string) {
+    return this.sellerStockService.remove(id);
+  }
+
+  @Delete()
+  @Roles('admin', 'management')
+  removeMany(@Body() dto: DeletePalletsDto) {
+    return this.sellerStockService.removeMany(dto.ids);
   }
 }

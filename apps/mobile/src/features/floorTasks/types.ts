@@ -7,6 +7,7 @@
 export type FloorTaskCategory =
   | 'pick'
   | 'pack'
+  | 'dispatch'
   | 'return_processing'
   | 'box_prep'
   | 'warehousing_inventory_check'
@@ -28,6 +29,7 @@ export interface FloorTaskLog {
   zone: string | null;
   comment: string | null;
   photoUrls: string[];
+  scannedBarcode: string | null;
   pausedAt: string | null;
   totalPausedMs: number;
 }
@@ -40,6 +42,8 @@ export interface CategoryMeta {
   needsZone?: boolean;
   needsComment?: boolean;
   needsPhotos?: boolean;
+  /** 'dispatch' only — no counts/zone/comment/photos, just one scanned barcode before Stop can be confirmed. */
+  needsBarcodeScan?: boolean;
   /** A visibly stronger divider below this row — see the Staff-view redesign's Floor Tasks clustering: [Pick,Pack] / [Return] / [Inventory,Location] / [Backup x3]. */
   strongDividerBelow?: boolean;
 }
@@ -55,7 +59,8 @@ export interface CategoryMeta {
  */
 export const CATEGORY_META: CategoryMeta[] = [
   { category: 'pick', label: 'floorTasks.category.pick', countLabel: 'floorTasks.field.picked', countExtraLabel: 'floorTasks.field.notFound' },
-  { category: 'pack', label: 'floorTasks.category.pack', countLabel: 'floorTasks.field.packed', strongDividerBelow: true },
+  { category: 'pack', label: 'floorTasks.category.pack', countLabel: 'floorTasks.field.packed' },
+  { category: 'dispatch', label: 'floorTasks.category.dispatch', needsBarcodeScan: true, strongDividerBelow: true },
   {
     category: 'return_processing',
     label: 'floorTasks.category.return_processing',

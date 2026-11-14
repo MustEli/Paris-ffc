@@ -1,3 +1,5 @@
+import { type TaskPriority } from '../tasks/task-priority';
+
 /**
  * Feature 2 (Reception — Incoming Flow) from the requirements doc.
  * Deliberately scoped for this vertical slice — see receptions.service.ts
@@ -12,11 +14,11 @@ export type ReceptionCategory = 'return_parcels' | 'packaging_stock' | 'sellers_
  * on admin instructions" until it moves to ready_for_putaway.
  *
  * return_parcels, packaging_stock, and equipment_other skip this wait
- * entirely — per customer request, staff record the put-away location
- * themselves in the same submission that logs the delivery, so a
- * reception in any of these categories goes straight to `completed` at
- * creation and never passes through `arrived` or `ready_for_putaway`
- * at all. See ReceptionsService.create().
+ * entirely — per customer request, locations are predefined/obvious to
+ * staff, so there's nothing left for Admin to instruct on. A reception
+ * in any of these categories goes straight to `completed` at creation
+ * and never passes through `arrived` or `ready_for_putaway` at all. See
+ * ReceptionsService.create().
  */
 export type ReceptionStatus = 'arrived' | 'ready_for_putaway' | 'completed';
 
@@ -24,8 +26,6 @@ export interface ReturnParcelsDetails {
   category: 'return_parcels';
   parcelCount: number;
   transporterCompany: string;
-  /** Where staff put it — recorded by staff themselves, no admin instructions involved for this category. */
-  putAwayLocation: string;
 }
 
 export interface PackagingStockDetails {
@@ -36,8 +36,6 @@ export interface PackagingStockDetails {
   sellerName: string | null;
   /** "If there are any" — optional, unlike equipment_other's required equipment photo. */
   invoicePhotoUrls: string[];
-  /** Where staff put it — recorded by staff themselves, no admin instructions involved for this category. */
-  putAwayLocation: string;
 }
 
 /**
@@ -59,8 +57,6 @@ export interface EquipmentOtherDetails {
   itemDescription: string;
   photoUrls: string[];
   invoicePhotoUrls: string[];
-  /** Where staff put it — recorded by staff themselves, no admin instructions involved for this category. */
-  putAwayLocation: string;
 }
 
 export type ReceptionDetails =
@@ -80,6 +76,12 @@ export interface Reception {
   processingDurationMs: number | null;
   /** Doc Step 5 (marked "Optional" there too): flagged if processing exceeds 2 hours. */
   flaggedForReview: boolean;
+
+  /** Task Board direct-assignment (see ReceptionsService.assign()) — a drag-a-pending-reception-onto-a-staff-member action, not an Open Pool task. */
+  assignedToUserId: string | null;
+  assignedByUserId: string | null;
+  assignedAt: string | null;
+  priority: TaskPriority;
 }
 
 /** One row's outcome from ReceptionsService.bulkAddInstructions() — a bad id/status in one row never aborts the rest. */

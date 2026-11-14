@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MenuBox } from '../../core/components/MenuBox';
 import { colors } from '../../core/theme/colors';
+import { spacing } from '../../core/theme/spacing';
+import { useOpenPoolTasks } from '../../features/openPool/hooks/useOpenPool';
 import { type StaffStackParamList } from '../types';
 
 interface Props {
@@ -22,14 +24,19 @@ interface Props {
 export function StaffHomeScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { data: availableOpenPoolTasks } = useOpenPoolTasks();
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
     >
-      <MenuBox label={t('mainMenu.reception')} onPress={() => navigation.navigate('ReceptionMenu')} />
+      <MenuBox label={t('mainMenu.reception')} onPress={() => navigation.navigate('ReceptionStart')} />
       <MenuBox label={t('mainMenu.floorTasks')} onPress={() => navigation.navigate('FloorTasks')} />
-      <MenuBox label={t('mainMenu.openPoolTasks')} onPress={() => navigation.navigate('OpenPool')} />
+      <MenuBox
+        label={t('mainMenu.openPoolTasks')}
+        onPress={() => navigation.navigate('OpenPool')}
+        badgeCount={availableOpenPoolTasks?.length}
+      />
       <MenuBox
         label={t('mainMenu.issueReporting')}
         variant="alert"
@@ -46,8 +53,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: 20,
-    paddingTop: 32,
-    gap: 14,
+    padding: spacing[5],
+    paddingTop: spacing[8],
+    // 14 in the original, nudged up to the nearest scale step (16) —
+    // imperceptible, consolidates with the handful of other near-14
+    // gaps found elsewhere in this pass.
+    gap: spacing[4],
   },
 });

@@ -3,8 +3,11 @@ import { type Reception as PrismaReception } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { ReceptionTasksService } from '../reception-tasks/reception-tasks.service';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
+import { type PublicUser } from '../users/user.types';
 import { UsersService } from '../users/users.service';
+import { type AssignReceptionDto } from './dto/assign-reception.dto';
 import { type CreateReceptionDto } from './dto/create-reception.dto';
 import { type BulkInstructionResult, type Reception, type ReceptionDetails } from './reception.types';
 
@@ -40,27 +43,28 @@ export class ReceptionsService {
     private readonly prisma: PrismaService,
     private readonly sheetsService: SheetsService,
     private readonly usersService: UsersService,
+    private readonly receptionTasksService: ReceptionTasksService,
   ) {}
 
   private summarizeDetails(details: ReceptionDetails): string {
     switch (details.category) {
       case 'return_parcels':
-        return `${details.parcelCount} parcel(s) via ${details.transporterCompany} — put away at ${details.putAwayLocation}`;
+        return `${details.parcelCount} parcel(s) via ${details.transporterCompany}`;
       case 'packaging_stock':
-        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType} — put away at ${details.putAwayLocation}`;
+        return `${details.parcelCount} parcel(s)/pallet(s) — ${details.packagingType}`;
       case 'sellers_stock':
         return `${details.palletCount} pallet(s)`;
       case 'equipment_other':
-        return `${details.parcelCount} parcel(s) — ${details.itemDescription} — put away at ${details.putAwayLocation}`;
+        return `${details.parcelCount} parcel(s) — ${details.itemDescription}`;
     }
   }
 
   private buildDetails(dto: CreateReceptionDto): ReceptionDetails {
     switch (dto.category) {
       case 'return_parcels':
-        if (!dto.parcelCount || !dto.transporterCompany || !dto.putAwayLocation) {
+        if (!dto.parcelCount || !dto.transporterCompany) {
           throw new BadRequestException({
-            message: 'return_parcels requires parcelCount, transporterCompany, and putAwayLocation',
+            message: 'return_parcels requires parcelCount and transporterCompany',
             code: 'reception.missing_required_fields',
           });
         }
@@ -68,13 +72,12 @@ export class ReceptionsService {
           category: 'return_parcels',
           parcelCount: dto.parcelCount,
           transporterCompany: dto.transporterCompany,
-          putAwayLocation: dto.putAwayLocation,
         };
 
       case 'packaging_stock':
-        if (!dto.parcelCount || !dto.packagingType || !dto.putAwayLocation) {
+        if (!dto.parcelCount || !dto.packagingType) {
           throw new BadRequestException({
-            message: 'packaging_stock requires parcelCount, packagingType, and putAwayLocation',
+            message: 'packaging_stock requires parcelCount and packagingType',
             code: 'reception.missing_required_fields',
           });
         }
@@ -84,7 +87,6 @@ export class ReceptionsService {
           packagingType: dto.packagingType,
           sellerName: dto.sellerName ?? null,
           invoicePhotoUrls: dto.invoicePhotoUrls ?? [],
-          putAwayLocation: dto.putAwayLocation,
         };
 
       case 'sellers_stock':
@@ -97,9 +99,9 @@ export class ReceptionsService {
         return { category: 'sellers_stock', palletCount: dto.palletCount };
 
       case 'equipment_other':
-        if (!dto.parcelCount || !dto.itemDescription || !dto.photoUrls?.length || !dto.putAwayLocation) {
+        if (!dto.parcelCount || !dto.itemDescription || !dto.photoUrls?.length) {
           throw new BadRequestException({
-            message: 'equipment_other requires parcelCount, itemDescription, at least one photo, and putAwayLocation',
+            message: 'equipment_other requires parcelCount, itemDescription, and at least one photo',
             code: 'reception.missing_required_fields',
           });
         }
@@ -109,7 +111,6 @@ export class ReceptionsService {
           itemDescription: dto.itemDescription,
           photoUrls: dto.photoUrls,
           invoicePhotoUrls: dto.invoicePhotoUrls ?? [],
-          putAwayLocation: dto.putAwayLocation,
         };
     }
   }
@@ -125,7 +126,6 @@ export class ReceptionsService {
       photoUrls: [] as string[],
       invoicePhotoUrls: [] as string[],
       sellerName: null,
-      putAwayLocation: null,
     };
     switch (details.category) {
       case 'return_parcels':
@@ -133,7 +133,6 @@ export class ReceptionsService {
           ...empty,
           parcelCount: details.parcelCount,
           transporterCompany: details.transporterCompany,
-          putAwayLocation: details.putAwayLocation,
         };
       case 'packaging_stock':
         return {
@@ -142,7 +141,6 @@ export class ReceptionsService {
           packagingType: details.packagingType,
           sellerName: details.sellerName,
           invoicePhotoUrls: details.invoicePhotoUrls,
-          putAwayLocation: details.putAwayLocation,
         };
       case 'sellers_stock':
         return { ...empty, palletCount: details.palletCount };
@@ -153,7 +151,6 @@ export class ReceptionsService {
           itemDescription: details.itemDescription,
           photoUrls: details.photoUrls,
           invoicePhotoUrls: details.invoicePhotoUrls,
-          putAwayLocation: details.putAwayLocation,
         };
     }
   }
@@ -166,8 +163,6 @@ export class ReceptionsService {
           category: 'return_parcels',
           parcelCount: row.parcelCount!,
           transporterCompany: row.transporterCompany!,
-          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
-          putAwayLocation: row.putAwayLocation ?? '(not recorded)',
         };
         break;
       case 'packaging_stock':
@@ -177,8 +172,6 @@ export class ReceptionsService {
           packagingType: row.packagingType!,
           sellerName: row.sellerName,
           invoicePhotoUrls: row.invoicePhotoUrls,
-          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
-          putAwayLocation: row.putAwayLocation ?? '(not recorded)',
         };
         break;
       case 'sellers_stock':
@@ -191,8 +184,6 @@ export class ReceptionsService {
           itemDescription: row.itemDescription!,
           photoUrls: row.photoUrls,
           invoicePhotoUrls: row.invoicePhotoUrls,
-          // Historical rows pre-date this field — fall back rather than lie about the type with a non-null assertion.
-          putAwayLocation: row.putAwayLocation ?? '(not recorded)',
         };
         break;
     }
@@ -206,6 +197,10 @@ export class ReceptionsService {
       putAwayAt: row.putAwayAt ? row.putAwayAt.toISOString() : null,
       processingDurationMs: row.processingDurationMs,
       flaggedForReview: row.flaggedForReview,
+      assignedToUserId: row.assignedToUserId,
+      assignedByUserId: row.assignedByUserId,
+      assignedAt: row.assignedAt ? row.assignedAt.toISOString() : null,
+      priority: row.priority,
     };
   }
 
@@ -218,7 +213,7 @@ export class ReceptionsService {
    * 2-hour review flag. Sellers Stock is the only category left on the
    * normal `arrived` → admin instructs → staff confirms flow.
    */
-  async create(userId: string, dto: CreateReceptionDto): Promise<Reception> {
+  async create(user: PublicUser, dto: CreateReceptionDto): Promise<Reception> {
     const details = this.buildDetails(dto);
     const arrivedAt = new Date();
     const isInstant =
@@ -229,7 +224,7 @@ export class ReceptionsService {
     const row = await this.prisma.reception.create({
       data: {
         id: randomUUID(),
-        createdByUserId: userId,
+        createdByUserId: user.id,
         status: isInstant ? 'completed' : 'arrived',
         category: details.category,
         arrivedAt,
@@ -241,8 +236,19 @@ export class ReceptionsService {
     const domain = this.toDomain(row);
 
     if (isInstant) {
-      const user = await this.usersService.findById(userId);
-      await this.appendCompletionToSheet(domain, user?.name ?? userId, arrivedAt, arrivedAt, 0);
+      const loggedByUser = await this.usersService.findById(user.id);
+      await this.appendCompletionToSheet(domain, loggedByUser?.name ?? user.id, arrivedAt, arrivedAt, 0);
+    }
+
+    // Marks the staff member's Reception-flow timer completed — see
+    // ReceptionTasksService. Best-effort: a missing/already-ended id
+    // (stale client, old test) shouldn't fail the reception itself.
+    if (dto.receptionTaskId) {
+      try {
+        await this.receptionTasksService.completeViaReception(dto.receptionTaskId, user, row.id);
+      } catch {
+        // Swallowed deliberately — see comment above.
+      }
     }
 
     return domain;
@@ -301,6 +307,43 @@ export class ReceptionsService {
       }
     }
     return results;
+  }
+
+  /**
+   * Task Board direct-assignment — admin drags a reception still
+   * awaiting instructions onto an on-shift staff member. Not an Open
+   * Pool task (see OpenPoolTask's own doc comment for why those are
+   * for admin-created, non-pending work instead): this mirrors
+   * PutAwayTask/OrderPrepTask's existing assignment shape, just on the
+   * Reception row itself rather than a separate task table.
+   */
+  async assign(id: string, issuerUserId: string, dto: AssignReceptionDto): Promise<Reception> {
+    const reception = await this.findOneRow(id);
+    if (reception.status !== 'arrived') {
+      throw new ConflictException(`Cannot assign a reception in status "${reception.status}"`);
+    }
+    const row = await this.prisma.reception.update({
+      where: { id },
+      data: {
+        instructions: dto.instructions,
+        status: 'ready_for_putaway',
+        assignedToUserId: dto.assignedToUserId,
+        assignedByUserId: issuerUserId,
+        assignedAt: new Date(),
+        priority: dto.priority ?? 'normal',
+      },
+    });
+    return this.toDomain(row);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.findOneRow(id);
+    await this.prisma.reception.delete({ where: { id } });
+  }
+
+  async removeMany(ids: string[]): Promise<{ deletedCount: number }> {
+    const result = await this.prisma.reception.deleteMany({ where: { id: { in: ids } } });
+    return { deletedCount: result.count };
   }
 
   async complete(id: string): Promise<Reception> {

@@ -43,3 +43,11 @@ export const STATUS_LABELS: Record<SellerStockStatus, string> = {
 export function fetchPallets(token: string) {
   return apiRequest<SellerStockPallet[]>('/seller-stock', { token });
 }
+
+export function deletePallet(token: string, id: string) {
+  return apiRequest<void>(`/seller-stock/${id}`, { method: 'DELETE', token });
+}
+
+export function deletePallets(token: string, ids: string[]) {
+  return apiRequest<{ deletedCount: number }>('/seller-stock', { method: 'DELETE', token, body: { ids } });
+}

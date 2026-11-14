@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
+import { useMyAssignedReceptions } from '../../reception/hooks/useReceptions';
+import { CATEGORY_LABELS } from '../../reception/types';
+import { summarizeDetails } from '../../reception/utils';
 import { usePallets } from '../../sellerStock/hooks/useSellerStock';
 import { useTasks } from '../hooks/usePutAwayTasks';
 import { type PutAwayTaskStatus } from '../types';
@@ -41,12 +44,14 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const tasks = useTasks();
   const pallets = usePallets();
+  const assignedReceptions = useMyAssignedReceptions();
 
-  const isPending = tasks.isPending || pallets.isPending;
-  const error = tasks.error ?? pallets.error;
+  const isPending = tasks.isPending || pallets.isPending || assignedReceptions.isPending;
+  const error = tasks.error ?? pallets.error ?? assignedReceptions.error;
 
   const openTasks = (tasks.data ?? []).filter((t) => OPEN_STATUSES.includes(t.status));
   const readyPallets = (pallets.data ?? []).filter((p) => p.status === 'ready_for_putaway');
+  const assignedReceptionsList = assignedReceptions.data ?? [];
 
   if (isPending) return <ActivityIndicator style={styles.spinner} color={colors.textSecondary} />;
 
@@ -59,7 +64,9 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
       {error && <Text style={styles.error}>{translateError(error, t)}</Text>}
 
       <Text style={styles.sectionTitle}>{t('putaway.assignedToYou')}</Text>
-      {openTasks.length === 0 && <Text style={styles.empty}>{t('putaway.noAssignedTasks')}</Text>}
+      {openTasks.length === 0 && assignedReceptionsList.length === 0 && (
+        <Text style={styles.empty}>{t('putaway.noAssignedTasks')}</Text>
+      )}
       {openTasks.map((task) => (
         <Pressable
           key={task.id}
@@ -68,6 +75,16 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
         >
           <Text style={styles.rowTitle}>{task.location}</Text>
           <Text style={styles.rowSubtitle}>{t(STATUS_LABEL_KEYS[task.status])}</Text>
+        </Pressable>
+      ))}
+      {assignedReceptionsList.map((reception) => (
+        <Pressable
+          key={reception.id}
+          style={styles.row}
+          onPress={() => navigation.navigate('ReceptionDetail', { id: reception.id })}
+        >
+          <Text style={styles.rowTitle}>{t(CATEGORY_LABELS[reception.details.category])}</Text>
+          <Text style={styles.rowSubtitle}>{summarizeDetails(reception)}</Text>
         </Pressable>
       ))}
 

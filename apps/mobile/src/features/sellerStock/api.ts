@@ -9,8 +9,6 @@ export interface CreatePalletInput {
   conditionFlags: PalletConditionFlag[];
   damageRemarks?: string;
   damageEvidencePhotoUrls?: string[];
-  /** Required only when the pallet is Good Condition and not overweight — see SellerStockService.create(). */
-  putAwayLocation?: string;
 }
 
 // NOTE: put-away assignment (instructions/complete) used to live here as
@@ -30,11 +28,7 @@ export function createPallet(token: string, input: CreatePalletInput) {
   return apiRequest<SellerStockPallet>('/seller-stock', { method: 'POST', token, body: input });
 }
 
-/** Good-condition, non-overweight pallets only — see the backend's SellerStockService.selfPutAway doc comment. */
-export function selfPutAway(token: string, id: string, zone: string) {
-  return apiRequest<SellerStockPallet>(`/seller-stock/${id}/self-putaway`, {
-    method: 'POST',
-    token,
-    body: { zone },
-  });
+/** Good-condition, non-overweight pallets only — see the backend's SellerStockService.selfPutAway doc comment. Locations are predefined/obvious to staff now, so there's nothing left to send — just the action itself. */
+export function selfPutAway(token: string, id: string) {
+  return apiRequest<SellerStockPallet>(`/seller-stock/${id}/self-putaway`, { method: 'POST', token });
 }

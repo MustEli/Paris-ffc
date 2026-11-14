@@ -18,12 +18,12 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { SearchModule } from './search/search.module';
 import { SheetsModule } from './sheets/sheets.module';
 import { ReceptionsModule } from './receptions/receptions.module';
+import { ReceptionTasksModule } from './reception-tasks/reception-tasks.module';
 import { SellerStockModule } from './seller-stock/seller-stock.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
-import { WarehouseLocationsModule } from './warehouse-locations/warehouse-locations.module';
 
 @Module({
   imports: [
@@ -42,6 +42,7 @@ import { WarehouseLocationsModule } from './warehouse-locations/warehouse-locati
     AuthModule,
     ShiftsModule,
     ReceptionsModule,
+    ReceptionTasksModule,
     UploadsModule,
     SellerStockModule,
     PutAwayModule,
@@ -56,7 +57,6 @@ import { WarehouseLocationsModule } from './warehouse-locations/warehouse-locati
     DirectivesModule,
     IssueReportsModule,
     SearchModule,
-    WarehouseLocationsModule,
   ],
   controllers: [AppController],
 })

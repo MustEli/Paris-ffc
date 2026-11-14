@@ -40,14 +40,13 @@ export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldPro
       {value ? (
         <div className="flex-row" style={{ alignItems: 'center' }}>
           <img src={resolvePhotoUrl(value)} alt={label} style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
-          <button className="btn btn-outline" style={{ color: '#0f172a', borderColor: '#d1d5db' }} onClick={() => onChange(null)}>
+          <button className="btn btn-outline" onClick={() => onChange(null)}>
             Remove
           </button>
         </div>
       ) : (
         <button
           className="btn btn-outline"
-          style={{ color: '#0f172a', borderColor: '#d1d5db' }}
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
         >

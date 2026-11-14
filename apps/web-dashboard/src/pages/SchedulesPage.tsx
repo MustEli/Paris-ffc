@@ -68,8 +68,7 @@ export function SchedulesPage() {
                   width: '100%',
                   textAlign: 'left',
                   marginBottom: 8,
-                  color: '#0f172a',
-                  borderColor: selectedId === s.id ? 'var(--brand-orange)' : '#d1d5db',
+                  borderColor: selectedId === s.id ? 'var(--brand-orange)' : undefined,
                 }}
                 onClick={() => setSelectedId(s.id)}
               >
@@ -213,7 +212,6 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
               key={day}
               type="button"
               className={`btn ${workingDays.includes(day) ? 'btn-primary' : 'btn-outline'}`}
-              style={workingDays.includes(day) ? undefined : { color: '#0f172a', borderColor: '#d1d5db' }}
               onClick={() => toggleDay(day)}
             >
               {WEEKDAY_LABELS[day]}

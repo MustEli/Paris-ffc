@@ -36,6 +36,17 @@ export class FloorTasksController {
     return this.floorTasksService.resume(id, user);
   }
 
+  /**
+   * Self-service pause with no task id needed — for callers (the global
+   * Home-icon leaving-guard) that only know "I have *some* floor task
+   * running," not which one. A plain no-op if none is open or it's
+   * already paused, same contract as pauseIfRunning() itself.
+   */
+  @Post('pause-mine')
+  pauseMine(@CurrentUser() user: PublicUser) {
+    return this.floorTasksService.pauseIfRunning(user.id);
+  }
+
   @Get('mine')
   findMine(@CurrentUser() user: PublicUser) {
     return this.floorTasksService.findMine(user.id);
