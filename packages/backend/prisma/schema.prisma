@@ -353,6 +353,8 @@ model PutAwayTask {
   issueDescription String?
   priority         TaskPriority      @default(normal)
   instructions     String?
+  /** Admin-uploaded photos attached at assignment time — e.g. showing exactly where to place a flagged pallet. Distinct from the pallet's own damageEvidencePhotoUrls (staff-captured on intake). */
+  instructionPhotoUrls String[]      @default([])
 
   @@index([palletId])
   @@index([assignedToUserId])

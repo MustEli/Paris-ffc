@@ -1,7 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
+import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../core/auth/authStore';
+
+const BRAND_ORANGE = '#fd8c1e';
 
 interface MenuItem {
   label: string;
@@ -11,6 +15,8 @@ interface MenuItem {
   disabled?: boolean;
   /** Shown instead of `description` while disabled, if provided — e.g. "Start your shift to unlock this." */
   disabledHint?: string;
+  /** Leading icon in a tinted circle — optional so existing callers keep working without it. */
+  icon?: ComponentProps<typeof Ionicons>['name'];
 }
 
 interface MenuScreenProps {
@@ -38,14 +44,28 @@ export function MenuScreen({ roleLabel, items }: MenuScreenProps) {
         {items.map((item) => (
           <Pressable
             key={item.label}
-            style={[styles.card, item.disabled && styles.cardDisabled]}
+            style={({ pressed }) => [
+              styles.card,
+              item.disabled && styles.cardDisabled,
+              pressed && !item.disabled && styles.cardPressed,
+            ]}
             onPress={item.onPress}
             disabled={item.disabled}
           >
-            <Text style={[styles.cardLabel, item.disabled && styles.cardLabelDisabled]}>{item.label}</Text>
-            <Text style={styles.cardDescription}>
-              {item.disabled && item.disabledHint ? item.disabledHint : item.description}
-            </Text>
+            <View style={styles.cardRow}>
+              {item.icon && (
+                <View style={[styles.iconBadge, item.disabled && styles.iconBadgeDisabled]}>
+                  <Ionicons name={item.icon} size={20} color={item.disabled ? '#9ca3af' : BRAND_ORANGE} />
+                </View>
+              )}
+              <View style={styles.cardText}>
+                <Text style={[styles.cardLabel, item.disabled && styles.cardLabelDisabled]}>{item.label}</Text>
+                <Text style={styles.cardDescription}>
+                  {item.disabled && item.disabledHint ? item.disabledHint : item.description}
+                </Text>
+              </View>
+              {!item.disabled && <Ionicons name="chevron-forward" size={18} color="#9ca3af" />}
+            </View>
           </Pressable>
         ))}
       </View>
@@ -73,14 +93,43 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 18,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  cardPressed: {
+    backgroundColor: '#f9fafb',
   },
   cardDisabled: {
     backgroundColor: '#f9fafb',
     opacity: 0.6,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  iconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#fff1e2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iconBadgeDisabled: {
+    backgroundColor: '#f1f5f9',
+  },
+  cardText: {
+    flex: 1,
   },
   cardLabel: {
     fontSize: 17,

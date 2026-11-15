@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type RouteProp } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
@@ -188,7 +189,14 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
         disabled={!isValid || create.isPending}
         onPress={handleSubmit}
       >
-        {create.isPending ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.submitText}>{t('issueReports.submit')}</Text>}
+        {create.isPending ? (
+          <ActivityIndicator color="#1a1200" />
+        ) : (
+          <>
+            <Ionicons name="send-outline" size={16} color="#1a1200" style={styles.submitIcon} />
+            <Text style={styles.submitText}>{t('issueReports.submit')}</Text>
+          </>
+        )}
       </Pressable>
     </KeyboardAwareScreen>
   );
@@ -248,11 +256,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   submitButton: {
+    flexDirection: 'row',
     backgroundColor: colors.brandOrange,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
+  },
+  submitIcon: {
+    marginRight: 8,
   },
   submitButtonDisabled: {
     opacity: 0.4,

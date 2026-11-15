@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
@@ -77,7 +78,10 @@ export function SelfieCaptureScreen({ navigation }: Props) {
         {localUri ? (
           <Image source={{ uri: localUri }} style={styles.preview} />
         ) : (
-          <Text style={styles.placeholder}>{t('selfie.tapToTake')}</Text>
+          <>
+            <Ionicons name="camera-outline" size={36} color={colors.textMuted} style={styles.placeholderIcon} />
+            <Text style={styles.placeholder}>{t('selfie.tapToTake')}</Text>
+          </>
         )}
       </Pressable>
 
@@ -89,7 +93,14 @@ export function SelfieCaptureScreen({ navigation }: Props) {
             <Text style={styles.retakeText}>{t('selfie.retake')}</Text>
           </Pressable>
           <Pressable style={[styles.saveButton, isSaving && styles.saveButtonBusy]} onPress={handleSave} disabled={isSaving}>
-            {isSaving ? <ActivityIndicator color="#1a1200" /> : <Text style={styles.saveText}>{t('selfie.useThisPhoto')}</Text>}
+            {isSaving ? (
+              <ActivityIndicator color="#1a1200" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#1a1200" style={styles.saveIcon} />
+                <Text style={styles.saveText}>{t('selfie.useThisPhoto')}</Text>
+              </>
+            )}
           </Pressable>
         </>
       )}
@@ -129,6 +140,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.surface,
   },
+  placeholderIcon: {
+    marginBottom: 6,
+  },
   placeholder: {
     color: colors.textMuted,
     fontSize: 14,
@@ -154,13 +168,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButton: {
+    flexDirection: 'row',
     backgroundColor: colors.brandOrange,
     paddingVertical: 16,
     paddingHorizontal: 40,
     borderRadius: 999,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     minWidth: 200,
+  },
+  saveIcon: {
+    marginRight: 8,
   },
   saveButtonBusy: {
     opacity: 0.7,

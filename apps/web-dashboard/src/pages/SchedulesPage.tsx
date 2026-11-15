@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { BarChart3, CalendarClock, Save, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '../core/api/client';
@@ -46,10 +47,17 @@ export function SchedulesPage() {
 
   return (
     <div>
-      <h1>Staff Schedules</h1>
-      <p className="page-subtitle">
-        Set each staff member's working days, shift hours, required daily hours, and scheduled break times.
-      </p>
+      <div className="page-header-row">
+        <span className="icon-badge icon-badge-blue">
+          <CalendarClock />
+        </span>
+        <div className="page-header-text">
+          <h1>Staff Schedules</h1>
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            Set each staff member's working days, shift hours, required daily hours, and scheduled break times.
+          </p>
+        </div>
+      </div>
 
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
@@ -62,16 +70,21 @@ export function SchedulesPage() {
             {staff.map((s) => (
               <button
                 key={s.id}
-                className="btn btn-outline"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  textAlign: 'left',
-                  marginBottom: 8,
-                  borderColor: selectedId === s.id ? 'var(--brand-orange)' : undefined,
-                }}
+                className={`btn ${selectedId === s.id ? 'btn-primary' : 'btn-outline'}`}
+                style={{ justifyContent: 'flex-start', width: '100%', marginBottom: 8 }}
                 onClick={() => setSelectedId(s.id)}
               >
+                <span
+                  className="top-header-avatar"
+                  style={{
+                    width: 26,
+                    height: 26,
+                    fontSize: 11,
+                    background: selectedId === s.id ? 'rgba(255,255,255,0.25)' : 'var(--brand-orange)',
+                  }}
+                >
+                  {s.name.charAt(0).toUpperCase()}
+                </span>
                 {s.name}
               </button>
             ))}
@@ -82,7 +95,15 @@ export function SchedulesPage() {
             {selectedId ? (
               <ScheduleEditor userId={selectedId} staffName={staff.find((s) => s.id === selectedId)?.name ?? ''} />
             ) : (
-              <p className="hint-text">Select a staff member to view or edit their schedule.</p>
+              <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <span
+                  className="icon-badge icon-badge-gray"
+                  style={{ width: 56, height: 56, borderRadius: 'var(--radius-lg)', margin: '0 auto 14px' }}
+                >
+                  <UserRound size={26} />
+                </span>
+                <p className="hint-text">Select a staff member to view or edit their schedule.</p>
+              </div>
             )}
           </div>
         </div>
@@ -102,7 +123,12 @@ function AttendanceTotalsTable() {
 
   return (
     <div className="card" style={{ marginBottom: 20 }}>
-      <h2 style={{ marginTop: 0 }}>Total shift days & hours per staff</h2>
+      <div className="flex-row" style={{ marginBottom: 12 }}>
+        <span className="icon-badge icon-badge-sm icon-badge-purple">
+          <BarChart3 />
+        </span>
+        <h2 style={{ margin: 0 }}>Total shift days & hours per staff</h2>
+      </div>
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
       {data && (
@@ -200,7 +226,12 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
 
   return (
     <div className="card">
-      <h2>{staffName}</h2>
+      <div className="flex-row" style={{ marginBottom: 16 }}>
+        <span className="top-header-avatar" style={{ width: 36, height: 36, fontSize: 15, background: 'var(--brand-orange)' }}>
+          {staffName.charAt(0).toUpperCase()}
+        </span>
+        <h2 style={{ margin: 0 }}>{staffName}</h2>
+      </div>
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
 
@@ -265,6 +296,7 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
       {saved && <p className="hint-text" style={{ color: '#16a34a' }}>Saved.</p>}
 
       <button className="btn btn-primary" onClick={handleSave} disabled={isSaving || workingDays.length === 0}>
+        <Save size={14} />
         {isSaving ? 'Saving…' : 'Save schedule'}
       </button>
     </div>

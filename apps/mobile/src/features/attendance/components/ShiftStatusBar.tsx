@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { translateError } from '../../../core/i18n/errorCodes';
 import { APP_LANGUAGES, type AppLanguage } from '../../../core/i18n/i18n';
 import { useLanguageStore } from '../../../core/i18n/languageStore';
 import { useActiveReceptionTaskStore } from '../../../core/navigation/activeReceptionTaskStore';
@@ -30,6 +31,30 @@ function formatDate(date: Date, locale: AppLanguage): string {
 
 /** The main-menu route — the one screen that never shows the Home icon. */
 const MAIN_MENU_ROUTE = 'StaffHome';
+
+/**
+ * Shared "End shift?" confirmation — also used by StaffHomeScreen to
+ * answer the Android hardware back button at the Main Menu (see its
+ * own doc comment). `onConfirm` runs an extra side effect (e.g. closing
+ * this bar's dropdown) right before the real end-shift call; omit it
+ * where there's no such side effect to run.
+ */
+export function useConfirmEndShift(end: () => void, onConfirm?: () => void) {
+  const { t } = useTranslation();
+  return useCallback(() => {
+    Alert.alert(t('shiftBar.confirmEndShiftTitle'), t('shiftBar.confirmEndShiftMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('shiftBar.endShift'),
+        style: 'destructive',
+        onPress: () => {
+          onConfirm?.();
+          end();
+        },
+      },
+    ]);
+  }, [t, end, onConfirm]);
+}
 
 /**
  * `navigationRef` has no global param-list augmentation (see its own
@@ -68,11 +93,13 @@ export function ShiftStatusBar() {
     isEnding,
     startBreak,
     isStartingBreak,
+    startBreakError,
     endBreak,
     isEndingBreak,
   } = useShiftStatus();
 
   const [isOpen, setIsOpen] = useState(false);
+  const confirmEndShift = useConfirmEndShift(end, () => setIsOpen(false));
 
   // Assigned-to-me work that isn't done yet — shown everywhere via this
   // bar so it can't be missed on whatever screen staff happens to be
@@ -207,20 +234,6 @@ export function ShiftStatusBar() {
     });
   }
 
-  function confirmEndShift() {
-    Alert.alert(t('shiftBar.confirmEndShiftTitle'), t('shiftBar.confirmEndShiftMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('shiftBar.endShift'),
-        style: 'destructive',
-        onPress: () => {
-          setIsOpen(false);
-          end();
-        },
-      },
-    ]);
-  }
-
   function toggleLanguage() {
     const next = APP_LANGUAGES.find((l) => l !== language) ?? 'en';
     setLanguage(next);
@@ -290,17 +303,23 @@ export function ShiftStatusBar() {
             {pendingItems.length > 0 && (
               <View style={styles.pendingSection}>
                 <Text style={styles.pendingSectionTitle}>{t('shiftBar.pendingTasksTitle')}</Text>
-                {pendingItems.map((item) => (
-                  <Pressable
-                    key={item.key}
-                    onPress={() => {
-                      setIsOpen(false);
-                      item.onPress();
-                    }}
-                    hitSlop={4}
-                  >
-                    <Text style={styles.pendingItem}>•  {item.label}</Text>
-                  </Pressable>
+                {pendingItems.map((item, index) => (
+                  <View key={item.key}>
+                    <Pressable
+                      style={({ pressed }) => [styles.pendingItemRow, pressed && styles.pendingItemRowPressed]}
+                      onPress={() => {
+                        setIsOpen(false);
+                        item.onPress();
+                      }}
+                      hitSlop={4}
+                    >
+                      <Text style={styles.pendingItem} numberOfLines={2}>
+                        {item.label}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    {index < pendingItems.length - 1 && <View style={styles.pendingItemDivider} />}
+                  </View>
                 ))}
               </View>
             )}
@@ -310,8 +329,7 @@ export function ShiftStatusBar() {
                   style={styles.dropdownRow}
                   disabled={isStartingBreak}
                   onPress={() => {
-                    setIsOpen(false);
-                    startBreak('lunch');
+                    startBreak('lunch', { onSuccess: () => setIsOpen(false) });
                   }}
                 >
                   <Text style={styles.dropdownLabel}>{t('shiftBar.lunchBreak')}</Text>
@@ -320,14 +338,18 @@ export function ShiftStatusBar() {
                   style={[styles.dropdownRow, !shortBreakAvailable && styles.dropdownRowDisabled]}
                   disabled={isStartingBreak || !shortBreakAvailable}
                   onPress={() => {
-                    setIsOpen(false);
-                    startBreak('short');
+                    startBreak('short', { onSuccess: () => setIsOpen(false) });
                   }}
                 >
                   <Text style={[styles.dropdownLabel, !shortBreakAvailable && styles.dropdownLabelDisabled]}>
                     {shortBreakAvailable ? t('shiftBar.shortBreak') : t('shiftBar.shortBreakUsedUp')}
                   </Text>
                 </Pressable>
+                {startBreakError && (
+                  <View style={styles.breakErrorRow}>
+                    <Text style={styles.breakErrorText}>{translateError(startBreakError, t)}</Text>
+                  </View>
+                )}
               </>
             )}
             {onBreak && (
@@ -480,8 +502,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   pendingSection: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 4,
     backgroundColor: colors.brandOrange + '1a',
   },
   pendingSectionTitle: {
@@ -489,12 +511,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.brandOrange,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 4,
+    paddingHorizontal: 24,
+  },
+  pendingItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+  },
+  pendingItemRowPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  pendingItemDivider: {
+    height: 1,
+    backgroundColor: colors.brandOrange + '26',
+    marginHorizontal: 24,
   },
   pendingItem: {
+    flex: 1,
     fontSize: 14,
+    fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 4,
+  },
+  breakErrorRow: {
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 10,
+  },
+  breakErrorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.alert,
   },
   dropdownRowDisabled: {
     opacity: 0.4,

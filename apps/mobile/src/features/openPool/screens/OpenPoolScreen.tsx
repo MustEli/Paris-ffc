@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, Text
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { colors } from '../../../core/theme/colors';
+import { elevation } from '../../../core/theme/elevation';
 import { PhotoCaptureButton } from '../../sellerStock/components/PhotoCaptureButton';
 import { useClaimOpenPoolTask, useCompleteOpenPoolTask, useMyOpenPoolTasks, useOpenPoolTasks } from '../hooks/useOpenPool';
 import { type OpenPoolTask } from '../types';
@@ -149,10 +150,11 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
     backgroundColor: colors.surface,
+    ...elevation.sm,
   },
   cardHeader: {
     flexDirection: 'row',

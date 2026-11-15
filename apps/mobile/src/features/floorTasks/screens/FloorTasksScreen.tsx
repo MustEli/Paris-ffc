@@ -1,5 +1,7 @@
+import { type Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +12,7 @@ import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { useOrderPrepTasks } from '../../orderPrep/hooks/useOrderPrep';
 import { useMyOpenFloorTask } from '../hooks/useFloorTasks';
-import { CATEGORY_META } from '../types';
+import { CATEGORY_META, type FloorTaskCategory } from '../types';
 import { FloorTaskDetailScreen } from './FloorTaskDetailScreen';
 
 interface Props {
@@ -18,6 +20,19 @@ interface Props {
 }
 
 const OPEN_ORDER_PREP_STATUSES = ['assigned', 'in_progress'];
+
+const CATEGORY_ICON: Record<FloorTaskCategory, ComponentProps<typeof Ionicons>['name']> = {
+  pick: 'basket-outline',
+  pack: 'cube-outline',
+  dispatch: 'send-outline',
+  return_processing: 'arrow-undo-outline',
+  warehousing_inventory_check: 'clipboard-outline',
+  warehousing_location_adjustment: 'swap-vertical-outline',
+  box_prep: 'archive-outline',
+  backup_box: 'archive-outline',
+  backup_shredder: 'trash-outline',
+  backup_other: 'ellipsis-horizontal-circle-outline',
+};
 
 /**
  * Staff-view redesign's Floor Tasks menu: a vertical list clustered
@@ -88,17 +103,24 @@ export function FloorTasksScreen({ navigation }: Props) {
         <ListRow
           key={meta.category}
           label={t(meta.label)}
+          icon={CATEGORY_ICON[meta.category]}
           strongDividerBelow={meta.strongDividerBelow}
           onPress={() => navigation.navigate('FloorTaskDetail', { category: meta.category })}
         />
       ))}
 
-      <ListRow label={t('floorTasks.putaway')} strongDividerBelow onPress={() => navigation.navigate('PutawayUnified')} />
+      <ListRow
+        label={t('floorTasks.putaway')}
+        icon="download-outline"
+        strongDividerBelow
+        onPress={() => navigation.navigate('PutawayUnified')}
+      />
 
       {CATEGORY_META.slice(3).map((meta) => (
         <ListRow
           key={meta.category}
           label={t(meta.label)}
+          icon={CATEGORY_ICON[meta.category]}
           strongDividerBelow={meta.strongDividerBelow}
           onPress={() => navigation.navigate('FloorTaskDetail', { category: meta.category })}
         />

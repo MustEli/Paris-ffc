@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
@@ -195,7 +196,14 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
         onPress={handleSubmit}
         disabled={!isFormValid() || isPending}
       >
-        {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{t('reception.logDelivery')}</Text>}
+        {isPending ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="checkmark-circle-outline" size={16} color="#1a1200" style={styles.submitIcon} />
+            <Text style={styles.submitText}>{t('reception.logDelivery')}</Text>
+          </>
+        )}
       </Pressable>
     </KeyboardAwareScreen>
   );
@@ -263,11 +271,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   submitButton: {
+    flexDirection: 'row',
     backgroundColor: colors.brandOrange,
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
+  },
+  submitIcon: {
+    marginRight: 8,
   },
   submitButtonDisabled: {
     opacity: 0.5,

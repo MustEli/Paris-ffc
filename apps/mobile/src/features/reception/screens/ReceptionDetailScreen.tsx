@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -110,7 +111,10 @@ export function ReceptionDetailScreen({ route }: Props) {
             {addInstructions.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>{t('reception.sendInstructions')}</Text>
+              <>
+                <Ionicons name="paper-plane-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>{t('reception.sendInstructions')}</Text>
+              </>
             )}
           </Pressable>
         </View>
@@ -127,7 +131,10 @@ export function ReceptionDetailScreen({ route }: Props) {
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>{t('reception.confirmPutAway')}</Text>
+              <>
+                <Ionicons name="checkmark-circle-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>{t('reception.confirmPutAway')}</Text>
+              </>
             )}
           </Pressable>
         </View>
@@ -225,14 +232,19 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonText: {
     color: '#fff',

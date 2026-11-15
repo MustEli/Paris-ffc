@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -21,7 +22,8 @@ export function UserListScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewUser')}>
-        <Text style={styles.newButtonText}>+ New User</Text>
+        <Ionicons name="add" size={18} color="#fff" />
+        <Text style={styles.newButtonText}>New User</Text>
       </Pressable>
 
       {isPending && <ActivityIndicator style={styles.spinner} />}
@@ -55,11 +57,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   newButton: {
+    flexDirection: 'row',
+    gap: 6,
     margin: 16,
     backgroundColor: '#0f172a',
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   newButtonText: {
     color: '#fff',
@@ -79,13 +84,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   row: {
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   name: {
     fontSize: 15,

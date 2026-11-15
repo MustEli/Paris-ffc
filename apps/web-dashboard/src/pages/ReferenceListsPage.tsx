@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ListChecks, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -30,11 +31,18 @@ export function ReferenceListsPage() {
 
   return (
     <div>
-      <h1>Manage Lists</h1>
-      <p className="page-subtitle">
-        These values feed the dropdowns staff use on the mobile app (e.g. Reception's Transporter Company and
-        Packaging Type fields) — anything added or removed here shows up there right away.
-      </p>
+      <div className="page-header-row">
+        <span className="icon-badge icon-badge-purple">
+          <ListChecks />
+        </span>
+        <div className="page-header-text">
+          <h1>Manage Lists</h1>
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            These values feed the dropdowns staff use on the mobile app (e.g. Reception's Transporter Company and
+            Packaging Type fields) — anything added or removed here shows up there right away.
+          </p>
+        </div>
+      </div>
 
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
@@ -92,7 +100,12 @@ function ReferenceListCard({
 
   return (
     <div className="card">
-      <h2>{REFERENCE_LIST_LABELS[category]}</h2>
+      <div className="flex-row" style={{ marginBottom: 14 }}>
+        <span className="icon-badge icon-badge-sm icon-badge-gray">
+          <ListChecks />
+        </span>
+        <h2 style={{ margin: 0 }}>{REFERENCE_LIST_LABELS[category]}</h2>
+      </div>
 
       <div className="chip-row" style={{ marginBottom: 16 }}>
         {values.length === 0 && <span className="hint-text">No values yet.</span>}
@@ -116,6 +129,7 @@ function ReferenceListCard({
           disabled={isSubmitting}
         />
         <button className="btn btn-primary" onClick={handleAdd} disabled={isSubmitting || !draft.trim()}>
+          <Plus size={14} />
           Add
         </button>
       </div>

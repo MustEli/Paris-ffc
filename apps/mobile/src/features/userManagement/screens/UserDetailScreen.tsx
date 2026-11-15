@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp, useNavigation } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
@@ -78,7 +79,10 @@ export function UserDetailScreen({ route }: Props) {
         {changeRole.isPending ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Update role</Text>
+          <>
+            <Ionicons name="shield-checkmark-outline" size={16} color="#fff" style={styles.buttonIcon} />
+            <Text style={styles.buttonText}>Update role</Text>
+          </>
         )}
       </Pressable>
 
@@ -152,11 +156,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonDisabled: {
     opacity: 0.5,

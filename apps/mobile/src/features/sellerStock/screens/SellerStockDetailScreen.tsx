@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image, ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
@@ -98,7 +99,10 @@ export function SellerStockDetailScreen({ route }: Props) {
             {selfPutAway.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Confirm put-away</Text>
+              <>
+                <Ionicons name="checkmark-circle-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Confirm put-away</Text>
+              </>
             )}
           </Pressable>
         </View>
@@ -109,6 +113,7 @@ export function SellerStockDetailScreen({ route }: Props) {
           style={styles.button}
           onPress={() => navigation.navigate('AssignTask', { palletId: pallet.id })}
         >
+          <Ionicons name="person-add-outline" size={16} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Assign put-away task</Text>
         </Pressable>
       )}
@@ -215,18 +220,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
   },
   confirmButton: {
+    flexDirection: 'row',
     backgroundColor: '#16a34a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonDisabled: {
     opacity: 0.5,

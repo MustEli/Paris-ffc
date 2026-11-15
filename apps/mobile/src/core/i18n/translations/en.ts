@@ -287,6 +287,7 @@ export const en = {
       break_already_active: 'Already on a break — end it before starting another.',
       short_break_used_up: 'Short break allowance for this shift has already been used up.',
       no_break_to_end: 'No break in progress to end.',
+      active_task_running: 'Pause your current task before starting a break.',
     },
     floorTask: {
       box_prep_merged: '"Box Prep" has been merged into "Backup — Box" — use that one instead.',

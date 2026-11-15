@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -176,7 +177,10 @@ export function NewPalletScreen({ navigation }: Props) {
         {isPending ? (
           <ActivityIndicator color="#1a1200" />
         ) : (
-          <Text style={styles.submitText}>{t('sellerStock.newPallet.logPallet')}</Text>
+          <>
+            <Ionicons name="layers-outline" size={16} color="#1a1200" style={styles.submitIcon} />
+            <Text style={styles.submitText}>{t('sellerStock.newPallet.logPallet')}</Text>
+          </>
         )}
       </Pressable>
     </KeyboardAwareScreen>
@@ -262,11 +266,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   submitButton: {
+    flexDirection: 'row',
     backgroundColor: colors.brandOrange,
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
+  },
+  submitIcon: {
+    marginRight: 8,
   },
   submitButtonDisabled: {
     opacity: 0.5,

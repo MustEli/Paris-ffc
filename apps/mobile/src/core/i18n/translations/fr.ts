@@ -277,6 +277,7 @@ export const fr = {
       break_already_active: 'Déjà en pause — terminez-la avant d’en démarrer une autre.',
       short_break_used_up: 'Le quota de pause courte pour ce service est déjà épuisé.',
       no_break_to_end: 'Aucune pause en cours à terminer.',
+      active_task_running: 'Mettez votre tâche en cours en pause avant de démarrer une pause.',
     },
     floorTask: {
       box_prep_merged: '« Box Prep » a été fusionné avec « Secours — Carton » — utilisez celui-ci à la place.',

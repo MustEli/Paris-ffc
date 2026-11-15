@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -5,6 +6,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../../core/theme/colors';
+import { elevation } from '../../../core/theme/elevation';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { type ReceptionStackParamList } from '../../../navigation/types';
@@ -48,6 +50,7 @@ export function ReceptionListScreen({ navigation, route }: Props) {
           style={styles.newButton}
           onPress={() => navigation.navigate('NewDelivery', { presetCategory: categoryFilter })}
         >
+          <Ionicons name="add" size={18} color="#1a1200" />
           <Text style={styles.newButtonText}>{t('reception.newDeliveryButton')}</Text>
         </Pressable>
       )}
@@ -92,11 +95,14 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   newButton: {
+    flexDirection: 'row',
+    gap: 6,
     margin: 16,
     backgroundColor: colors.brandOrange,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   newButtonText: {
     color: '#1a1200',
@@ -123,9 +129,10 @@ const styles = StyleSheet.create({
   row: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
     backgroundColor: colors.surface,
+    ...elevation.sm,
   },
   rowHeader: {
     flexDirection: 'row',

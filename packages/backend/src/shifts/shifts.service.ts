@@ -265,20 +265,25 @@ export class ShiftsService {
       }
     }
 
+    // Hard block, not an auto-pause: staff with an actively-running
+    // Floor Task or Reception Task (not already paused) must pause it
+    // themselves before a break can start. Direct Prisma access rather
+    // than importing FloorTasksModule/ReceptionTasksModule — same
+    // circular-dependency reasoning as endShiftInternal's cascade.
+    const [runningFloorTask, runningReceptionTask] = await Promise.all([
+      this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null, pausedAt: null } }),
+      this.prisma.receptionTask.findFirst({ where: { userId, endedAt: null, pausedAt: null } }),
+    ]);
+    if (runningFloorTask || runningReceptionTask) {
+      throw new ConflictException({
+        message: 'Pause your active task before starting a break',
+        code: 'shift.active_task_running',
+      });
+    }
+
     const brk = await this.prisma.break.create({
       data: { id: randomUUID(), shiftId: shift.id, type, startedAt: now, endedAt: null },
     });
-
-    // Starting a break pauses a still-running floor task — same direct-
-    // Prisma reasoning as endShiftInternal's cascade (avoids a circular
-    // module dependency). Already paused, or nothing open at all? Then
-    // there's nothing to do. Deliberately doesn't auto-resume when the
-    // break ends — only asked for the pause side of this, not the
-    // reverse.
-    const openFloorTask = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null, pausedAt: null } });
-    if (openFloorTask) {
-      await this.prisma.floorTaskLog.update({ where: { id: openFloorTask.id }, data: { pausedAt: now } });
-    }
 
     return this.toBreakDomain(brk);
   }

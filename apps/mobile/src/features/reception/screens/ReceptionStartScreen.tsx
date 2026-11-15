@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -70,7 +71,10 @@ export function ReceptionStartScreen({ navigation }: Props) {
         {start.isPending ? (
           <ActivityIndicator color="#1a1200" />
         ) : (
-          <Text style={styles.startButtonText}>{t('receptionStart.start')}</Text>
+          <>
+            <Ionicons name="play-circle-outline" size={18} color="#1a1200" style={styles.startButtonIcon} />
+            <Text style={styles.startButtonText}>{t('receptionStart.start')}</Text>
+          </>
         )}
       </Pressable>
     </View>
@@ -107,11 +111,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   startButton: {
+    flexDirection: 'row',
     backgroundColor: colors.brandOrange,
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
+  },
+  startButtonIcon: {
+    marginRight: 8,
   },
   buttonBusy: {
     opacity: 0.7,

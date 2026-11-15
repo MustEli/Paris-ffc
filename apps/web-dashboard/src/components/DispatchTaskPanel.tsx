@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2, Radio, Send, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '../core/api/client';
@@ -84,7 +85,12 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
 
   return (
     <div className="card" style={{ marginTop: 16, background: '#f8fafc' }}>
-      <h2 style={{ marginTop: 0 }}>Send {items.length} selected as Open Pool task(s)</h2>
+      <div className="flex-row" style={{ marginBottom: 12 }}>
+        <span className="icon-badge icon-badge-sm icon-badge-purple">
+          <Radio />
+        </span>
+        <h2 style={{ margin: 0 }}>Send {items.length} selected as Open Pool task(s)</h2>
+      </div>
 
       <div className="form-row">
         <label className="form-label">Comment for all</label>
@@ -132,15 +138,20 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
 
       {error && <p className="error-text">{error}</p>}
       <button className="btn btn-accent" onClick={handleSend} disabled={isSending}>
+        <Send size={14} />
         {isSending ? 'Sending…' : `Send ${items.length} task(s)`}
       </button>
 
       {results && (
-        <ul style={{ margin: '12px 0 0', paddingLeft: 20 }}>
+        <ul style={{ margin: '12px 0 0', paddingLeft: 0, listStyle: 'none' }}>
           {results.map((r) => {
             const label = items.find((i) => i.id === r.id)?.label ?? r.id;
             return (
-              <li key={r.id} style={{ color: r.success ? '#15803d' : '#dc2626' }}>
+              <li
+                key={r.id}
+                style={{ color: r.success ? '#15803d' : '#dc2626', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}
+              >
+                {r.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
                 {r.success ? 'Sent' : `Failed: ${r.error}`} — {label}
               </li>
             );

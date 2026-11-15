@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -68,15 +69,22 @@ export function ReceptionMenuScreen({ navigation }: Props) {
 
       <MenuBox
         label={t('reception.returnParcels')}
+        icon={<Ionicons name="arrow-undo-outline" size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'return_parcels' })}
       />
       <MenuBox
         label={t('reception.packagingStock')}
+        icon={<Ionicons name="archive-outline" size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'packaging_stock' })}
       />
-      <MenuBox label={t('reception.sellersStock')} onPress={() => navigation.navigate('SellerStockList')} />
+      <MenuBox
+        label={t('reception.sellersStock')}
+        icon={<Ionicons name="layers-outline" size={26} color={colors.brandOrange} />}
+        onPress={() => navigation.navigate('SellerStockList')}
+      />
       <MenuBox
         label={t('reception.equipmentOther')}
+        icon={<Ionicons name="construct-outline" size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'equipment_other' })}
       />
     </ScrollView>

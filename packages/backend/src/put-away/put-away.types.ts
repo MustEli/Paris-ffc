@@ -27,4 +27,6 @@ export interface PutAwayTask {
   /** Set by Admin at assignment time (Task Board) — defaults to 'normal' when not given. */
   priority: TaskPriority;
   instructions: string | null;
+  /** Admin-uploaded photos attached at assignment time — distinct from the pallet's own staff-captured damageEvidencePhotoUrls. */
+  instructionPhotoUrls: string[];
 }

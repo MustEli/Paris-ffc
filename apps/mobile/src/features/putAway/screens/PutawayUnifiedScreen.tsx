@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { translateError } from '../../../core/i18n/errorCodes';
@@ -73,8 +74,11 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
           style={styles.row}
           onPress={() => navigation.navigate('PutAwayTaskDetail', { id: task.id })}
         >
-          <Text style={styles.rowTitle}>{task.location}</Text>
-          <Text style={styles.rowSubtitle}>{t(STATUS_LABEL_KEYS[task.status])}</Text>
+          <View style={styles.rowBody}>
+            <Text style={styles.rowTitle}>{task.location}</Text>
+            <Text style={styles.rowSubtitle}>{t(STATUS_LABEL_KEYS[task.status])}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
       ))}
       {assignedReceptionsList.map((reception) => (
@@ -83,8 +87,11 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
           style={styles.row}
           onPress={() => navigation.navigate('ReceptionDetail', { id: reception.id })}
         >
-          <Text style={styles.rowTitle}>{t(CATEGORY_LABELS[reception.details.category])}</Text>
-          <Text style={styles.rowSubtitle}>{summarizeDetails(reception)}</Text>
+          <View style={styles.rowBody}>
+            <Text style={styles.rowTitle}>{t(CATEGORY_LABELS[reception.details.category])}</Text>
+            <Text style={styles.rowSubtitle}>{summarizeDetails(reception)}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
       ))}
 
@@ -96,10 +103,13 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
           style={styles.row}
           onPress={() => navigation.navigate('SellerStockDetail', { id: pallet.id })}
         >
-          <Text style={styles.rowTitle}>{t('putaway.pallet', { index: pallet.palletIndex })}</Text>
-          <Text style={styles.rowSubtitle}>
-            {t('putaway.palletSubtitle', { sellerName: pallet.sellerName, boxNumber: pallet.boxNumber })}
-          </Text>
+          <View style={styles.rowBody}>
+            <Text style={styles.rowTitle}>{t('putaway.pallet', { index: pallet.palletIndex })}</Text>
+            <Text style={styles.rowSubtitle}>
+              {t('putaway.palletSubtitle', { sellerName: pallet.sellerName, boxNumber: pallet.boxNumber })}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
       ))}
     </ScrollView>
@@ -144,12 +154,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+  },
+  rowBody: {
+    flex: 1,
   },
   rowTitle: {
     fontSize: 15,

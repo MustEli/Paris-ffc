@@ -1,4 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
+import {
+  Activity,
+  Boxes,
+  CheckCircle2,
+  ClipboardCheck,
+  Download,
+  LayoutDashboard,
+  PackageCheck,
+  PackageSearch,
+  RefreshCw,
+  ShoppingCart,
+  Truck,
+  Users,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -133,8 +147,17 @@ export function DashboardPage() {
 
   return (
     <div>
-      <h1>Dashboard</h1>
-      <p className="page-subtitle">{today}</p>
+      <div className="page-header-row">
+        <span className="icon-badge icon-badge-orange">
+          <LayoutDashboard />
+        </span>
+        <div className="page-header-text">
+          <h1>Dashboard</h1>
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            {today}
+          </p>
+        </div>
+      </div>
 
       {isPending && <p>Loading…</p>}
       {error && <p className="error-text">{error.message}</p>}
@@ -144,28 +167,49 @@ export function DashboardPage() {
           <div className="section-toolbar">
             <h2 style={{ margin: 0 }}>Current status</h2>
             <button className="btn btn-outline" onClick={() => refetch()} disabled={isRefetching}>
+              <RefreshCw size={14} className={isRefetching ? 'spin' : undefined} />
               {isRefetching ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
           <div className="card">
             <div className="stat-grid">
               <div className="stat-tile">
-                <div className="stat-tile-label">Staff on shift</div>
-                <div className="stat-tile-value">
-                  {data.liveSummary.staffOnShiftCount} / {data.liveSummary.totalStaffCount}
+                <span className="icon-badge icon-badge-blue">
+                  <Users />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Staff on shift</div>
+                  <div className="stat-tile-value">
+                    {data.liveSummary.staffOnShiftCount} / {data.liveSummary.totalStaffCount}
+                  </div>
                 </div>
               </div>
               <div className="stat-tile">
-                <div className="stat-tile-label">Pallets pending review</div>
-                <div className="stat-tile-value">{data.liveSummary.palletsPendingReviewCount}</div>
+                <span className="icon-badge icon-badge-red">
+                  <PackageSearch />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Pallets pending review</div>
+                  <div className="stat-tile-value">{data.liveSummary.palletsPendingReviewCount}</div>
+                </div>
               </div>
               <div className="stat-tile">
-                <div className="stat-tile-label">Open put-away tasks</div>
-                <div className="stat-tile-value">{data.liveSummary.openPutAwayTaskCount}</div>
+                <span className="icon-badge icon-badge-purple">
+                  <Boxes />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Open put-away tasks</div>
+                  <div className="stat-tile-value">{data.liveSummary.openPutAwayTaskCount}</div>
+                </div>
               </div>
               <div className="stat-tile">
-                <div className="stat-tile-label">Active order-prep sessions</div>
-                <div className="stat-tile-value">{data.liveSummary.activeOrderPrepSessionCount}</div>
+                <span className="icon-badge icon-badge-green">
+                  <ShoppingCart />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Active order-prep sessions</div>
+                  <div className="stat-tile-value">{data.liveSummary.activeOrderPrepSessionCount}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -174,27 +218,52 @@ export function DashboardPage() {
           <div className="card">
             <div className="stat-grid">
               <div className="stat-tile">
-                <div className="stat-tile-label">Receptions logged</div>
-                <div className="stat-tile-value">{data.today.receptionsLoggedCount}</div>
+                <span className="icon-badge icon-badge-blue">
+                  <Truck />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Receptions logged</div>
+                  <div className="stat-tile-value">{data.today.receptionsLoggedCount}</div>
+                </div>
               </div>
               <div className="stat-tile">
-                <div className="stat-tile-label">Receptions completed</div>
-                <div className="stat-tile-value">{data.today.receptionsCompletedCount}</div>
+                <span className="icon-badge icon-badge-green">
+                  <CheckCircle2 />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Receptions completed</div>
+                  <div className="stat-tile-value">{data.today.receptionsCompletedCount}</div>
+                </div>
               </div>
               <div className="stat-tile">
-                <div className="stat-tile-label">Pallets logged</div>
-                <div className="stat-tile-value">{data.today.palletsLoggedCount}</div>
+                <span className="icon-badge icon-badge-orange">
+                  <PackageCheck />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Pallets logged</div>
+                  <div className="stat-tile-value">{data.today.palletsLoggedCount}</div>
+                </div>
               </div>
               <div className="stat-tile">
-                <div className="stat-tile-label">Put-away completed</div>
-                <div className="stat-tile-value">{data.today.putAwayCompletedCount}</div>
+                <span className="icon-badge icon-badge-purple">
+                  <ClipboardCheck />
+                </span>
+                <div className="stat-tile-body">
+                  <div className="stat-tile-label">Put-away completed</div>
+                  <div className="stat-tile-value">{data.today.putAwayCompletedCount}</div>
+                </div>
               </div>
             </div>
           </div>
 
           <StaffActivitySection highlightId={highlightId} highlightRef={highlightRef} />
 
-          <h2>Staff</h2>
+          <div className="flex-row" style={{ marginBottom: 12 }}>
+            <span className="icon-badge icon-badge-sm icon-badge-blue">
+              <Users />
+            </span>
+            <h2 style={{ margin: 0 }}>Staff</h2>
+          </div>
           <div className="card">
             <table>
               <thead>
@@ -309,13 +378,33 @@ function StaffHistorySection() {
     enabled: !!token,
   });
 
-  const orderedDays = data ? [...data.days].reverse() : [];
+  // Ascending (oldest -> today), matching the backend's own order —
+  // Cumulative is pinned right after the sticky Staff column (a
+  // running total, not part of the day timeline) and the day-by-day
+  // breakdown scrolls oldest-to-newest ending with Today as the
+  // rightmost group, which is also where the view defaults to (see the
+  // scroll effect below) so Today's columns are visible without the
+  // admin needing to notice there's more to scroll to.
+  const orderedDays = data ? data.days : [];
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [data]);
 
   return (
     <>
       <div className="section-toolbar">
-        <h2 style={{ margin: 0 }}>Staff History</h2>
+        <div className="flex-row">
+          <span className="icon-badge icon-badge-sm icon-badge-purple">
+            <ClipboardCheck />
+          </span>
+          <h2 style={{ margin: 0 }}>Staff History</h2>
+        </div>
         <button className="btn btn-outline" onClick={() => data && downloadStaffHistory(data)} disabled={!data || data.days.length === 0}>
+          <Download size={14} />
           Download
         </button>
       </div>
@@ -324,17 +413,20 @@ function StaffHistorySection() {
         {error && <p className="error-text">{error.message}</p>}
         {data && data.days.length === 0 && <p className="hint-text">No completed shifts yet.</p>}
         {data && data.days.length > 0 && (
-          <div style={{ overflowX: 'auto' }}>
+          <div ref={scrollRef} style={{ overflowX: 'auto' }}>
             <table style={{ width: 'max-content' }}>
               <thead>
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, verticalAlign: 'bottom' }}>
                     Staff
                   </th>
-                  {orderedDays.map((day, i) => (
-                    <StaffHistoryGroupHeader key={day} title={i === 0 ? `${formatDayHeader(day)} (Today)` : formatDayHeader(day)} />
-                  ))}
                   <StaffHistoryGroupHeader title="Cumulative" />
+                  {orderedDays.map((day, i) => (
+                    <StaffHistoryGroupHeader
+                      key={day}
+                      title={i === orderedDays.length - 1 ? `${formatDayHeader(day)} (Today)` : formatDayHeader(day)}
+                    />
+                  ))}
                 </tr>
                 <StaffHistorySubHeaderRow groupCount={orderedDays.length + 1} />
               </thead>
@@ -342,10 +434,10 @@ function StaffHistorySection() {
                 {data.staff.map((staffRow) => (
                   <tr key={staffRow.userId}>
                     <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 'var(--weight-strong)' }}>{staffRow.userName}</td>
+                    <StaffHistoryCells entry={staffRow.cumulative} />
                     {orderedDays.map((day) => (
                       <StaffHistoryCells key={day} entry={staffRow.days[day] ?? EMPTY_DAY} />
                     ))}
-                    <StaffHistoryCells entry={staffRow.cumulative} />
                   </tr>
                 ))}
                 {data.staff.length === 0 && (
@@ -421,12 +513,17 @@ function StaffActivitySection({
   return (
     <>
       <div className="section-toolbar">
-        <h2 style={{ margin: 0 }}>Staff Activity</h2>
         <div className="flex-row">
-          <button className={`btn ${scope === 'live' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setScope('live')}>
+          <span className="icon-badge icon-badge-sm icon-badge-orange">
+            <Activity />
+          </span>
+          <h2 style={{ margin: 0 }}>Staff Activity</h2>
+        </div>
+        <div className="tab-group">
+          <button className={`tab-btn ${scope === 'live' ? 'tab-btn-active' : ''}`} onClick={() => setScope('live')}>
             Live
           </button>
-          <button className={`btn ${scope === 'recent' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setScope('recent')}>
+          <button className={`tab-btn ${scope === 'recent' ? 'tab-btn-active' : ''}`} onClick={() => setScope('recent')}>
             Recent
           </button>
         </div>

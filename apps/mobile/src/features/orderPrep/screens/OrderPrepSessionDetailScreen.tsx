@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
@@ -116,7 +117,10 @@ export function OrderPrepSessionDetailScreen({ route, navigation }: Props) {
             {assign.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Assign task</Text>
+              <>
+                <Ionicons name="person-add-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Assign task</Text>
+              </>
             )}
           </Pressable>
         </>
@@ -207,11 +211,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 20,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonDisabled: {
     opacity: 0.5,

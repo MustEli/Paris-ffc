@@ -1,3 +1,4 @@
+import { Upload, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { ApiError } from '../core/api/client';
@@ -41,6 +42,7 @@ export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldPro
         <div className="flex-row" style={{ alignItems: 'center' }}>
           <img src={resolvePhotoUrl(value)} alt={label} style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
           <button className="btn btn-outline" onClick={() => onChange(null)}>
+            <X size={14} />
             Remove
           </button>
         </div>
@@ -50,6 +52,7 @@ export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldPro
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
         >
+          <Upload size={14} />
           {isUploading ? 'Uploading…' : 'Upload photo'}
         </button>
       )}

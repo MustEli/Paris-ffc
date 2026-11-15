@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Download, FileArchive, Image, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -19,6 +20,34 @@ import { useAuth } from '../core/auth/AuthContext';
 import { DispatchTaskPanel } from '../components/DispatchTaskPanel';
 
 type SortKey = 'createdAt' | 'sellerName' | 'weightKg';
+
+/** Matches ReceptionsPage.tsx's own copy — kept file-local rather than shared, since neither file is meant to import from the other for one small style object. */
+const filterControlStyle: React.CSSProperties = {
+  appearance: 'none',
+  background: '#fff',
+  border: '1px solid var(--gray-200)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '8px 12px',
+  fontSize: 'var(--text-sm)',
+  fontFamily: 'inherit',
+  color: 'var(--gray-950)',
+  width: 'auto',
+};
+
+function SortHeader({ label, active, dir, onClick }: { label: string; active: boolean; dir: 'asc' | 'desc'; onClick: () => void }) {
+  return (
+    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={onClick}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {label}
+        {active ? dir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} style={{ opacity: 0.4 }} />}
+      </span>
+    </th>
+  );
+}
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
 
 function extensionFromUrl(url: string): string {
   const match = /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.exec(url);
@@ -225,7 +254,12 @@ export function SellerStockSection() {
 
   return (
     <div>
-      <h2>Seller Stock Pallets</h2>
+      <div className="flex-row" style={{ marginBottom: 4 }}>
+        <span className="icon-badge icon-badge-sm icon-badge-purple">
+          <Boxes />
+        </span>
+        <h2 style={{ margin: 0 }}>Seller Stock Pallets</h2>
+      </div>
       <p className="page-subtitle">Every pallet received, with full details, condition, and photos.</p>
 
       {isPending && <p>Loading…</p>}
@@ -233,9 +267,15 @@ export function SellerStockSection() {
 
       {all.length > 0 && (
         <div className="card">
-          <div className="flex-row" style={{ flexWrap: 'wrap', marginBottom: 12, gap: 10 }}>
-            <input type="text" placeholder="Filter by seller" value={sellerFilter} onChange={(e) => setSellerFilter(e.target.value)} />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <div className="flex-row" style={{ flexWrap: 'wrap', marginBottom: 14, gap: 10 }}>
+            <input
+              type="text"
+              style={{ ...filterControlStyle, flex: '2 1 200px' }}
+              placeholder="Filter by seller"
+              value={sellerFilter}
+              onChange={(e) => setSellerFilter(e.target.value)}
+            />
+            <select style={{ ...filterControlStyle, flex: '1 1 160px' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
               {Object.entries(STATUS_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -243,36 +283,32 @@ export function SellerStockSection() {
                 </option>
               ))}
             </select>
-            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+            <input type="date" style={{ ...filterControlStyle, flex: '0 0 auto' }} value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            <input type="date" style={{ ...filterControlStyle, flex: '0 0 auto' }} value={toDate} onChange={(e) => setToDate(e.target.value)} />
           </div>
 
           <div className="section-toolbar">
             <div className="flex-row" style={{ flexWrap: 'wrap' }}>
-              <button
-                className="btn btn-outline"
-                onClick={() => setSelectedIds(new Set(pallets.map((p) => p.id)))}
-              >
+              <button className="btn btn-outline" onClick={() => setSelectedIds(new Set(pallets.map((p) => p.id)))}>
                 Select all
               </button>
-              <button
-                className="btn btn-outline"
-                onClick={() => setSelectedIds(new Set())}
-              >
+              <button className="btn btn-outline" onClick={() => setSelectedIds(new Set())}>
                 Clear selection
               </button>
               <button
                 className="btn-danger-text"
-                style={{ color: '#dc2626' }}
+                style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 onClick={handleDeleteSelected}
                 disabled={isDeleting || selectedIds.size === 0}
               >
+                <Trash2 size={13} />
                 Delete selected ({selectedIds.size})
               </button>
               <button
                 className="btn btn-outline"
                 onClick={() => downloadPalletsExcel(selectedPallets.length > 0 ? selectedPallets : pallets, selectedPallets.length > 0 ? 'selected' : 'all')}
               >
+                <Download size={14} />
                 Download as Excel ({selectedPallets.length > 0 ? selectedPallets.length : pallets.length})
               </button>
             </div>
@@ -281,6 +317,7 @@ export function SellerStockSection() {
               onClick={() => handleDownloadZip(selectedPallets.length > 0 ? selectedPallets : pallets)}
               disabled={isZipping}
             >
+              <FileArchive size={14} />
               {isZipping
                 ? `Zipping ${zipProgress ? `${zipProgress.done}/${zipProgress.total}` : ''}…`
                 : `Download photos ZIP (${selectedPallets.length > 0 ? selectedPallets.length : pallets.length})`}
@@ -294,16 +331,10 @@ export function SellerStockSection() {
               <tr>
                 <th></th>
                 <th>Pallet</th>
-                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('createdAt')}>
-                  Date & Time {sortKey === 'createdAt' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                </th>
+                <SortHeader label="Date & Time" active={sortKey === 'createdAt'} dir={sortDir} onClick={() => toggleSort('createdAt')} />
                 <th>Box Number</th>
-                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('sellerName')}>
-                  Seller {sortKey === 'sellerName' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                </th>
-                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('weightKg')}>
-                  Weight (kg) {sortKey === 'weightKg' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                </th>
+                <SortHeader label="Seller" active={sortKey === 'sellerName'} dir={sortDir} onClick={() => toggleSort('sellerName')} />
+                <SortHeader label="Weight (kg)" active={sortKey === 'weightKg'} dir={sortDir} onClick={() => toggleSort('weightKg')} />
                 <th>Condition</th>
                 <th>Status</th>
                 <th>Photos</th>
@@ -332,11 +363,11 @@ export function SellerStockSection() {
                       />
                     </td>
                     <td>{pallet.palletIndex}</td>
-                    <td>{new Date(pallet.createdAt).toLocaleString()}</td>
+                    <td>{formatDateTime(pallet.createdAt)}</td>
                     <td>{pallet.boxNumber}</td>
                     <td>{pallet.sellerName}</td>
                     <td>
-                      {pallet.weightKg}
+                      {pallet.weightKg.toLocaleString()}
                       {pallet.overweightFlag && (
                         <span className="pill pill-amber" style={{ marginLeft: 6 }}>
                           Overweight
@@ -350,26 +381,29 @@ export function SellerStockSection() {
                       <div className="flex-row">
                         <button
                           className="btn-danger-text"
-                          style={{ color: 'var(--gray-950)', textDecoration: 'underline' }}
+                          style={{ color: 'var(--gray-950)', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                           onClick={() => setGalleryPallet(pallet)}
                           disabled={photoCount === 0}
                         >
+                          <Image size={13} />
                           View photos
                         </button>
                         <button
                           className="btn-danger-text"
-                          style={{ color: 'var(--gray-950)', textDecoration: 'underline' }}
+                          style={{ color: 'var(--gray-950)', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                           onClick={() => handleDownloadZip([pallet])}
                           disabled={isZipping || photoCount === 0}
                         >
+                          <Download size={13} />
                           Download this one
                         </button>
                         <button
                           className="btn-danger-text"
-                          style={{ color: '#dc2626', textDecoration: 'underline' }}
+                          style={{ color: '#dc2626', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                           onClick={() => handleDeleteOne(pallet.id)}
                           disabled={isDeleting}
                         >
+                          <Trash2 size={13} />
                           Delete
                         </button>
                       </div>

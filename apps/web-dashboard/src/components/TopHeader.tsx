@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Bell, ChevronDown, LogOut, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -88,6 +89,7 @@ export function TopHeader() {
         </div>
 
         <div className="top-header-search" ref={containerRef}>
+          <Search size={15} className="top-header-search-icon" />
           <input
             type="text"
             placeholder="Search by Pallet ID, Box #, Seller Name, Staff Name, or Task ID"
@@ -149,7 +151,7 @@ export function TopHeader() {
           </div>
 
           <button type="button" className="top-header-bell" title="Notifications">
-            🔔
+            <Bell size={17} />
             <span className="top-header-bell-badge" />
           </button>
 
@@ -157,10 +159,12 @@ export function TopHeader() {
             <button type="button" className="top-header-profile-trigger" onClick={() => setIsProfileOpen((v) => !v)}>
               <span className="top-header-avatar">{(user?.name ?? '?').charAt(0).toUpperCase()}</span>
               <span className="top-header-profile-name">{user?.name}</span>
+              <ChevronDown size={14} color="#94a3b8" />
             </button>
             {isProfileOpen && (
               <div className="top-header-profile-dropdown">
                 <button type="button" className="top-header-profile-dropdown-item" onClick={logout}>
+                  <LogOut size={14} />
                   Log out
                 </button>
               </div>

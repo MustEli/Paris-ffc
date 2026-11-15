@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -77,7 +78,14 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
         <View style={styles.actionBox}>
           {start.error && <Text style={styles.error}>{start.error.message}</Text>}
           <Pressable style={styles.button} disabled={start.isPending} onPress={() => start.mutate()}>
-            {start.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start task</Text>}
+            {start.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="play-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Start task</Text>
+              </>
+            )}
           </Pressable>
           <ReportIssueForm draft={issueDraft} setDraft={setIssueDraft} report={report} />
         </View>
@@ -94,7 +102,10 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Task completed</Text>
+              <>
+                <Ionicons name="checkmark-done-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Task completed</Text>
+              </>
             )}
           </Pressable>
           <ReportIssueForm draft={issueDraft} setDraft={setIssueDraft} report={report} />
@@ -126,7 +137,10 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
             {reassign.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Reassign task</Text>
+              <>
+                <Ionicons name="swap-horizontal-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Reassign task</Text>
+              </>
             )}
           </Pressable>
         </View>
@@ -283,10 +297,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonDisabled: {
     opacity: 0.5,

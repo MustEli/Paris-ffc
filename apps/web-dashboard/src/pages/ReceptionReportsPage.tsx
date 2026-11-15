@@ -1,5 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import {
+  AlertCircle,
+  BarChart3,
+  Calendar,
+  Clock,
+  PackageX,
+  SlidersHorizontal,
+  Truck,
+  X,
+} from 'lucide-react';
+import { type ComponentType, useState } from 'react';
 
 import {
   fetchReceptionDuration,
@@ -32,6 +42,44 @@ const WEEKDAY_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+const numberFormatter = new Intl.NumberFormat();
+function formatCount(n: number): string {
+  return numberFormatter.format(n);
+}
+
+/** Shared look for native select/date controls — this page only; the
+    global stylesheet doesn't style these elements yet. */
+const controlStyle: React.CSSProperties = {
+  width: 'auto',
+  padding: '8px 10px',
+  border: '1px solid var(--gray-200)',
+  borderRadius: 'var(--radius-sm)',
+  fontSize: 'var(--text-sm)',
+  fontFamily: 'inherit',
+  color: 'var(--gray-950)',
+  background: '#fff',
+};
+
+const filterLabelStyle: React.CSSProperties = {
+  fontSize: 'var(--text-sm)',
+  fontWeight: 'var(--weight-strong)',
+  color: 'var(--gray-600)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+};
+
+function SectionHeading({ icon: Icon, tint, title }: { icon: ComponentType<{ size?: number }>; tint: string; title: string }) {
+  return (
+    <div className="flex-row" style={{ marginBottom: 14 }}>
+      <span className={`icon-badge icon-badge-sm icon-badge-${tint}`}>
+        <Icon />
+      </span>
+      <h2 style={{ margin: 0 }}>{title}</h2>
+    </div>
+  );
 }
 
 /**
@@ -98,14 +146,26 @@ export function ReceptionReportsPage() {
 
   return (
     <div>
-      <h1>Reception Reports</h1>
-      <p className="page-subtitle">Delivery volume, processing time, Seller Stock quality, sources, and reliability.</p>
+      <div className="page-header-row">
+        <span className="icon-badge icon-badge-orange">
+          <BarChart3 />
+        </span>
+        <div className="page-header-text">
+          <h1>Reception Reports</h1>
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            Delivery volume, processing time, Seller Stock quality, sources, and reliability.
+          </p>
+        </div>
+      </div>
 
       <div className="card">
-        <div className="flex-row" style={{ flexWrap: 'wrap', gap: 16 }}>
+        <div className="flex-row" style={{ flexWrap: 'wrap', gap: 20 }}>
           <div className="flex-row">
-            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>Granularity</label>
-            <select value={granularity} onChange={(e) => setGranularity(e.target.value as ReportGranularity)}>
+            <span style={filterLabelStyle}>
+              <SlidersHorizontal size={14} />
+              Granularity
+            </span>
+            <select style={controlStyle} value={granularity} onChange={(e) => setGranularity(e.target.value as ReportGranularity)}>
               <option value="day">Day</option>
               <option value="week">Week</option>
               <option value="month">Month</option>
@@ -113,12 +173,18 @@ export function ReceptionReportsPage() {
             </select>
           </div>
           <div className="flex-row">
-            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>From</label>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <span style={filterLabelStyle}>
+              <Calendar size={14} />
+              From
+            </span>
+            <input style={controlStyle} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div className="flex-row">
-            <label style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>To</label>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <span style={filterLabelStyle}>
+              <Calendar size={14} />
+              To
+            </span>
+            <input style={controlStyle} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
           {(from || to) && (
             <button
@@ -128,16 +194,32 @@ export function ReceptionReportsPage() {
                 setTo('');
               }}
             >
+              <X size={14} />
               Clear dates
             </button>
           )}
         </div>
 
-        <div className="stat-grid" style={{ marginTop: 16 }}>
-          <StatTile label="Deliveries (latest period)" value={latestVolume?.total ?? '—'} />
-          <StatTile label="Avg. reception duration" value={latestDuration?.averageMinutes != null ? `${round1(latestDuration.averageMinutes)} min` : '—'} />
-          <StatTile label="Seller Stock problem rate" value={latestQuality != null ? `${round1(latestQuality.problemRatePercent)}%` : '—'} />
-          <StatTile label="Abandoned-reception rate" value={latestReliability != null ? `${round1(latestReliability.unfinishedRatePercent)}%` : '—'} />
+        <div className="stat-grid" style={{ marginTop: 18 }}>
+          <StatTile icon={Truck} tint="blue" label="Deliveries (latest period)" value={latestVolume ? formatCount(latestVolume.total) : '—'} />
+          <StatTile
+            icon={Clock}
+            tint="purple"
+            label="Avg. reception duration"
+            value={latestDuration?.averageMinutes != null ? `${round1(latestDuration.averageMinutes)} min` : '—'}
+          />
+          <StatTile
+            icon={PackageX}
+            tint="red"
+            label="Seller Stock problem rate"
+            value={latestQuality != null ? `${round1(latestQuality.problemRatePercent)}%` : '—'}
+          />
+          <StatTile
+            icon={AlertCircle}
+            tint="orange"
+            label="Abandoned-reception rate"
+            value={latestReliability != null ? `${round1(latestReliability.unfinishedRatePercent)}%` : '—'}
+          />
         </div>
       </div>
 
@@ -146,8 +228,9 @@ export function ReceptionReportsPage() {
 
       {volume.data && (
         <div className="card">
+          <SectionHeading icon={BarChart3} tint="blue" title="Delivery Volume" />
           <StackedBarChart
-            title="Delivery Volume"
+            title="By Category"
             extra={<PercentChangeBadge percent={volume.data.percentChangeVsPreviousPeriod} />}
             data={volume.data.byPeriod.map((p) => ({
               label: p.period,
@@ -171,17 +254,18 @@ export function ReceptionReportsPage() {
 
       {duration.data && (
         <div className="card">
-          <LineChart title="Reception Duration — Trend" data={duration.data.byPeriod.map((p) => ({ x: p.period, y: p.averageMinutes }))} unit=" min" />
+          <SectionHeading icon={Clock} tint="purple" title="Reception Duration" />
+          <LineChart title="Trend" data={duration.data.byPeriod.map((p) => ({ x: p.period, y: p.averageMinutes }))} unit=" min" />
           <div style={{ marginTop: 20 }}>
-            <div className="flex-row" style={{ marginBottom: 8 }}>
+            <div className="tab-group" style={{ marginBottom: 12 }}>
               <button
-                className={`btn ${durationDimension === 'category' ? 'btn-primary' : 'btn-outline'}`}
+                className={`tab-btn ${durationDimension === 'category' ? 'tab-btn-active' : ''}`}
                 onClick={() => setDurationDimension('category')}
               >
                 By Category
               </button>
               <button
-                className={`btn ${durationDimension === 'staff' ? 'btn-primary' : 'btn-outline'}`}
+                className={`tab-btn ${durationDimension === 'staff' ? 'tab-btn-active' : ''}`}
                 onClick={() => setDurationDimension('staff')}
               >
                 By Staff
@@ -208,17 +292,12 @@ export function ReceptionReportsPage() {
 
       {quality.data && (
         <div className="card">
-          <div className="flex-row" style={{ marginBottom: 8 }}>
-            <button
-              className={`btn ${qualityView === 'all' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setQualityView('all')}
-            >
+          <SectionHeading icon={PackageX} tint="red" title="Seller Stock Quality" />
+          <div className="tab-group" style={{ marginBottom: 12 }}>
+            <button className={`tab-btn ${qualityView === 'all' ? 'tab-btn-active' : ''}`} onClick={() => setQualityView('all')}>
               All problems
             </button>
-            <button
-              className={`btn ${qualityView === 'overweight' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setQualityView('overweight')}
-            >
+            <button className={`tab-btn ${qualityView === 'overweight' ? 'tab-btn-active' : ''}`} onClick={() => setQualityView('overweight')}>
               Overweight only
             </button>
           </div>
@@ -241,7 +320,7 @@ export function ReceptionReportsPage() {
           )}
           <div style={{ marginTop: 20 }}>
             <LineChart
-              title="Overall Problem Rate — Trend"
+              title="Trend"
               color="#d03b3b"
               unit="%"
               data={
@@ -256,6 +335,7 @@ export function ReceptionReportsPage() {
 
       {sources.data && (
         <div className="card">
+          <SectionHeading icon={Truck} tint="blue" title="Reception Sources" />
           <RankedBarChart
             title="Volume by Transporter Company"
             data={[...sources.data.topTransporters].sort((a, b) => b.totalQuantity - a.totalQuantity).map((t) => ({ label: t.transporterCompany, value: t.totalQuantity }))}
@@ -265,6 +345,7 @@ export function ReceptionReportsPage() {
 
       {reliability.data && (
         <div className="card">
+          <SectionHeading icon={AlertCircle} tint="orange" title="Reception Reliability" />
           <RankedBarChart
             title="Abandoned-Reception Rate by Staff"
             unit="%"
@@ -272,7 +353,7 @@ export function ReceptionReportsPage() {
             data={[...reliability.data.byStaff].sort((a, b) => b.unfinishedRatePercent - a.unfinishedRatePercent).map((s) => ({ label: s.userName, value: round1(s.unfinishedRatePercent) }))}
           />
           <div style={{ marginTop: 20 }}>
-            <LineChart title="Abandoned-Reception Rate — Trend" color="#d03b3b" unit="%" data={reliability.data.byPeriod.map((p) => ({ x: p.period, y: round1(p.unfinishedRatePercent) }))} />
+            <LineChart title="Trend" color="#d03b3b" unit="%" data={reliability.data.byPeriod.map((p) => ({ x: p.period, y: round1(p.unfinishedRatePercent) }))} />
           </div>
         </div>
       )}

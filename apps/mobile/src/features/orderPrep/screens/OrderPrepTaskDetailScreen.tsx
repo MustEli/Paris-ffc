@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -55,7 +56,14 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
         <>
           {start.error && <Text style={styles.error}>{start.error.message}</Text>}
           <Pressable style={styles.button} disabled={start.isPending} onPress={() => start.mutate()}>
-            {start.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start task</Text>}
+            {start.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="play-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Start task</Text>
+              </>
+            )}
           </Pressable>
         </>
       )}
@@ -71,7 +79,10 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
             {complete.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Task completed</Text>
+              <>
+                <Ionicons name="checkmark-done-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Task completed</Text>
+              </>
             )}
           </Pressable>
         </>
@@ -136,11 +147,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonText: {
     color: '#fff',

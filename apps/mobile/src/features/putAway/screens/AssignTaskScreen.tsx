@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type RouteProp } from '@react-navigation/native';
 import { useState } from 'react';
@@ -70,7 +71,14 @@ export function AssignTaskScreen({ route, navigation }: Props) {
         disabled={!assignedToUserId || !location || isPending}
         onPress={handleSubmit}
       >
-        {isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Assign task</Text>}
+        {isPending ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="person-add-outline" size={16} color="#fff" style={styles.buttonIcon} />
+            <Text style={styles.buttonText}>Assign task</Text>
+          </>
+        )}
       </Pressable>
     </KeyboardAwareScreen>
   );
@@ -129,11 +137,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   button: {
+    flexDirection: 'row',
     backgroundColor: '#0f172a',
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonDisabled: {
     opacity: 0.5,

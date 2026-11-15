@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
@@ -8,10 +10,12 @@ interface Props {
   /** A visibly stronger divider below this row — see Floor Tasks' and Issue Reporting's clustering. */
   strongDividerBelow?: boolean;
   disabled?: boolean;
+  /** Optional leading icon in a tinted circle — makes rows scannable at a glance instead of plain text. */
+  icon?: ComponentProps<typeof Ionicons>['name'];
 }
 
 /** Floor Tasks' and Issue Reporting's shared vertical list row, one task/category per row. */
-export function ListRow({ label, onPress, strongDividerBelow, disabled }: Props) {
+export function ListRow({ label, onPress, strongDividerBelow, disabled, icon }: Props) {
   return (
     <View>
       <Pressable
@@ -19,8 +23,13 @@ export function ListRow({ label, onPress, strongDividerBelow, disabled }: Props)
         onPress={onPress}
         disabled={disabled}
       >
+        {icon && (
+          <View style={styles.iconBadge}>
+            <Ionicons name={icon} size={18} color={colors.brandOrange} />
+          </View>
+        )}
         <Text style={[styles.label, disabled && styles.labelDisabled]}>{label}</Text>
-        <Text style={[styles.chevron, disabled && styles.labelDisabled]}>›</Text>
+        <Ionicons name="chevron-forward" size={18} color={disabled ? colors.textMuted : colors.textSecondary} />
       </Pressable>
       <View style={strongDividerBelow ? styles.strongDivider : styles.divider} />
     </View>
@@ -31,7 +40,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     paddingVertical: 18,
     paddingHorizontal: 20,
     backgroundColor: colors.surface,
@@ -42,16 +51,21 @@ const styles = StyleSheet.create({
   rowDisabled: {
     opacity: 0.4,
   },
+  iconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.brandOrange + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   label: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
     color: colors.textPrimary,
   },
   labelDisabled: {
-    color: colors.textMuted,
-  },
-  chevron: {
-    fontSize: 20,
     color: colors.textMuted,
   },
   divider: {

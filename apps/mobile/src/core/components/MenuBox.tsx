@@ -1,6 +1,8 @@
+import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
+import { elevation } from '../theme/elevation';
 import { spacing } from '../theme/spacing';
 import { fontSize, fontWeight } from '../theme/typography';
 
@@ -14,10 +16,12 @@ interface Props {
   spacedAbove?: boolean;
   /** A small count pill in the top-right corner — e.g. Open Pool Tasks' current unclaimed count. Hidden entirely at 0/undefined. */
   badgeCount?: number;
+  /** An Ionicons element shown above the label — optional so this stays a drop-in prop, not a required redesign of every call site. */
+  icon?: ReactNode;
 }
 
 /** The main menu's and Reception's shared tile — tap it, either do the thing or land on more boxes/rows. */
-export function MenuBox({ label, description, onPress, variant = 'default', spacedAbove, badgeCount }: Props) {
+export function MenuBox({ label, description, onPress, variant = 'default', spacedAbove, badgeCount, icon }: Props) {
   const isAlert = variant === 'alert';
   return (
     <Pressable
@@ -34,6 +38,7 @@ export function MenuBox({ label, description, onPress, variant = 'default', spac
           <Text style={styles.badgeText}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
         </View>
       )}
+      {icon && <View style={styles.icon}>{icon}</View>}
       <Text style={[styles.label, isAlert && styles.labelAlert]}>{label}</Text>
       {description && <Text style={styles.description}>{description}</Text>}
     </Pressable>
@@ -48,6 +53,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: spacing[5],
     alignItems: 'center',
+    ...elevation.sm,
+  },
+  icon: {
+    marginBottom: spacing[2],
   },
   badge: {
     position: 'absolute',
@@ -60,6 +69,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[2],
     alignItems: 'center',
     justifyContent: 'center',
+    ...elevation.sm,
   },
   badgeText: {
     color: '#1a1200',

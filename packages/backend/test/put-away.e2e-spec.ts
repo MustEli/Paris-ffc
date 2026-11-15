@@ -191,6 +191,7 @@ describe('Put-Away (e2e)', () => {
       .expect(201);
     expect(withPriority.body.priority).toBe('urgent');
     expect(withPriority.body.instructions).toBe('Fragile — handle with care');
+    expect(withPriority.body.instructionPhotoUrls).toEqual([]);
 
     const palletWithoutPriority = await createReadyPallet(app, staff.token);
     const withoutPriority = await request(app.getHttpServer())
@@ -200,6 +201,18 @@ describe('Put-Away (e2e)', () => {
       .expect(201);
     expect(withoutPriority.body.priority).toBe('normal');
     expect(withoutPriority.body.instructions).toBeNull();
+    expect(withoutPriority.body.instructionPhotoUrls).toEqual([]);
+  });
+
+  it('accepts admin-uploaded instruction photos at assignment time', async () => {
+    const palletId = await createReadyPallet(app, staff.token);
+    const photoUrls = ['https://res.cloudinary.com/demo/image/upload/a.jpg', 'https://res.cloudinary.com/demo/image/upload/b.jpg'];
+    const response = await request(app.getHttpServer())
+      .post('/put-away-tasks')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ palletId, assignedToUserId: staff.id, location: 'Aisle 3', instructionPhotoUrls: photoUrls })
+      .expect(201);
+    expect(response.body.instructionPhotoUrls).toEqual(photoUrls);
   });
 
   it('rejects a second assignment while one is already active for the same pallet', async () => {

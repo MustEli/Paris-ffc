@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { type ComponentProps, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +21,14 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: 'current', label: 'Current' },
   { key: 'today', label: 'Today' },
   { key: 'staff', label: 'Staff' },
+];
+
+const MODULES: { key: string; label: string; icon: ComponentProps<typeof Ionicons>['name']; onPress: (nav: Props['navigation']) => void }[] = [
+  { key: 'reception', label: 'Reception', icon: 'cube-outline', onPress: (nav) => nav.navigate('ReceptionList') },
+  { key: 'sellerStock', label: 'Seller Stock', icon: 'layers-outline', onPress: (nav) => nav.navigate('SellerStockList') },
+  { key: 'putAway', label: 'Put-Away', icon: 'download-outline', onPress: (nav) => nav.navigate('PutAwayTaskList') },
+  { key: 'orderPrep', label: 'Order Prep', icon: 'cart-outline', onPress: (nav) => nav.navigate('OrderPrepSessionList') },
+  { key: 'users', label: 'Users', icon: 'people-outline', onPress: (nav) => nav.navigate('UserList') },
 ];
 
 /**
@@ -117,21 +126,19 @@ export function AdminHomeScreen({ navigation }: Props) {
 
           <Text style={[styles.sectionTitle, styles.modulesTitle]}>Modules</Text>
           <View style={styles.modules}>
-            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('ReceptionList')}>
-              <Text style={styles.moduleLabel}>Reception</Text>
-            </Pressable>
-            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('SellerStockList')}>
-              <Text style={styles.moduleLabel}>Seller Stock</Text>
-            </Pressable>
-            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('PutAwayTaskList')}>
-              <Text style={styles.moduleLabel}>Put-Away</Text>
-            </Pressable>
-            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('OrderPrepSessionList')}>
-              <Text style={styles.moduleLabel}>Order Prep</Text>
-            </Pressable>
-            <Pressable style={styles.moduleCard} onPress={() => navigation.navigate('UserList')}>
-              <Text style={styles.moduleLabel}>Users</Text>
-            </Pressable>
+            {MODULES.map((module) => (
+              <Pressable
+                key={module.key}
+                style={({ pressed }) => [styles.moduleCard, pressed && styles.moduleCardPressed]}
+                onPress={() => module.onPress(navigation)}
+              >
+                <View style={styles.moduleIconBadge}>
+                  <Ionicons name={module.icon} size={20} color="#c2660a" />
+                </View>
+                <Text style={styles.moduleLabel}>{module.label}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+              </Pressable>
+            ))}
           </View>
         </>
       )}
@@ -185,21 +192,48 @@ const styles = StyleSheet.create({
   // Same card look as the Staff panel's MenuScreen — label-only here
   // (no description line), per explicit feedback.
   moduleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: 14,
+    padding: 16,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  moduleCardPressed: {
+    backgroundColor: '#f9fafb',
+  },
+  moduleIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: '#fff1e2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   moduleLabel: {
-    fontSize: 17,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '700',
     color: '#0f172a',
   },
   statusCard: {
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 14,
     padding: 12,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   statusContent: {
     marginTop: 14,

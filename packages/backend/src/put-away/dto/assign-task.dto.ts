@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
 import { TASK_PRIORITIES, type TaskPriority } from '../../tasks/task-priority';
 
@@ -23,4 +23,9 @@ export class AssignTaskDto {
   @IsOptional()
   @IsString()
   instructions?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  instructionPhotoUrls?: string[];
 }

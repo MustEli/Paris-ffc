@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Table2, TrendingDown, TrendingUp } from 'lucide-react';
+import { type ComponentType, useState } from 'react';
 
 /**
  * Small, self-contained chart set for the Reception Reports page — no
@@ -21,6 +22,11 @@ export const INK_SECONDARY = '#52514e';
 export const INK_MUTED = '#898781';
 export const GRIDLINE = '#e1e0d9';
 export const BASELINE = '#c3c2b7';
+
+const numberFormatter = new Intl.NumberFormat();
+function fmt(n: number): string {
+  return numberFormatter.format(n);
+}
 
 function Tooltip({ x, y, children }: { x: number; y: number; children: React.ReactNode }) {
   return (
@@ -48,10 +54,10 @@ function Tooltip({ x, y, children }: { x: number; y: number; children: React.Rea
 function Legend({ items }: { items: { color: string; label: string }[] }) {
   if (items.length < 2) return null;
   return (
-    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 10, fontSize: 12, color: INK_SECONDARY }}>
+    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14, fontSize: 12, fontWeight: 500, color: INK_SECONDARY }}>
       {items.map((item) => (
-        <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: item.color, display: 'inline-block' }} />
+        <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: item.color, display: 'inline-block' }} />
           {item.label}
         </div>
       ))}
@@ -63,9 +69,10 @@ function TableToggle({ showTable, onToggle }: { showTable: boolean; onToggle: ()
   return (
     <button
       className="btn btn-outline"
-      style={{ fontSize: 'var(--text-xs)', padding: 'var(--space-1) 10px' }}
+      style={{ fontSize: 'var(--text-xs)', padding: '6px 12px' }}
       onClick={onToggle}
     >
+      <Table2 size={13} />
       {showTable ? 'View chart' : 'View as table'}
     </button>
   );
@@ -83,9 +90,9 @@ function ChartHeader({
   onToggleTable: () => void;
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{title}</h3>
+        <h3 style={{ margin: 0, fontSize: 'var(--text-md)', fontWeight: 'var(--weight-strong)', color: 'var(--gray-950)' }}>{title}</h3>
         {extra}
       </div>
       <TableToggle showTable={showTable} onToggle={onToggleTable} />
@@ -143,9 +150,9 @@ export function StackedBarChart({
                 <tr key={d.label}>
                   <td>{d.label}</td>
                   {legend.map((l) => (
-                    <td key={l.key}>{d.segments.find((s) => s.key === l.key)?.value ?? 0}</td>
+                    <td key={l.key}>{fmt(d.segments.find((s) => s.key === l.key)?.value ?? 0)}</td>
                   ))}
-                  <td>{totals[i]}</td>
+                  <td>{fmt(totals[i])}</td>
                 </tr>
               ))}
             </tbody>
@@ -170,8 +177,8 @@ export function StackedBarChart({
                       x={x}
                       y={y}
                       width={barWidth}
-                      height={Math.max(0, segHeight - 2)}
-                      rx={2}
+                      height={Math.max(0, segHeight)}
+                      rx={0}
                       fill={colorByKey.get(seg.key) ?? SINGLE_SERIES_COLOR}
                       onMouseEnter={(e) =>
                         setHover({
@@ -246,7 +253,7 @@ export function RankedBarChart({
               <tr key={d.label}>
                 <td>{d.label}</td>
                 <td>
-                  {d.value}
+                  {fmt(d.value)}
                   {unit}
                 </td>
               </tr>
@@ -265,12 +272,12 @@ export function RankedBarChart({
                 </text>
                 <rect x={150} y={y + 4} width={Math.max(2, barWidth)} height={16} rx={2} fill={color}>
                   <title>
-                    {d.label}: {d.value}
+                    {d.label}: {fmt(d.value)}
                     {unit}
                   </title>
                 </rect>
                 <text x={150 + barWidth + 6} y={y + 16} fontSize={11} fill={INK_PRIMARY}>
-                  {d.value}
+                  {fmt(d.value)}
                   {unit}
                 </text>
               </g>
@@ -329,7 +336,7 @@ export function LineChart({
             {data.map((d) => (
               <tr key={d.x}>
                 <td>{d.x}</td>
-                <td>{d.y === null ? '—' : `${d.y}${unit}`}</td>
+                <td>{d.y === null ? '—' : `${fmt(d.y)}${unit}`}</td>
               </tr>
             ))}
           </tbody>
@@ -373,7 +380,7 @@ export function LineChart({
             whiteSpace: 'nowrap',
           }}
         >
-          {points[hoverIndex]!.raw.x}: {points[hoverIndex]!.raw.y}
+          {points[hoverIndex]!.raw.x}: {points[hoverIndex]!.raw.y !== null ? fmt(points[hoverIndex]!.raw.y!) : '—'}
           {unit}
         </div>
       )}
@@ -381,11 +388,28 @@ export function LineChart({
   );
 }
 
-export function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
+export function StatTile({
+  label,
+  value,
+  icon: Icon,
+  tint = 'blue',
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: ComponentType<{ size?: number }>;
+  tint?: 'orange' | 'blue' | 'green' | 'purple' | 'gray' | 'red';
+}) {
   return (
     <div className="stat-tile">
-      <div className="stat-tile-label">{label}</div>
-      <div className="stat-tile-value">{value}</div>
+      {Icon && (
+        <span className={`icon-badge icon-badge-${tint}`}>
+          <Icon />
+        </span>
+      )}
+      <div className="stat-tile-body">
+        <div className="stat-tile-label">{label}</div>
+        <div className="stat-tile-value">{value}</div>
+      </div>
     </div>
   );
 }
@@ -394,8 +418,9 @@ export function PercentChangeBadge({ percent }: { percent: number | null }) {
   if (percent === null) return null;
   const up = percent >= 0;
   return (
-    <span style={{ fontSize: 12, fontWeight: 600, color: up ? '#006300' : '#d03b3b' }}>
-      {up ? '▲' : '▼'} {Math.abs(Math.round(percent))}% vs last period
+    <span className={`pill ${up ? 'pill-green' : 'pill-red'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+      {Math.abs(Math.round(percent))}% vs last period
     </span>
   );
 }

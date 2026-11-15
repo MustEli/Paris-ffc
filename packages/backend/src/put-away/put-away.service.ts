@@ -40,6 +40,7 @@ export class PutAwayService {
       issueDescription: row.issueDescription,
       priority: row.priority,
       instructions: row.instructions,
+      instructionPhotoUrls: row.instructionPhotoUrls,
     };
   }
 
@@ -84,6 +85,7 @@ export class PutAwayService {
         assignedAt: new Date(),
         priority: dto.priority ?? 'normal',
         instructions: dto.instructions ?? null,
+        instructionPhotoUrls: dto.instructionPhotoUrls ?? [],
       },
     });
     return this.toDomain(row);

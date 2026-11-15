@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -43,6 +43,30 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
   const onBreak = !isLoadingStatus && !!status?.onBreak;
 
   const [now, setNow] = useState(() => Date.now());
+
+  // `now` only needs to tick once a second while a break is running
+  // (see the interval below) — the rest of the time it's fine for it to
+  // sit stale, since nothing reads it. But that staleness is exactly
+  // the bug: the instant `onBreak` flips false -> true, `now` still
+  // holds whatever old timestamp it last had (the previous break's
+  // final tick, or this component's mount time if this is the first
+  // break of the session) — possibly minutes or hours old — while
+  // `statusUpdatedAt` has just jumped to "right now" (the status
+  // refetch that followed the break actually starting). The breakCounter
+  // math below subtracts a stale, too-small `now - statusUpdatedAt`,
+  // which inflates the very first displayed countdown by however long
+  // `now` had gone un-refreshed (the "60:05"/"20:01" instead of an
+  // exact "60:00"/"20:00" the admin reported). Resetting `now`
+  // synchronously here — during render, the instant the transition is
+  // seen, via the officially-supported "adjust state while rendering"
+  // pattern — fixes this before the first paint, rather than waiting
+  // for the interval's first 1s tick to correct it a moment later.
+  const wasOnBreakRef = useRef(onBreak);
+  if (onBreak && !wasOnBreakRef.current) {
+    setNow(Date.now());
+  }
+  wasOnBreakRef.current = onBreak;
+
   useEffect(() => {
     if (!onBreak) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);

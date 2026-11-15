@@ -19,6 +19,7 @@ const ERROR_CODE_KEYS: Record<string, string> = {
   'shift.break_already_active': 'apiErrors.shift.break_already_active',
   'shift.short_break_used_up': 'apiErrors.shift.short_break_used_up',
   'shift.no_break_to_end': 'apiErrors.shift.no_break_to_end',
+  'shift.active_task_running': 'apiErrors.shift.active_task_running',
   'floor_task.box_prep_merged': 'apiErrors.floorTask.box_prep_merged',
   'floor_task.already_open': 'apiErrors.floorTask.already_open',
   'floor_task.not_yours': 'apiErrors.floorTask.not_yours',

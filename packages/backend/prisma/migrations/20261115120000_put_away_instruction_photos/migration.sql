@@ -1,0 +1,1 @@
+ALTER TABLE "PutAwayTask" ADD COLUMN "instructionPhotoUrls" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

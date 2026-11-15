@@ -59,6 +59,8 @@ export interface AssignPutAwayInput {
   location: string;
   priority: TaskPriority;
   instructions?: string;
+  /** Admin-uploaded photos attached at assignment time — distinct from the pallet's own staff-captured damage evidence photos. */
+  instructionPhotoUrls?: string[];
 }
 
 export function assignPutAway(token: string, input: AssignPutAwayInput) {
