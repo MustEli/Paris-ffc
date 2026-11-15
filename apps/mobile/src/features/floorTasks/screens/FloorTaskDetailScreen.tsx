@@ -98,6 +98,14 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const needsComment = meta.category === 'backup_other' || meta.needsComment;
   const commentRequired = meta.category === 'backup_other';
 
+  // Dispatch (the only needsBarcodeScan category today) has no other
+  // field to fill in at Stop time — once the barcode is scanned,
+  // there's nothing left to confirm, so Stop should end it right away
+  // instead of opening the isEnding form. A future needsBarcodeScan
+  // category that also needs counts/zone/comment/photos would fall
+  // through to the normal isEnding flow via this same check.
+  const hasEndingForm = !!(meta.countLabel || meta.countExtraLabel || meta.needsZone || needsComment || meta.needsPhotos);
+
   // Every number box the category shows must have something typed in —
   // 0 counts — before Pause or Stop can proceed. Purely a client-side
   // gate: nothing is sent to the backend here, it just stops the
@@ -190,6 +198,23 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
           <Text style={styles.startedAt}>
             {t('floorTasks.started', { time: new Date(openTask.startedAt).toLocaleTimeString() })}
           </Text>
+
+          {meta.needsBarcodeScan && (
+            <View style={styles.barcodeSection}>
+              <View style={styles.barcodeRow}>
+                <BarcodeScanButton onScan={handleScanBarcode} />
+                <Text style={styles.barcodeText}>
+                  {scannedBarcode ? t('floorTasks.scannedBarcode', { value: scannedBarcode }) : t('floorTasks.scanBarcode')}
+                </Text>
+              </View>
+              {scannedBarcode && (
+                <Pressable onPress={() => setScannedBarcode('')}>
+                  <Text style={styles.rescanLink}>{t('floorTasks.rescan')}</Text>
+                </Pressable>
+              )}
+              {barcodeError && <Text style={styles.error}>{barcodeError}</Text>}
+            </View>
+          )}
         </>
       ) : (
         <Text style={styles.subtitle}>{t('floorTasks.nothingStartsUntilStart')}</Text>
@@ -198,6 +223,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
       {start.error && <Text style={styles.error}>{translateError(start.error, t)}</Text>}
       {pause.error && <Text style={styles.error}>{translateError(pause.error, t)}</Text>}
       {resume.error && <Text style={styles.error}>{translateError(resume.error, t)}</Text>}
+      {!isEnding && end.error && <Text style={styles.error}>{translateError(end.error, t)}</Text>}
 
       {isEnding && (
         <>
@@ -262,23 +288,6 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             </View>
           )}
 
-          {meta.needsBarcodeScan && (
-            <View style={styles.barcodeSection}>
-              <View style={styles.barcodeRow}>
-                <BarcodeScanButton onScan={handleScanBarcode} />
-                <Text style={styles.barcodeText}>
-                  {scannedBarcode ? t('floorTasks.scannedBarcode', { value: scannedBarcode }) : t('floorTasks.scanBarcode')}
-                </Text>
-              </View>
-              {scannedBarcode && (
-                <Pressable onPress={() => setScannedBarcode('')}>
-                  <Text style={styles.rescanLink}>{t('floorTasks.rescan')}</Text>
-                </Pressable>
-              )}
-              {barcodeError && <Text style={styles.error}>{barcodeError}</Text>}
-            </View>
-          )}
-
           {end.error && <Text style={styles.error}>{translateError(end.error, t)}</Text>}
         </>
       )}
@@ -326,8 +335,16 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.iconButtonGroup}>
-            <Pressable style={[styles.iconButton, styles.stopIconButton]} onPress={() => setIsEnding(true)}>
-              <Ionicons name="stop" size={28} color="#fff" />
+            <Pressable
+              style={[styles.iconButton, styles.stopIconButton, end.isPending && styles.buttonBusy]}
+              disabled={end.isPending}
+              onPress={() => (hasEndingForm ? setIsEnding(true) : handleConfirmEnd())}
+            >
+              {end.isPending && !hasEndingForm ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Ionicons name="stop" size={28} color="#fff" />
+              )}
             </Pressable>
             <Text style={styles.iconButtonLabel}>{t('floorTasks.stop')}</Text>
           </View>
