@@ -1,0 +1,14 @@
+{
+  "title": "Manage Lists",
+  "subtitle": "These values feed the dropdowns staff use on the mobile app (e.g. Reception's Transporter Company and Packaging Type fields) — anything added or removed here shows up there right away.",
+  "loading": "Loading…",
+  "noValues": "No values yet.",
+  "remove": "Remove",
+  "removeAriaLabel": "Remove {{value}}",
+  "addPlaceholder": "Add a value…",
+  "add": "Add",
+  "errors": {
+    "addFailed": "Failed to add value",
+    "removeFailed": "Failed to remove value"
+  }
+}

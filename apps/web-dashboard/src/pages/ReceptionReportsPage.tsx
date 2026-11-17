@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { type ComponentType, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   fetchReceptionDuration,
@@ -30,14 +31,7 @@ import {
   StatTile,
 } from '../components/charts/ReportCharts';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  return_parcels: 'Return Parcels',
-  packaging_stock: 'Packaging Stock',
-  sellers_stock: 'Sellers Stock',
-  equipment_other: 'Equipment & Other',
-};
-
-const WEEKDAY_LABELS: Record<string, string> = { MON: 'Mon', TUE: 'Tue', WED: 'Wed', THU: 'Thu', FRI: 'Fri', SAT: 'Sat', SUN: 'Sun' };
+const CATEGORY_KEYS = ['return_parcels', 'packaging_stock', 'sellers_stock', 'equipment_other'];
 const WEEKDAY_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 function round1(n: number): number {
@@ -91,10 +85,18 @@ function SectionHeading({ icon: Icon, tint, title }: { icon: ComponentType<{ siz
  * each number is computed.
  */
 export function ReceptionReportsPage() {
+  const { t } = useTranslation('receptionReports');
   const { token } = useAuth();
   const [granularity, setGranularity] = useState<ReportGranularity>('week');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+
+  const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+    CATEGORY_KEYS.map((key) => [key, t(`categoryLabels.${key}`)]),
+  );
+  const WEEKDAY_LABELS: Record<string, string> = Object.fromEntries(
+    WEEKDAY_ORDER.map((day) => [day, t(`weekdayLabels.${day}`)]),
+  );
 
   const params: ReportDateRangeParams = {
     granularity,
@@ -151,9 +153,9 @@ export function ReceptionReportsPage() {
           <BarChart3 />
         </span>
         <div className="page-header-text">
-          <h1>Reception Reports</h1>
+          <h1>{t('title')}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>
-            Delivery volume, processing time, Seller Stock quality, sources, and reliability.
+            {t('subtitle')}
           </p>
         </div>
       </div>
@@ -163,26 +165,26 @@ export function ReceptionReportsPage() {
           <div className="flex-row">
             <span style={filterLabelStyle}>
               <SlidersHorizontal size={14} />
-              Granularity
+              {t('filters.granularity')}
             </span>
             <select style={controlStyle} value={granularity} onChange={(e) => setGranularity(e.target.value as ReportGranularity)}>
-              <option value="day">Day</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-              <option value="quarter">Quarter</option>
+              <option value="day">{t('filters.granularityOptions.day')}</option>
+              <option value="week">{t('filters.granularityOptions.week')}</option>
+              <option value="month">{t('filters.granularityOptions.month')}</option>
+              <option value="quarter">{t('filters.granularityOptions.quarter')}</option>
             </select>
           </div>
           <div className="flex-row">
             <span style={filterLabelStyle}>
               <Calendar size={14} />
-              From
+              {t('filters.from')}
             </span>
             <input style={controlStyle} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div className="flex-row">
             <span style={filterLabelStyle}>
               <Calendar size={14} />
-              To
+              {t('filters.to')}
             </span>
             <input style={controlStyle} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
@@ -195,42 +197,42 @@ export function ReceptionReportsPage() {
               }}
             >
               <X size={14} />
-              Clear dates
+              {t('filters.clearDates')}
             </button>
           )}
         </div>
 
         <div className="stat-grid" style={{ marginTop: 18 }}>
-          <StatTile icon={Truck} tint="blue" label="Deliveries (latest period)" value={latestVolume ? formatCount(latestVolume.total) : '—'} />
+          <StatTile icon={Truck} tint="blue" label={t('stats.deliveriesLatestPeriod')} value={latestVolume ? formatCount(latestVolume.total) : '—'} />
           <StatTile
             icon={Clock}
             tint="purple"
-            label="Avg. reception duration"
+            label={t('stats.avgReceptionDuration')}
             value={latestDuration?.averageMinutes != null ? `${round1(latestDuration.averageMinutes)} min` : '—'}
           />
           <StatTile
             icon={PackageX}
             tint="red"
-            label="Seller Stock problem rate"
+            label={t('stats.sellerStockProblemRate')}
             value={latestQuality != null ? `${round1(latestQuality.problemRatePercent)}%` : '—'}
           />
           <StatTile
             icon={AlertCircle}
             tint="orange"
-            label="Abandoned-reception rate"
+            label={t('stats.abandonedReceptionRate')}
             value={latestReliability != null ? `${round1(latestReliability.unfinishedRatePercent)}%` : '—'}
           />
         </div>
       </div>
 
-      {isLoading && <p>Loading…</p>}
+      {isLoading && <p>{t('loading')}</p>}
       {firstError && <p className="error-text">{firstError.message}</p>}
 
       {volume.data && (
         <div className="card">
-          <SectionHeading icon={BarChart3} tint="blue" title="Delivery Volume" />
+          <SectionHeading icon={BarChart3} tint="blue" title={t('sections.deliveryVolume')} />
           <StackedBarChart
-            title="By Category"
+            title={t('charts.byCategory')}
             extra={<PercentChangeBadge percent={volume.data.percentChangeVsPreviousPeriod} />}
             data={volume.data.byPeriod.map((p) => ({
               label: p.period,
@@ -242,7 +244,7 @@ export function ReceptionReportsPage() {
           />
           <div style={{ marginTop: 20 }}>
             <RankedBarChart
-              title="Deliveries by Day of Week"
+              title={t('charts.deliveriesByDayOfWeek')}
               data={WEEKDAY_ORDER.map((weekday) => ({
                 label: WEEKDAY_LABELS[weekday],
                 value: volume.data!.byWeekday.find((w) => w.weekday === weekday)?.total ?? 0,
@@ -254,25 +256,25 @@ export function ReceptionReportsPage() {
 
       {duration.data && (
         <div className="card">
-          <SectionHeading icon={Clock} tint="purple" title="Reception Duration" />
-          <LineChart title="Trend" data={duration.data.byPeriod.map((p) => ({ x: p.period, y: p.averageMinutes }))} unit=" min" />
+          <SectionHeading icon={Clock} tint="purple" title={t('sections.receptionDuration')} />
+          <LineChart title={t('charts.trend')} data={duration.data.byPeriod.map((p) => ({ x: p.period, y: p.averageMinutes }))} unit=" min" />
           <div style={{ marginTop: 20 }}>
             <div className="tab-group" style={{ marginBottom: 12 }}>
               <button
                 className={`tab-btn ${durationDimension === 'category' ? 'tab-btn-active' : ''}`}
                 onClick={() => setDurationDimension('category')}
               >
-                By Category
+                {t('charts.byCategoryTab')}
               </button>
               <button
                 className={`tab-btn ${durationDimension === 'staff' ? 'tab-btn-active' : ''}`}
                 onClick={() => setDurationDimension('staff')}
               >
-                By Staff
+                {t('charts.byStaffTab')}
               </button>
             </div>
             <RankedBarChart
-              title={durationDimension === 'category' ? 'Average Duration by Category' : 'Average Duration by Staff'}
+              title={durationDimension === 'category' ? t('charts.averageDurationByCategory') : t('charts.averageDurationByStaff')}
               unit=" min"
               data={
                 durationDimension === 'category'
@@ -292,25 +294,25 @@ export function ReceptionReportsPage() {
 
       {quality.data && (
         <div className="card">
-          <SectionHeading icon={PackageX} tint="red" title="Seller Stock Quality" />
+          <SectionHeading icon={PackageX} tint="red" title={t('sections.sellerStockQuality')} />
           <div className="tab-group" style={{ marginBottom: 12 }}>
             <button className={`tab-btn ${qualityView === 'all' ? 'tab-btn-active' : ''}`} onClick={() => setQualityView('all')}>
-              All problems
+              {t('charts.allProblems')}
             </button>
             <button className={`tab-btn ${qualityView === 'overweight' ? 'tab-btn-active' : ''}`} onClick={() => setQualityView('overweight')}>
-              Overweight only
+              {t('charts.overweightOnly')}
             </button>
           </div>
           {qualityView === 'all' ? (
             <RankedBarChart
-              title="Problem Rate by Seller"
+              title={t('charts.problemRateBySeller')}
               unit="%"
               color="#d03b3b"
               data={[...quality.data.bySeller].sort((a, b) => b.problemRatePercent - a.problemRatePercent).map((s) => ({ label: s.sellerName, value: round1(s.problemRatePercent) }))}
             />
           ) : (
             <RankedBarChart
-              title="Overweight Rate by Seller"
+              title={t('charts.overweightRateBySeller')}
               unit="%"
               color="#d03b3b"
               data={[...quality.data.overweight.bySeller]
@@ -320,7 +322,7 @@ export function ReceptionReportsPage() {
           )}
           <div style={{ marginTop: 20 }}>
             <LineChart
-              title="Trend"
+              title={t('charts.trend')}
               color="#d03b3b"
               unit="%"
               data={
@@ -335,25 +337,25 @@ export function ReceptionReportsPage() {
 
       {sources.data && (
         <div className="card">
-          <SectionHeading icon={Truck} tint="blue" title="Reception Sources" />
+          <SectionHeading icon={Truck} tint="blue" title={t('sections.receptionSources')} />
           <RankedBarChart
-            title="Volume by Transporter Company"
-            data={[...sources.data.topTransporters].sort((a, b) => b.totalQuantity - a.totalQuantity).map((t) => ({ label: t.transporterCompany, value: t.totalQuantity }))}
+            title={t('charts.volumeByTransporterCompany')}
+            data={[...sources.data.topTransporters].sort((a, b) => b.totalQuantity - a.totalQuantity).map((transporter) => ({ label: transporter.transporterCompany, value: transporter.totalQuantity }))}
           />
         </div>
       )}
 
       {reliability.data && (
         <div className="card">
-          <SectionHeading icon={AlertCircle} tint="orange" title="Reception Reliability" />
+          <SectionHeading icon={AlertCircle} tint="orange" title={t('sections.receptionReliability')} />
           <RankedBarChart
-            title="Abandoned-Reception Rate by Staff"
+            title={t('charts.abandonedReceptionRateByStaff')}
             unit="%"
             color="#d03b3b"
             data={[...reliability.data.byStaff].sort((a, b) => b.unfinishedRatePercent - a.unfinishedRatePercent).map((s) => ({ label: s.userName, value: round1(s.unfinishedRatePercent) }))}
           />
           <div style={{ marginTop: 20 }}>
-            <LineChart title="Trend" color="#d03b3b" unit="%" data={reliability.data.byPeriod.map((p) => ({ x: p.period, y: round1(p.unfinishedRatePercent) }))} />
+            <LineChart title={t('charts.trend')} color="#d03b3b" unit="%" data={reliability.data.byPeriod.map((p) => ({ x: p.period, y: round1(p.unfinishedRatePercent) }))} />
           </div>
         </div>
       )}

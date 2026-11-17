@@ -14,11 +14,11 @@ import {
   Users,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
-import { DIRECTIVE_TYPE_LABELS } from '../core/api/directives';
-import { FLOOR_TASK_CATEGORY_LABELS } from '../core/api/floorTasks';
 import {
   fetchAdminDashboard,
   fetchStaffActivity,
@@ -58,25 +58,25 @@ function formatHours(hours: number): string {
   return `${hours}h`;
 }
 
-const STAFF_HISTORY_CATEGORY_COLUMNS: { key: keyof StaffHistoryDay; label: string }[] = [
-  { key: 'plannedHours', label: 'Planned' },
-  { key: 'floorTaskHours', label: 'Floor Task' },
-  { key: 'receptionHours', label: 'Reception' },
-  { key: 'openPoolHours', label: 'Open Pool' },
-  { key: 'urgentTaskHours', label: 'Urgent Task' },
-  { key: 'actualHours', label: 'Actual' },
+const STAFF_HISTORY_CATEGORY_COLUMNS: { key: keyof StaffHistoryDay; labelKey: string }[] = [
+  { key: 'plannedHours', labelKey: 'staffHistory.columns.planned' },
+  { key: 'floorTaskHours', labelKey: 'staffHistory.columns.floorTask' },
+  { key: 'receptionHours', labelKey: 'staffHistory.columns.reception' },
+  { key: 'openPoolHours', labelKey: 'staffHistory.columns.openPool' },
+  { key: 'urgentTaskHours', labelKey: 'staffHistory.columns.urgentTask' },
+  { key: 'actualHours', labelKey: 'staffHistory.columns.actual' },
 ];
 
-function downloadStaffHistory(report: StaffHistoryReport) {
+function downloadStaffHistory(report: StaffHistoryReport, t: TFunction<'dashboard'>) {
   const orderedDays = [...report.days].reverse();
-  const header: string[] = ['Staff'];
+  const header: string[] = [t('staffHistory.staffColumn')];
   for (const day of orderedDays) {
     for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
-      header.push(`${day} ${col.label} (h)`);
+      header.push(`${day} ${t(col.labelKey)} (h)`);
     }
   }
   for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
-    header.push(`Cumulative ${col.label} (h)`);
+    header.push(`${t('staffHistory.cumulative')} ${t(col.labelKey)} (h)`);
   }
 
   const rows: (string | number)[][] = report.staff.map((staffRow) => {
@@ -95,20 +95,22 @@ function downloadStaffHistory(report: StaffHistoryReport) {
 
   const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, 'Staff History');
+  XLSX.utils.book_append_sheet(book, sheet, t('staffHistory.heading'));
   XLSX.writeFile(book, `elno-staff-history-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-function breakLabel(staff: AdminDashboardReport['staff'][number]): string {
+function breakLabel(staff: AdminDashboardReport['staff'][number], t: TFunction<'dashboard'>): string {
   if (staff.breakType === 'short') {
     const remaining = staff.shortBreakRemainingMs ?? 0;
-    return `Short break — ${formatMinutesSeconds(Math.max(0, remaining))} remaining`;
+    return t('staffTable.shortBreakRemaining', { time: formatMinutesSeconds(Math.max(0, remaining)) });
   }
   if (staff.breakType === 'lunch') {
     const remaining = staff.lunchBreakRemainingMs ?? 0;
-    return `Lunch break — ${formatMinutesSeconds(remaining)} ${remaining >= 0 ? 'remaining' : 'over'}`;
+    return remaining >= 0
+      ? t('staffTable.lunchBreakRemaining', { time: formatMinutesSeconds(remaining) })
+      : t('staffTable.lunchBreakOver', { time: formatMinutesSeconds(remaining) });
   }
-  return 'On break';
+  return t('staffTable.onBreak');
 }
 
 /**
@@ -120,6 +122,7 @@ function breakLabel(staff: AdminDashboardReport['staff'][number]): string {
  * download) has no mobile equivalent at all.
  */
 export function DashboardPage() {
+  const { t } = useTranslation('dashboard');
   const { token } = useAuth();
   const { data, isPending, error, refetch, isRefetching } = useQuery({
     queryKey: ['admin-dashboard'],
@@ -152,23 +155,23 @@ export function DashboardPage() {
           <LayoutDashboard />
         </span>
         <div className="page-header-text">
-          <h1>Dashboard</h1>
+          <h1>{t('title')}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>
             {today}
           </p>
         </div>
       </div>
 
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
 
       {data && (
         <>
           <div className="section-toolbar">
-            <h2 style={{ margin: 0 }}>Current status</h2>
+            <h2 style={{ margin: 0 }}>{t('currentStatus.heading')}</h2>
             <button className="btn btn-outline" onClick={() => refetch()} disabled={isRefetching}>
               <RefreshCw size={14} className={isRefetching ? 'spin' : undefined} />
-              {isRefetching ? 'Refreshing…' : 'Refresh'}
+              {isRefetching ? t('currentStatus.refreshing') : t('currentStatus.refresh')}
             </button>
           </div>
           <div className="card">
@@ -178,7 +181,7 @@ export function DashboardPage() {
                   <Users />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Staff on shift</div>
+                  <div className="stat-tile-label">{t('currentStatus.staffOnShift')}</div>
                   <div className="stat-tile-value">
                     {data.liveSummary.staffOnShiftCount} / {data.liveSummary.totalStaffCount}
                   </div>
@@ -189,7 +192,7 @@ export function DashboardPage() {
                   <PackageSearch />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Pallets pending review</div>
+                  <div className="stat-tile-label">{t('currentStatus.palletsPendingReview')}</div>
                   <div className="stat-tile-value">{data.liveSummary.palletsPendingReviewCount}</div>
                 </div>
               </div>
@@ -198,7 +201,7 @@ export function DashboardPage() {
                   <Boxes />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Open put-away tasks</div>
+                  <div className="stat-tile-label">{t('currentStatus.openPutAwayTasks')}</div>
                   <div className="stat-tile-value">{data.liveSummary.openPutAwayTaskCount}</div>
                 </div>
               </div>
@@ -207,14 +210,14 @@ export function DashboardPage() {
                   <ShoppingCart />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Active order-prep sessions</div>
+                  <div className="stat-tile-label">{t('currentStatus.activeOrderPrepSessions')}</div>
                   <div className="stat-tile-value">{data.liveSummary.activeOrderPrepSessionCount}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <h2>Today</h2>
+          <h2>{t('today.heading')}</h2>
           <div className="card">
             <div className="stat-grid">
               <div className="stat-tile">
@@ -222,7 +225,7 @@ export function DashboardPage() {
                   <Truck />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Receptions logged</div>
+                  <div className="stat-tile-label">{t('today.receptionsLogged')}</div>
                   <div className="stat-tile-value">{data.today.receptionsLoggedCount}</div>
                 </div>
               </div>
@@ -231,7 +234,7 @@ export function DashboardPage() {
                   <CheckCircle2 />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Receptions completed</div>
+                  <div className="stat-tile-label">{t('today.receptionsCompleted')}</div>
                   <div className="stat-tile-value">{data.today.receptionsCompletedCount}</div>
                 </div>
               </div>
@@ -240,7 +243,7 @@ export function DashboardPage() {
                   <PackageCheck />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Pallets logged</div>
+                  <div className="stat-tile-label">{t('today.palletsLogged')}</div>
                   <div className="stat-tile-value">{data.today.palletsLoggedCount}</div>
                 </div>
               </div>
@@ -249,7 +252,7 @@ export function DashboardPage() {
                   <ClipboardCheck />
                 </span>
                 <div className="stat-tile-body">
-                  <div className="stat-tile-label">Put-away completed</div>
+                  <div className="stat-tile-label">{t('today.putAwayCompleted')}</div>
                   <div className="stat-tile-value">{data.today.putAwayCompletedCount}</div>
                 </div>
               </div>
@@ -262,24 +265,24 @@ export function DashboardPage() {
             <span className="icon-badge icon-badge-sm icon-badge-blue">
               <Users />
             </span>
-            <h2 style={{ margin: 0 }}>Staff</h2>
+            <h2 style={{ margin: 0 }}>{t('staffTable.heading')}</h2>
           </div>
           <div className="card">
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Shifts today</th>
-                  <th>Hours worked today</th>
-                  <th>Put-away done</th>
-                  <th>Order prep done</th>
+                  <th>{t('staffTable.name')}</th>
+                  <th>{t('staffTable.status')}</th>
+                  <th>{t('staffTable.shiftsToday')}</th>
+                  <th>{t('staffTable.hoursWorkedToday')}</th>
+                  <th>{t('staffTable.putAwayDone')}</th>
+                  <th>{t('staffTable.orderPrepDone')}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.staff.length === 0 && (
                   <tr>
-                    <td colSpan={6}>No staff accounts yet.</td>
+                    <td colSpan={6}>{t('staffTable.noStaffAccounts')}</td>
                   </tr>
                 )}
                 {data.staff.map((s) => (
@@ -292,14 +295,16 @@ export function DashboardPage() {
                     <td>
                       {s.onShift ? (
                         <span className="pill pill-green">
-                          On shift{s.shiftStartedAt ? ` since ${formatLocalTime(s.shiftStartedAt)}` : ''}
+                          {s.shiftStartedAt
+                            ? t('staffTable.onShiftSince', { time: formatLocalTime(s.shiftStartedAt) })
+                            : t('staffTable.onShift')}
                         </span>
                       ) : (
-                        <span className="pill pill-gray">Off shift</span>
+                        <span className="pill pill-gray">{t('staffTable.offShift')}</span>
                       )}
                       {s.onBreak && (
                         <span className="pill pill-amber" style={{ marginLeft: 6 }}>
-                          {breakLabel(s)}
+                          {breakLabel(s, t)}
                         </span>
                       )}
                     </td>
@@ -329,7 +334,7 @@ function StaffHistoryGroupHeader({ title }: { title: string }) {
   );
 }
 
-function StaffHistorySubHeaderRow({ groupCount }: { groupCount: number }) {
+function StaffHistorySubHeaderRow({ groupCount, t }: { groupCount: number; t: TFunction<'dashboard'> }) {
   return (
     <tr>
       <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }} />
@@ -339,7 +344,7 @@ function StaffHistorySubHeaderRow({ groupCount }: { groupCount: number }) {
             key={`${groupIndex}-${col.key}`}
             style={{ textAlign: 'center', fontSize: 11, fontWeight: 'var(--weight-regular)', color: 'var(--gray-500)', minWidth: 64, borderLeft: i === 0 ? '1px solid var(--gray-150)' : undefined }}
           >
-            {col.label}
+            {t(col.labelKey)}
           </th>
         )),
       )}
@@ -371,6 +376,7 @@ const EMPTY_DAY: StaffHistoryDay = { plannedHours: 0, actualHours: 0, floorTaskH
  * computed.
  */
 function StaffHistorySection() {
+  const { t } = useTranslation('dashboard');
   const { token } = useAuth();
   const { data, isPending, error } = useQuery({
     queryKey: ['staff-history'],
@@ -401,34 +407,38 @@ function StaffHistorySection() {
           <span className="icon-badge icon-badge-sm icon-badge-purple">
             <ClipboardCheck />
           </span>
-          <h2 style={{ margin: 0 }}>Staff History</h2>
+          <h2 style={{ margin: 0 }}>{t('staffHistory.heading')}</h2>
         </div>
-        <button className="btn btn-outline" onClick={() => data && downloadStaffHistory(data)} disabled={!data || data.days.length === 0}>
+        <button className="btn btn-outline" onClick={() => data && downloadStaffHistory(data, t)} disabled={!data || data.days.length === 0}>
           <Download size={14} />
-          Download
+          {t('staffHistory.download')}
         </button>
       </div>
       <div className="card">
-        {isPending && <p>Loading…</p>}
+        {isPending && <p>{t('staffHistory.loading')}</p>}
         {error && <p className="error-text">{error.message}</p>}
-        {data && data.days.length === 0 && <p className="hint-text">No completed shifts yet.</p>}
+        {data && data.days.length === 0 && <p className="hint-text">{t('staffHistory.noShiftsYet')}</p>}
         {data && data.days.length > 0 && (
           <div ref={scrollRef} style={{ overflowX: 'auto' }}>
             <table style={{ width: 'max-content' }}>
               <thead>
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, verticalAlign: 'bottom' }}>
-                    Staff
+                    {t('staffHistory.staffColumn')}
                   </th>
-                  <StaffHistoryGroupHeader title="Cumulative" />
+                  <StaffHistoryGroupHeader title={t('staffHistory.cumulative')} />
                   {orderedDays.map((day, i) => (
                     <StaffHistoryGroupHeader
                       key={day}
-                      title={i === orderedDays.length - 1 ? `${formatDayHeader(day)} (Today)` : formatDayHeader(day)}
+                      title={
+                        i === orderedDays.length - 1
+                          ? t('staffHistory.todaySuffix', { day: formatDayHeader(day) })
+                          : formatDayHeader(day)
+                      }
                     />
                   ))}
                 </tr>
-                <StaffHistorySubHeaderRow groupCount={orderedDays.length + 1} />
+                <StaffHistorySubHeaderRow groupCount={orderedDays.length + 1} t={t} />
               </thead>
               <tbody>
                 {data.staff.map((staffRow) => (
@@ -442,7 +452,7 @@ function StaffHistorySection() {
                 ))}
                 {data.staff.length === 0 && (
                   <tr>
-                    <td colSpan={(orderedDays.length + 1) * STAFF_HISTORY_CATEGORY_COLUMNS.length + 1}>No staff accounts yet.</td>
+                    <td colSpan={(orderedDays.length + 1) * STAFF_HISTORY_CATEGORY_COLUMNS.length + 1}>{t('staffHistory.noStaffAccounts')}</td>
                   </tr>
                 )}
               </tbody>
@@ -454,27 +464,28 @@ function StaffHistorySection() {
   );
 }
 
-const STAFF_ACTIVITY_TYPE_LABELS: Record<StaffActivityEntry['type'], string> = {
-  floor_task: 'Floor Task',
-  reception: 'Reception',
-  open_pool: 'Open Pool',
-  directive: 'Urgent Task',
+const STAFF_ACTIVITY_TYPE_KEYS: Record<StaffActivityEntry['type'], string> = {
+  floor_task: 'staffActivity.types.floorTask',
+  reception: 'staffActivity.types.reception',
+  open_pool: 'staffActivity.types.openPool',
+  directive: 'staffActivity.types.directive',
 };
 
-function staffActivityDetail(entry: StaffActivityEntry): string {
+function staffActivityDetail(entry: StaffActivityEntry, t: TFunction<'dashboard'>): string {
   switch (entry.type) {
     case 'floor_task': {
-      const label = entry.floorTaskCategory ? FLOOR_TASK_CATEGORY_LABELS[entry.floorTaskCategory as keyof typeof FLOOR_TASK_CATEGORY_LABELS] : '—';
-      return entry.scannedBarcode !== undefined
-        ? `${label}${entry.scannedBarcode ? ` — scanned: ${entry.scannedBarcode}` : ' — not yet scanned'}`
-        : label;
+      const label = entry.floorTaskCategory ? t(`floorTaskCategories.${entry.floorTaskCategory}`, { ns: 'common' }) : '—';
+      if (entry.scannedBarcode === undefined) return label;
+      return entry.scannedBarcode
+        ? `${label} ${t('staffActivity.scannedSuffix', { barcode: entry.scannedBarcode })}`
+        : `${label} ${t('staffActivity.notYetScanned')}`;
     }
     case 'reception':
-      return entry.receptionOutcome === 'unfinished' ? 'Reception — no confirmed delivery' : 'Reception';
+      return entry.receptionOutcome === 'unfinished' ? t('staffActivity.receptionNoDelivery') : t('staffActivity.reception');
     case 'open_pool':
       return entry.openPoolTitle ?? '—';
     case 'directive':
-      return entry.directiveType ? (DIRECTIVE_TYPE_LABELS[entry.directiveType as keyof typeof DIRECTIVE_TYPE_LABELS] ?? entry.directiveType) : '—';
+      return entry.directiveType ? t(`directiveTypes.${entry.directiveType}`, { ns: 'common', defaultValue: entry.directiveType }) : '—';
   }
 }
 
@@ -501,6 +512,7 @@ function StaffActivitySection({
   highlightId: string | null;
   highlightRef: React.RefObject<HTMLTableRowElement | null>;
 }) {
+  const { t } = useTranslation('dashboard');
   const { token } = useAuth();
   const [scope, setScope] = useState<'live' | 'recent'>('live');
   const { data, isPending, error } = useQuery({
@@ -517,35 +529,35 @@ function StaffActivitySection({
           <span className="icon-badge icon-badge-sm icon-badge-orange">
             <Activity />
           </span>
-          <h2 style={{ margin: 0 }}>Staff Activity</h2>
+          <h2 style={{ margin: 0 }}>{t('staffActivity.heading')}</h2>
         </div>
         <div className="tab-group">
           <button className={`tab-btn ${scope === 'live' ? 'tab-btn-active' : ''}`} onClick={() => setScope('live')}>
-            Live
+            {t('staffActivity.live')}
           </button>
           <button className={`tab-btn ${scope === 'recent' ? 'tab-btn-active' : ''}`} onClick={() => setScope('recent')}>
-            Recent
+            {t('staffActivity.recent')}
           </button>
         </div>
       </div>
       <div className="card">
-        {isPending && <p>Loading…</p>}
+        {isPending && <p>{t('staffActivity.loading')}</p>}
         {error && <p className="error-text">{error.message}</p>}
         <table>
           <thead>
             <tr>
-              <th>Staff</th>
-              <th>Hours worked today</th>
-              <th>Type</th>
-              <th>Detail</th>
-              <th>Started</th>
-              <th>{scope === 'live' ? 'Duration' : 'Finished'}</th>
+              <th>{t('staffActivity.staffColumn')}</th>
+              <th>{t('staffActivity.hoursWorkedToday')}</th>
+              <th>{t('staffActivity.type')}</th>
+              <th>{t('staffActivity.detail')}</th>
+              <th>{t('staffActivity.started')}</th>
+              <th>{scope === 'live' ? t('staffActivity.duration') : t('staffActivity.finished')}</th>
             </tr>
           </thead>
           <tbody>
             {data && data.entries.length === 0 && (
               <tr>
-                <td colSpan={6}>{scope === 'live' ? 'No one is on anything right now.' : 'Nothing finished yet.'}</td>
+                <td colSpan={6}>{scope === 'live' ? t('staffActivity.noneLive') : t('staffActivity.noneRecent')}</td>
               </tr>
             )}
             {data?.entries.map((entry) => (
@@ -556,12 +568,12 @@ function StaffActivitySection({
               >
                 <td>{entry.userName}</td>
                 <td>{entry.hoursWorkedToday}h</td>
-                <td>{STAFF_ACTIVITY_TYPE_LABELS[entry.type]}</td>
+                <td>{t(STAFF_ACTIVITY_TYPE_KEYS[entry.type])}</td>
                 <td>
-                  {staffActivityDetail(entry)}
+                  {staffActivityDetail(entry, t)}
                   {entry.floorTaskOutcome === 'cancelled' && (
                     <span className="pill pill-gray" style={{ marginLeft: 6 }}>
-                      Cancelled
+                      {t('staffActivity.cancelled')}
                     </span>
                   )}
                 </td>

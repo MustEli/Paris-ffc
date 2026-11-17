@@ -3,11 +3,6 @@ import { apiRequest } from './client';
 /** Mirrors packages/backend/src/tasks/task-priority.ts. */
 export type TaskPriority = 'normal' | 'high' | 'urgent';
 export const TASK_PRIORITIES: TaskPriority[] = ['normal', 'high', 'urgent'];
-export const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  normal: 'Normal',
-  high: 'High',
-  urgent: 'Urgent',
-};
 
 /** Mirrors packages/backend/src/tasks/tasks.types.ts. */
 export interface OnShiftStaffMember {

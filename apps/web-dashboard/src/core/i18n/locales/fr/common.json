@@ -1,0 +1,93 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord / Aperçu des opérations",
+    "taskBoard": "Tableau des tâches",
+    "schedules": "Présence & planning des équipes",
+    "receptionIntake": "Réception & prise en charge",
+    "receptionReports": "Rapports de réception",
+    "orderPrep": "Préparation de commandes (Pick & Pack)",
+    "returnProcessing": "Traitement des retours",
+    "issueQueue": "Exceptions & file des incidents",
+    "referenceLists": "Gestion des utilisateurs & des accès"
+  },
+  "placeholder": {
+    "orderPrepDescription": "Calculateur de main-d'œuvre et échelonnement.",
+    "returnProcessingDescription": "Flux de traitement des retours.",
+    "issueQueueDescription": "Stock endommagé, alertes de surpoids, incidents, demandes et questions.",
+    "comingSoon": "Cette section arrive bientôt — revenez après la prochaine mise à jour."
+  },
+  "logOut": "Déconnexion",
+  "search": {
+    "placeholder": "Rechercher par ID palette, n° de carton, nom du vendeur, nom de l'employé ou ID de tâche",
+    "searching": "Recherche en cours…",
+    "noMatches": "Aucun résultat.",
+    "pallets": "Palettes",
+    "staff": "Employés",
+    "tasks": "Tâches"
+  },
+  "liveStatus": "En direct",
+  "notifications": "Notifications",
+  "language": "Langue",
+  "priority": {
+    "normal": "Normale",
+    "high": "Élevée",
+    "urgent": "Urgente"
+  },
+  "directiveTypes": {
+    "photo_demand": "Photo requise",
+    "clear_stalled_task": "Débloquer la tâche",
+    "recount_inventory": "Recompter l'inventaire",
+    "verify_location": "Vérifier l'emplacement",
+    "custom": "Personnalisée"
+  },
+  "floorTaskCategories": {
+    "pick": "Picking",
+    "pack": "Emballage",
+    "dispatch": "Expédition",
+    "return_processing": "Retour",
+    "box_prep": "Préparation des cartons",
+    "warehousing_inventory_check": "Entreposage — Vérification de l'inventaire",
+    "warehousing_location_adjustment": "Entreposage — Ajustement d'emplacement",
+    "backup_box": "Renfort — Cartons",
+    "backup_shredder": "Renfort — Déchiqueteuse",
+    "backup_other": "Renfort — Autre"
+  },
+  "referenceListCategories": {
+    "transporter_company": "Transporteurs",
+    "packaging_type": "Types d'emballage",
+    "issue_type": "Types de signalement",
+    "color_tag": "Étiquettes de couleur",
+    "seller_name": "Vendeurs"
+  },
+  "receptionCategory": {
+    "return_parcels": "Colis de retour",
+    "packaging_stock": "Stock d'emballage",
+    "sellers_stock": "Stock vendeurs",
+    "equipment_other": "Équipement & Autre"
+  },
+  "receptionStatus": {
+    "arrived": "En attente d'instructions",
+    "ready_for_putaway": "Prêt pour le rangement",
+    "completed": "Terminé"
+  },
+  "sellerStockStatus": {
+    "ready_for_putaway": "Dans le circuit de rangement",
+    "pending_admin_review": "En attente de validation admin",
+    "instructed": "Instructions données — prêt à ranger",
+    "put_away": "Rangé"
+  },
+  "conditionFlags": {
+    "good": "Bon état",
+    "overweight": "Surpoids",
+    "overloaded": "Surcharge",
+    "damaged": "Endommagé",
+    "location_name_needed": "Nom d'emplacement requis",
+    "other": "Autre"
+  },
+  "receptionSummary": {
+    "parcelsFrom": "{{count}} colis de {{transporter}}",
+    "parcelsPackaging": "{{count}} colis — {{packagingType}}",
+    "pallets": "{{count}} palette(s)",
+    "parcelsItem": "{{count}} colis — {{item}}"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "deliveries": {
+    "title": "Deliveries",
+    "loading": "Loading…"
+  },
+  "filters": {
+    "allCategories": "All categories",
+    "allStatuses": "All statuses",
+    "filterByStaff": "Filter by staff",
+    "flaggedOnly": "Flagged only"
+  },
+  "actions": {
+    "selectAll": "Select all ({{count}})",
+    "clearSelection": "Clear selection",
+    "deleteSelected": "Delete selected ({{count}})",
+    "downloadExcel": "Download as Excel ({{count}})",
+    "downloadZip": "Download photos as ZIP ({{count}})",
+    "zipping": "Zipping {{progress}}…"
+  },
+  "table": {
+    "dateTime": "Date & Time",
+    "category": "Category",
+    "staff": "Staff",
+    "summary": "Summary",
+    "status": "Status",
+    "photos": "Photos",
+    "noResults": "No deliveries match these filters.",
+    "flagged": "Flagged",
+    "viewDetails": "View details",
+    "photosAction": "Photos",
+    "delete": "Delete"
+  },
+  "modal": {
+    "close": "Close",
+    "status": "Status",
+    "loggedBy": "Logged by",
+    "arrivedAt": "Arrived at",
+    "transporterCompany": "Transporter company",
+    "packagingType": "Packaging type",
+    "seller": "Seller",
+    "itemDescription": "Item description",
+    "instructions": "Instructions",
+    "assignedTo": "Assigned to",
+    "priority": "Priority",
+    "assignedAt": "Assigned at",
+    "putAwayAt": "Put away at",
+    "processingTime": "Processing time",
+    "processingTimeValue": "{{minutes}} min",
+    "noValue": "—"
+  },
+  "gallery": {
+    "noPhotos": "No photos.",
+    "equipmentPhotos": "Equipment Photo(s)",
+    "invoicePhotos": "Invoice Photo(s)"
+  },
+  "confirm": {
+    "deleteOne": "Delete this delivery permanently? This cannot be undone.",
+    "deleteSelected": "Delete {{count}} selected delivery(ies) permanently? This cannot be undone."
+  },
+  "errors": {
+    "deleteFailed": "Failed to delete",
+    "deleteSelectedFailed": "Failed to delete selected",
+    "noPhotosFound": "No photos found for the selected delivery(ies).",
+    "zipFailed": "Failed to build the zip file."
+  },
+  "excel": {
+    "id": "ID",
+    "dateTime": "Date & Time",
+    "category": "Category",
+    "staff": "Staff",
+    "summary": "Summary",
+    "status": "Status",
+    "flagged": "Flagged",
+    "instructions": "Instructions",
+    "assignedTo": "Assigned To",
+    "priority": "Priority",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "intakePage": {
+    "title": "Reception & Intake",
+    "subtitle": "Every delivery and seller stock pallet received, with full details and photos."
+  },
+  "pendingReview": {
+    "title": "Needs Admin Review",
+    "pendingCount": "{{count}} pending",
+    "empty": "Nothing waiting on review right now.",
+    "boxPrefix": "Box {{boxNumber}}",
+    "assign": "Assign…",
+    "onlineStaffLabel": "Online staff — drag a card here",
+    "noOneOnShift": "No one is on shift.",
+    "flaggedForReview": "Flagged for review",
+    "weightKg": "{{weight}} kg"
+  },
+  "assignModal": {
+    "title": "Assign {{palletIndex}} — {{sellerName}}",
+    "close": "Close",
+    "assignTo": "Assign to",
+    "selectStaffPlaceholder": "Select a staff member…",
+    "instructionsLocation": "Instructions / put-away location",
+    "locationPlaceholder": "e.g. Set aside in Aisle 4 — repackage before placing",
+    "additionalNotes": "Additional notes (optional)",
+    "priority": "Priority",
+    "photosForStaff": "Photos for staff (optional)",
+    "uploadPhotos": "Upload photo(s)",
+    "uploading": "Uploading…",
+    "removePhoto": "Remove photo",
+    "sendInstructions": "Send instructions",
+    "sending": "Sending…",
+    "errors": {
+      "missingFields": "Pick a staff member and enter an instruction before sending.",
+      "uploadFailed": "Failed to upload a photo",
+      "assignFailed": "Failed to assign this pallet"
+    }
+  }
+}

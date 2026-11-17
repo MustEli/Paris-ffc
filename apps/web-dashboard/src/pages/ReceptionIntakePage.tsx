@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle2, PackageSearch, Trash2, Upload, User, Weight } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '../core/api/client';
-import { CONDITION_FLAG_LABELS, fetchPallets, type SellerStockPallet } from '../core/api/sellerStock';
-import { assignPutAway, fetchTaskBoard, PRIORITY_LABELS, TASK_PRIORITIES, type OnShiftStaffMember, type TaskPriority } from '../core/api/tasks';
+import { fetchPallets, type SellerStockPallet } from '../core/api/sellerStock';
+import { assignPutAway, fetchTaskBoard, TASK_PRIORITIES, type OnShiftStaffMember, type TaskPriority } from '../core/api/tasks';
 import { resolvePhotoUrl, uploadPhoto } from '../core/api/upload';
 import { useAuth } from '../core/auth/AuthContext';
 import { DeliveriesSection } from './ReceptionsPage';
@@ -12,6 +13,7 @@ import { SellerStockSection } from './SellerStockPage';
 
 /** Customer's nav spec bundles all received stuff — deliveries and seller stock pallets — under one "Reception & Intake" item, as two record tables plus (above them) the one place admin actually acts on anything: pallets a staff member flagged a problem with. */
 export function ReceptionIntakePage() {
+  const { t } = useTranslation('receptions');
   return (
     <div>
       <div className="page-header-row">
@@ -19,9 +21,9 @@ export function ReceptionIntakePage() {
           <PackageSearch />
         </span>
         <div className="page-header-text">
-          <h1>Reception & Intake</h1>
+          <h1>{t('intakePage.title')}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>
-            Every delivery and seller stock pallet received, with full details and photos.
+            {t('intakePage.subtitle')}
           </p>
         </div>
       </div>
@@ -34,9 +36,13 @@ export function ReceptionIntakePage() {
   );
 }
 
-function conditionSummary(pallet: SellerStockPallet): string {
-  const flags = pallet.conditionFlags.filter((f) => f !== 'good').map((f) => CONDITION_FLAG_LABELS[f]);
-  return flags.length > 0 ? flags.join(', ') : 'Flagged for review';
+function conditionSummary(
+  pallet: SellerStockPallet,
+  fallback: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const flags = pallet.conditionFlags.filter((f) => f !== 'good').map((f) => t(`conditionFlags.${f}`, { ns: 'common' }));
+  return flags.length > 0 ? flags.join(', ') : fallback;
 }
 
 interface AssignTarget {
@@ -64,6 +70,7 @@ interface AssignTarget {
  * happens to end.
  */
 function PendingReviewSection() {
+  const { t } = useTranslation('receptions');
   const { token } = useAuth();
   const queryClient = useQueryClient();
 
@@ -110,9 +117,9 @@ function PendingReviewSection() {
           <span className="icon-badge icon-badge-sm icon-badge-red">
             <AlertTriangle />
           </span>
-          <h2 style={{ margin: 0 }}>Needs Admin Review</h2>
+          <h2 style={{ margin: 0 }}>{t('pendingReview.title')}</h2>
         </div>
-        <span className="pill pill-red">{pending.length} pending</span>
+        <span className="pill pill-red">{t('pendingReview.pendingCount', { count: pending.length })}</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
@@ -121,7 +128,7 @@ function PendingReviewSection() {
             <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <CheckCircle2 size={16} color="var(--tint-green-icon)" />
               <p className="hint-text" style={{ margin: 0 }}>
-                Nothing waiting on review right now.
+                {t('pendingReview.empty')}
               </p>
             </div>
           )}
@@ -146,9 +153,9 @@ function PendingReviewSection() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="flex-row" style={{ justifyContent: 'space-between' }}>
                   <div style={{ fontWeight: 'var(--weight-strong)' }}>
-                    {pallet.palletIndex} — Box {pallet.boxNumber}
+                    {pallet.palletIndex} — {t('pendingReview.boxPrefix', { boxNumber: pallet.boxNumber })}
                   </div>
-                  <span className="pill pill-red">{conditionSummary(pallet)}</span>
+                  <span className="pill pill-red">{conditionSummary(pallet, t('pendingReview.flaggedForReview'), t)}</span>
                 </div>
                 <div className="flex-row" style={{ gap: 14, marginTop: 4, color: 'var(--gray-500)', fontSize: 'var(--text-sm)' }}>
                   <span className="flex-row" style={{ gap: 4 }}>
@@ -157,7 +164,7 @@ function PendingReviewSection() {
                   </span>
                   <span className="flex-row" style={{ gap: 4 }}>
                     <Weight size={13} />
-                    {pallet.weightKg.toLocaleString()} kg
+                    {t('pendingReview.weightKg', { weight: pallet.weightKg.toLocaleString() })}
                   </span>
                 </div>
                 {pallet.damageRemarks && (
@@ -169,7 +176,7 @@ function PendingReviewSection() {
                 style={{ flexShrink: 0, alignSelf: 'center' }}
                 onClick={() => setAssignTarget({ pallet, staff: null })}
               >
-                Assign…
+                {t('pendingReview.assign')}
               </button>
             </div>
           ))}
@@ -178,9 +185,9 @@ function PendingReviewSection() {
         <div style={{ width: 230, flexShrink: 0, position: 'sticky', top: 16 }}>
           <div className="card">
             <div className="stat-tile-label" style={{ marginBottom: 10 }}>
-              Online staff — drag a card here
+              {t('pendingReview.onlineStaffLabel')}
             </div>
-            {onShiftStaff.length === 0 && <p className="hint-text" style={{ margin: 0 }}>No one is on shift.</p>}
+            {onShiftStaff.length === 0 && <p className="hint-text" style={{ margin: 0 }}>{t('pendingReview.noOneOnShift')}</p>}
             {onShiftStaff.map((s) => (
               <div
                 key={s.userId}
@@ -234,6 +241,7 @@ function AssignReviewModal({
   onClose: () => void;
   onAssigned: () => void;
 }) {
+  const { t } = useTranslation('receptions');
   const { token } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assignedToUserId, setAssignedToUserId] = useState(target.staff?.userId ?? '');
@@ -255,7 +263,7 @@ function AssignReviewModal({
       const uploaded = await Promise.all(files.map((file) => uploadPhoto(token!, file)));
       setPhotoUrls((prev) => [...prev, ...uploaded]);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to upload a photo');
+      setError(err instanceof ApiError ? err.message : t('assignModal.errors.uploadFailed'));
     } finally {
       setIsUploading(false);
     }
@@ -263,7 +271,7 @@ function AssignReviewModal({
 
   async function handleSubmit() {
     if (!assignedToUserId || !location.trim()) {
-      setError('Pick a staff member and enter an instruction before sending.');
+      setError(t('assignModal.errors.missingFields'));
       return;
     }
     setIsSubmitting(true);
@@ -279,7 +287,7 @@ function AssignReviewModal({
       });
       onAssigned();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to assign this pallet');
+      setError(err instanceof ApiError ? err.message : t('assignModal.errors.assignFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -291,19 +299,21 @@ function AssignReviewModal({
         <div className="modal-header">
           <div>
             <h2 style={{ margin: 0 }}>
-              Assign {target.pallet.palletIndex} — {target.pallet.sellerName}
+              {t('assignModal.title', { palletIndex: target.pallet.palletIndex, sellerName: target.pallet.sellerName })}
             </h2>
-            <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{conditionSummary(target.pallet)}</p>
+            <p className="page-subtitle" style={{ margin: '4px 0 0' }}>
+              {conditionSummary(target.pallet, t('pendingReview.flaggedForReview'), t)}
+            </p>
           </div>
-          <button className="modal-close" onClick={onClose} aria-label="Close">
+          <button className="modal-close" onClick={onClose} aria-label={t('assignModal.close')}>
             ✕
           </button>
         </div>
 
         <div className="form-row">
-          <label className="form-label">Assign to</label>
+          <label className="form-label">{t('assignModal.assignTo')}</label>
           <select value={assignedToUserId} onChange={(e) => setAssignedToUserId(e.target.value)}>
-            <option value="">Select a staff member…</option>
+            <option value="">{t('assignModal.selectStaffPlaceholder')}</option>
             {staffOptions.map((s) => (
               <option key={s.userId} value={s.userId}>
                 {s.userName}
@@ -313,33 +323,33 @@ function AssignReviewModal({
         </div>
 
         <div className="form-row">
-          <label className="form-label">Instructions / put-away location</label>
+          <label className="form-label">{t('assignModal.instructionsLocation')}</label>
           <input
             type="text"
-            placeholder="e.g. Set aside in Aisle 4 — repackage before placing"
+            placeholder={t('assignModal.locationPlaceholder')}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
           />
         </div>
 
         <div className="form-row">
-          <label className="form-label">Additional notes (optional)</label>
+          <label className="form-label">{t('assignModal.additionalNotes')}</label>
           <textarea rows={2} value={instructions} onChange={(e) => setInstructions(e.target.value)} />
         </div>
 
         <div className="form-row">
-          <label className="form-label">Priority</label>
+          <label className="form-label">{t('assignModal.priority')}</label>
           <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
             {TASK_PRIORITIES.map((p) => (
               <option key={p} value={p}>
-                {PRIORITY_LABELS[p]}
+                {t(`priority.${p}`, { ns: 'common' })}
               </option>
             ))}
           </select>
         </div>
 
         <div className="form-row">
-          <label className="form-label">Photos for staff (optional)</label>
+          <label className="form-label">{t('assignModal.photosForStaff')}</label>
           <div className="photo-grid" style={{ marginBottom: photoUrls.length > 0 ? 10 : 0 }}>
             {photoUrls.map((url, i) => (
               <div key={url} style={{ position: 'relative' }}>
@@ -348,7 +358,7 @@ function AssignReviewModal({
                   className="modal-close"
                   style={{ position: 'absolute', top: -6, right: -6, background: '#fff', borderRadius: '50%', boxShadow: 'var(--shadow-sm)', padding: 2 }}
                   onClick={() => setPhotoUrls((prev) => prev.filter((_, idx) => idx !== i))}
-                  aria-label="Remove photo"
+                  aria-label={t('assignModal.removePhoto')}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -357,14 +367,14 @@ function AssignReviewModal({
           </div>
           <button className="btn btn-outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
             <Upload size={14} />
-            {isUploading ? 'Uploading…' : 'Upload photo(s)'}
+            {isUploading ? t('assignModal.uploading') : t('assignModal.uploadPhotos')}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
         </div>
 
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn-accent" onClick={handleSubmit} disabled={isSubmitting} style={{ marginTop: 8 }}>
-          {isSubmitting ? 'Sending…' : 'Send instructions'}
+          {isSubmitting ? t('assignModal.sending') : t('assignModal.sendInstructions')}
         </button>
       </div>
     </div>

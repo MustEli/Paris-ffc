@@ -1,0 +1,81 @@
+{
+  "title": "Dashboard",
+  "loading": "Loading…",
+  "currentStatus": {
+    "heading": "Current status",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "staffOnShift": "Staff on shift",
+    "palletsPendingReview": "Pallets pending review",
+    "openPutAwayTasks": "Open put-away tasks",
+    "activeOrderPrepSessions": "Active order-prep sessions"
+  },
+  "today": {
+    "heading": "Today",
+    "receptionsLogged": "Receptions logged",
+    "receptionsCompleted": "Receptions completed",
+    "palletsLogged": "Pallets logged",
+    "putAwayCompleted": "Put-away completed"
+  },
+  "staffTable": {
+    "heading": "Staff",
+    "name": "Name",
+    "status": "Status",
+    "shiftsToday": "Shifts today",
+    "hoursWorkedToday": "Hours worked today",
+    "putAwayDone": "Put-away done",
+    "orderPrepDone": "Order prep done",
+    "noStaffAccounts": "No staff accounts yet.",
+    "onShift": "On shift",
+    "onShiftSince": "On shift since {{time}}",
+    "offShift": "Off shift",
+    "onBreak": "On break",
+    "shortBreakRemaining": "Short break — {{time}} remaining",
+    "lunchBreakRemaining": "Lunch break — {{time}} remaining",
+    "lunchBreakOver": "Lunch break — {{time}} over"
+  },
+  "staffHistory": {
+    "heading": "Staff History",
+    "download": "Download",
+    "loading": "Loading…",
+    "noShiftsYet": "No completed shifts yet.",
+    "noStaffAccounts": "No staff accounts yet.",
+    "staffColumn": "Staff",
+    "cumulative": "Cumulative",
+    "todaySuffix": "{{day}} (Today)",
+    "columns": {
+      "planned": "Planned",
+      "floorTask": "Floor Task",
+      "reception": "Reception",
+      "openPool": "Open Pool",
+      "urgentTask": "Urgent Task",
+      "actual": "Actual"
+    }
+  },
+  "staffActivity": {
+    "heading": "Staff Activity",
+    "live": "Live",
+    "recent": "Recent",
+    "loading": "Loading…",
+    "staffColumn": "Staff",
+    "hoursWorkedToday": "Hours worked today",
+    "type": "Type",
+    "detail": "Detail",
+    "started": "Started",
+    "duration": "Duration",
+    "finished": "Finished",
+    "noneLive": "No one is on anything right now.",
+    "noneRecent": "Nothing finished yet.",
+    "cancelled": "Cancelled",
+    "scannedSuffix": "— scanned: {{barcode}}",
+    "notYetScanned": "— not yet scanned",
+    "receptionNoDelivery": "Reception — no confirmed delivery",
+    "reception": "Reception",
+    "types": {
+      "floorTask": "Floor Task",
+      "reception": "Reception",
+      "openPool": "Open Pool",
+      "directive": "Urgent Task"
+    }
+  }
+}

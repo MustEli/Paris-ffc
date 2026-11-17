@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, CalendarClock, Save, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '../core/api/client';
 import { fetchAttendanceReport } from '../core/api/reports';
-import { fetchSchedule, setSchedule, WEEKDAY_LABELS, WEEKDAYS, type Weekday } from '../core/api/schedules';
+import { fetchSchedule, setSchedule, WEEKDAYS, type Weekday } from '../core/api/schedules';
 import { fetchStaffUsers } from '../core/api/users';
 import { useAuth } from '../core/auth/AuthContext';
 
@@ -36,6 +37,7 @@ function formatDurationMinutes(totalMinutes: number): string {
  * change how staff actually start/end their shift or breaks.
  */
 export function SchedulesPage() {
+  const { t } = useTranslation('schedules');
   const { token } = useAuth();
   const { data: staff, isPending, error } = useQuery({
     queryKey: ['staff-users'],
@@ -52,14 +54,14 @@ export function SchedulesPage() {
           <CalendarClock />
         </span>
         <div className="page-header-text">
-          <h1>Staff Schedules</h1>
+          <h1>{t('title')}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>
-            Set each staff member's working days, shift hours, required daily hours, and scheduled break times.
+            {t('subtitle')}
           </p>
         </div>
       </div>
 
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
 
       <AttendanceTotalsTable />
@@ -88,7 +90,7 @@ export function SchedulesPage() {
                 {s.name}
               </button>
             ))}
-            {staff.length === 0 && <p className="hint-text">No staff accounts yet.</p>}
+            {staff.length === 0 && <p className="hint-text">{t('noStaffAccounts')}</p>}
           </div>
 
           <div>
@@ -102,7 +104,7 @@ export function SchedulesPage() {
                 >
                   <UserRound size={26} />
                 </span>
-                <p className="hint-text">Select a staff member to view or edit their schedule.</p>
+                <p className="hint-text">{t('selectStaffPrompt')}</p>
               </div>
             )}
           </div>
@@ -114,6 +116,7 @@ export function SchedulesPage() {
 
 /** Actual worked totals (completed shifts only, lunch time excluded) — distinct from the schedule editor below it, which only sets the *target* days/hours. See ReportsService.attendance() for how these are computed. */
 function AttendanceTotalsTable() {
+  const { t } = useTranslation('schedules');
   const { token } = useAuth();
   const { data, isPending, error } = useQuery({
     queryKey: ['attendance-report'],
@@ -127,17 +130,17 @@ function AttendanceTotalsTable() {
         <span className="icon-badge icon-badge-sm icon-badge-purple">
           <BarChart3 />
         </span>
-        <h2 style={{ margin: 0 }}>Total shift days & hours per staff</h2>
+        <h2 style={{ margin: 0 }}>{t('attendanceTotals.heading')}</h2>
       </div>
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
       {data && (
         <table>
           <thead>
             <tr>
-              <th>Staff</th>
-              <th>Total shift days</th>
-              <th>Total hours worked</th>
+              <th>{t('attendanceTotals.staff')}</th>
+              <th>{t('attendanceTotals.totalShiftDays')}</th>
+              <th>{t('attendanceTotals.totalHoursWorked')}</th>
             </tr>
           </thead>
           <tbody>
@@ -151,12 +154,13 @@ function AttendanceTotalsTable() {
           </tbody>
         </table>
       )}
-      {data && data.rows.length === 0 && <p className="hint-text">No completed shifts yet.</p>}
+      {data && data.rows.length === 0 && <p className="hint-text">{t('attendanceTotals.noCompletedShifts')}</p>}
     </div>
   );
 }
 
 function ScheduleEditor({ userId, staffName }: { userId: string; staffName: string }) {
+  const { t } = useTranslation('schedules');
   const { token } = useAuth();
   const { data: schedule, isPending, error, refetch } = useQuery({
     queryKey: ['schedule', userId],
@@ -218,7 +222,7 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
       setSaved(true);
       refetch();
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Failed to save schedule');
+      setSaveError(err instanceof ApiError ? err.message : t('editor.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -232,11 +236,11 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
         </span>
         <h2 style={{ margin: 0 }}>{staffName}</h2>
       </div>
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
 
       <div className="form-row">
-        <label className="form-label">Working days</label>
+        <label className="form-label">{t('editor.workingDays')}</label>
         <div className="chip-row">
           {WEEKDAYS.map((day) => (
             <button
@@ -245,7 +249,7 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
               className={`btn ${workingDays.includes(day) ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => toggleDay(day)}
             >
-              {WEEKDAY_LABELS[day]}
+              {t(`weekdays.${day}`)}
             </button>
           ))}
         </div>
@@ -253,11 +257,11 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
 
       <div className="flex-row" style={{ alignItems: 'flex-end' }}>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Shift start</label>
+          <label className="form-label">{t('editor.shiftStart')}</label>
           <input type="time" value={shiftStartTime} onChange={(e) => setShiftStartTime(e.target.value)} />
         </div>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Required hours/day</label>
+          <label className="form-label">{t('editor.requiredHoursPerDay')}</label>
           <input
             type="number"
             step="0.5"
@@ -267,7 +271,7 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
           />
         </div>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Lunch break duration (min)</label>
+          <label className="form-label">{t('editor.lunchBreakDurationMin')}</label>
           <input
             type="number"
             min="1"
@@ -279,25 +283,25 @@ function ScheduleEditor({ userId, staffName }: { userId: string; staffName: stri
 
       <div className="flex-row" style={{ alignItems: 'flex-end' }}>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Total time (required + lunch)</label>
+          <label className="form-label">{t('editor.totalTime')}</label>
           <input type="text" value={formatDurationMinutes(totalMinutes)} disabled />
         </div>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Shift end (calculated)</label>
+          <label className="form-label">{t('editor.shiftEndCalculated')}</label>
           <input type="time" value={shiftEndTime} disabled />
         </div>
         <div className="form-row" style={{ flex: 1 }}>
-          <label className="form-label">Paid break duration</label>
-          <input type="text" value="20 min (fixed)" disabled />
+          <label className="form-label">{t('editor.paidBreakDuration')}</label>
+          <input type="text" value={t('editor.paidBreakFixed')} disabled />
         </div>
       </div>
 
       {saveError && <p className="error-text">{saveError}</p>}
-      {saved && <p className="hint-text" style={{ color: '#16a34a' }}>Saved.</p>}
+      {saved && <p className="hint-text" style={{ color: '#16a34a' }}>{t('editor.saved')}</p>}
 
       <button className="btn btn-primary" onClick={handleSave} disabled={isSaving || workingDays.length === 0}>
         <Save size={14} />
-        {isSaving ? 'Saving…' : 'Save schedule'}
+        {isSaving ? t('editor.saving') : t('editor.saveSchedule')}
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Radio, Send, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '../core/api/client';
 import { type DispatchItemResult } from '../core/api/openPool';
@@ -23,6 +24,7 @@ interface DispatchTaskPanelProps {
  * item — see OpenPoolService.dispatchFromReceptions/dispatchFromPallets.
  */
 export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: DispatchTaskPanelProps) {
+  const { t } = useTranslation('sellerStock');
   const { token } = useAuth();
   const { data: staff } = useQuery({
     queryKey: ['staff-users'],
@@ -60,7 +62,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
   async function handleSend() {
     const dispatchItems = items.map((item) => ({ id: item.id, comment: (comments[item.id] ?? '').trim() }));
     if (dispatchItems.some((i) => !i.comment)) {
-      setError('Every selected item needs a comment before sending.');
+      setError(t('dispatchPanel.errors.commentRequired'));
       return;
     }
     setIsSending(true);
@@ -75,7 +77,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
         onAllSucceeded();
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to send as Open Pool task(s)');
+      setError(err instanceof ApiError ? err.message : t('dispatchPanel.errors.dispatchFailed'));
     } finally {
       setIsSending(false);
     }
@@ -89,29 +91,29 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
         <span className="icon-badge icon-badge-sm icon-badge-purple">
           <Radio />
         </span>
-        <h2 style={{ margin: 0 }}>Send {items.length} selected as Open Pool task(s)</h2>
+        <h2 style={{ margin: 0 }}>{t('dispatchPanel.title', { count: items.length })}</h2>
       </div>
 
       <div className="form-row">
-        <label className="form-label">Comment for all</label>
+        <label className="form-label">{t('dispatchPanel.commentForAll')}</label>
         <div className="flex-row">
           <textarea
             rows={2}
             style={{ flex: 1 }}
             value={bulkComment}
             onChange={(e) => setBulkComment(e.target.value)}
-            placeholder="e.g. Stack in aisle 4, bay 2"
+            placeholder={t('dispatchPanel.commentPlaceholder')}
           />
           <button className="btn btn-outline" onClick={applyToAll}>
-            Apply to all
+            {t('dispatchPanel.applyToAll')}
           </button>
         </div>
       </div>
 
       <div className="form-row">
-        <label className="form-label">Send to</label>
+        <label className="form-label">{t('dispatchPanel.sendTo')}</label>
         <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
-          <option value="">Anyone available</option>
+          <option value="">{t('dispatchPanel.anyoneAvailable')}</option>
           {staff?.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -121,7 +123,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
       </div>
 
       <div className="form-row">
-        <label className="form-label">Per-item comment</label>
+        <label className="form-label">{t('dispatchPanel.perItemComment')}</label>
         {items.map((item) => (
           <div key={item.id} className="flex-row" style={{ marginBottom: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: '#374151', width: 220, flexShrink: 0 }}>{item.label}</span>
@@ -130,7 +132,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
               style={{ flex: 1 }}
               value={comments[item.id] ?? ''}
               onChange={(e) => setComments((prev) => ({ ...prev, [item.id]: e.target.value }))}
-              placeholder="e.g. Stack in aisle 4, bay 2"
+              placeholder={t('dispatchPanel.commentPlaceholder')}
             />
           </div>
         ))}
@@ -139,7 +141,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
       {error && <p className="error-text">{error}</p>}
       <button className="btn btn-accent" onClick={handleSend} disabled={isSending}>
         <Send size={14} />
-        {isSending ? 'Sending…' : `Send ${items.length} task(s)`}
+        {isSending ? t('dispatchPanel.sending') : t('dispatchPanel.sendTasks', { count: items.length })}
       </button>
 
       {results && (
@@ -152,7 +154,7 @@ export function DispatchTaskPanel({ items, onDispatch, onAllSucceeded }: Dispatc
                 style={{ color: r.success ? '#15803d' : '#dc2626', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}
               >
                 {r.success ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                {r.success ? 'Sent' : `Failed: ${r.error}`} — {label}
+                {r.success ? t('dispatchPanel.sent') : t('dispatchPanel.failed', { error: r.error })} — {label}
               </li>
             );
           })}

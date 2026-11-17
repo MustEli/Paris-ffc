@@ -1,5 +1,6 @@
 import { Table2, TrendingDown, TrendingUp } from 'lucide-react';
 import { type ComponentType, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Small, self-contained chart set for the Reception Reports page — no
@@ -66,6 +67,7 @@ function Legend({ items }: { items: { color: string; label: string }[] }) {
 }
 
 function TableToggle({ showTable, onToggle }: { showTable: boolean; onToggle: () => void }) {
+  const { t } = useTranslation('charts');
   return (
     <button
       className="btn btn-outline"
@@ -73,7 +75,7 @@ function TableToggle({ showTable, onToggle }: { showTable: boolean; onToggle: ()
       onClick={onToggle}
     >
       <Table2 size={13} />
-      {showTable ? 'View chart' : 'View as table'}
+      {showTable ? t('viewChart') : t('viewAsTable')}
     </button>
   );
 }
@@ -119,6 +121,7 @@ export function StackedBarChart({
   legend: { key: string; color: string; label: string }[];
   height?: number;
 }) {
+  const { t } = useTranslation('charts');
   const [showTable, setShowTable] = useState(false);
   const [hover, setHover] = useState<{ x: number; y: number; label: string; rows: { label: string; value: number }[] } | null>(null);
 
@@ -138,11 +141,11 @@ export function StackedBarChart({
           <table>
             <thead>
               <tr>
-                <th>Period</th>
+                <th>{t('tableHeaders.period')}</th>
                 {legend.map((l) => (
                   <th key={l.key}>{l.label}</th>
                 ))}
-                <th>Total</th>
+                <th>{t('tableHeaders.total')}</th>
               </tr>
             </thead>
             <tbody>
@@ -230,6 +233,7 @@ export function RankedBarChart({
   color?: string;
   height?: number;
 }) {
+  const { t } = useTranslation('charts');
   const [showTable, setShowTable] = useState(false);
   const rowHeight = 28;
   const chartHeight = height ?? Math.max(60, data.length * rowHeight + 10);
@@ -239,13 +243,13 @@ export function RankedBarChart({
     <div>
       <ChartHeader title={title} extra={extra} showTable={showTable} onToggleTable={() => setShowTable((v) => !v)} />
       {data.length === 0 ? (
-        <p className="hint-text">No data for this period.</p>
+        <p className="hint-text">{t('noData')}</p>
       ) : showTable ? (
         <table>
           <thead>
             <tr>
-              <th>Label</th>
-              <th>Value</th>
+              <th>{t('tableHeaders.label')}</th>
+              <th>{t('tableHeaders.value')}</th>
             </tr>
           </thead>
           <tbody>
@@ -305,6 +309,7 @@ export function LineChart({
   color?: string;
   height?: number;
 }) {
+  const { t } = useTranslation('charts');
   const [showTable, setShowTable] = useState(false);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const values = data.map((d) => d.y).filter((v): v is number => v !== null);
@@ -328,8 +333,8 @@ export function LineChart({
         <table>
           <thead>
             <tr>
-              <th>Period</th>
-              <th>Value</th>
+              <th>{t('tableHeaders.period')}</th>
+              <th>{t('tableHeaders.value')}</th>
             </tr>
           </thead>
           <tbody>
@@ -415,12 +420,13 @@ export function StatTile({
 }
 
 export function PercentChangeBadge({ percent }: { percent: number | null }) {
+  const { t } = useTranslation('charts');
   if (percent === null) return null;
   const up = percent >= 0;
   return (
     <span className={`pill ${up ? 'pill-green' : 'pill-red'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
       {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-      {Math.abs(Math.round(percent))}% vs last period
+      {t('vsLastPeriod', { percent: Math.abs(Math.round(percent)) })}
     </span>
   );
 }

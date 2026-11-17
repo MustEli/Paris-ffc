@@ -1,14 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, History, Megaphone, Radio, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../core/api/client';
-import { createDirective, DIRECTIVE_TYPE_LABELS, DIRECTIVE_TYPES, fetchAllDirectives } from '../core/api/directives';
+import { createDirective, DIRECTIVE_TYPES, fetchAllDirectives } from '../core/api/directives';
 import { createOpenPoolTask, fetchAllOpenPoolTasks } from '../core/api/openPool';
 import {
   fetchTaskBoard,
-  PRIORITY_LABELS,
   TASK_PRIORITIES,
   type OnShiftStaffMember,
   type TaskPriority,
@@ -47,6 +47,7 @@ const SELECT_STYLE: React.CSSProperties = {
  * the two push-style tools: urgent Directives and Open Pool tasks.
  */
 export function TaskBoardPage() {
+  const { t } = useTranslation('taskBoard');
   const { token } = useAuth();
   const { data } = useQuery({
     queryKey: ['task-board'],
@@ -67,9 +68,9 @@ export function TaskBoardPage() {
           <ClipboardList />
         </span>
         <div className="page-header-text">
-          <h1>Task Board</h1>
+          <h1>{t('pageTitle')}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>
-            Push an urgent directive to staff, or publish a task for anyone on shift to claim.
+            {t('pageSubtitle')}
           </p>
         </div>
       </div>
@@ -102,6 +103,7 @@ function DirectivesSection({
   onShiftStaff: OnShiftStaffMember[];
   highlightId: string | null;
 }) {
+  const { t } = useTranslation('taskBoard');
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const { data: directives, isPending, error } = useQuery({
@@ -144,7 +146,7 @@ function DirectivesSection({
       setCreationComment('');
       queryClient.invalidateQueries({ queryKey: ['directives'] });
     } catch (err) {
-      setSubmitError(err instanceof ApiError ? err.message : 'Failed to push directive');
+      setSubmitError(err instanceof ApiError ? err.message : t('directives.failedToPush'));
     } finally {
       setIsSubmitting(false);
     }
@@ -156,17 +158,16 @@ function DirectivesSection({
         <span className="icon-badge icon-badge-sm icon-badge-red">
           <Megaphone />
         </span>
-        <h2 style={{ margin: 0 }}>Admin Directives</h2>
+        <h2 style={{ margin: 0 }}>{t('directives.heading')}</h2>
       </div>
       <p className="page-subtitle" style={{ marginBottom: 'var(--space-4)' }}>
-        Push an urgent demand to a specific on-shift staff member, or anyone available — they get a real-time alert with
-        sound.
+        {t('directives.description')}
       </p>
 
       <div className="form-row">
-        <label className="form-label">Target</label>
+        <label className="form-label">{t('directives.targetLabel')}</label>
         <select style={SELECT_STYLE} value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
-          <option value="">Anyone available</option>
+          <option value="">{t('directives.anyoneAvailable')}</option>
           {onShiftStaff.map((s) => (
             <option key={s.userId} value={s.userId}>
               {s.userName}
@@ -175,71 +176,71 @@ function DirectivesSection({
         </select>
       </div>
       <div className="form-row">
-        <label className="form-label">Directive type</label>
+        <label className="form-label">{t('directives.typeLabel')}</label>
         <div className="chip-row">
-          {DIRECTIVE_TYPES.map((t) => (
+          {DIRECTIVE_TYPES.map((directiveType) => (
             <button
-              key={t}
+              key={directiveType}
               type="button"
-              className={`btn ${type === t ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setType(t)}
+              className={`btn ${type === directiveType ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setType(directiveType)}
             >
-              {DIRECTIVE_TYPE_LABELS[t]}
+              {t(`directiveTypes.${directiveType}`, { ns: 'common' })}
             </button>
           ))}
         </div>
       </div>
       <div className="form-row">
-        <label className="form-label">Message</label>
+        <label className="form-label">{t('directives.messageLabel')}</label>
         <textarea
           rows={2}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="e.g. Upload photo of missing item at Aisle 4B Rack 3 immediately"
+          placeholder={t('directives.messagePlaceholder')}
         />
       </div>
-      <PhotoUploadField label="Photo (optional)" value={creationPhotoUrl} onChange={setCreationPhotoUrl} />
+      <PhotoUploadField label={t('directives.photoLabel')} value={creationPhotoUrl} onChange={setCreationPhotoUrl} />
       <div className="form-row">
-        <label className="form-label">Comment (optional)</label>
+        <label className="form-label">{t('directives.commentLabel')}</label>
         <textarea
           rows={2}
           value={creationComment}
           onChange={(e) => setCreationComment(e.target.value)}
-          placeholder="Anything extra staff should see the moment they accept"
+          placeholder={t('directives.commentPlaceholder')}
         />
       </div>
       {submitError && <p className="error-text">{submitError}</p>}
       <button className="btn btn-accent" onClick={handlePush} disabled={isSubmitting || !message.trim()}>
         <Send size={14} />
-        {isSubmitting ? 'Sending…' : 'Send Alert to Staff'}
+        {isSubmitting ? t('directives.sending') : t('directives.sendAlert')}
       </button>
 
       <div className="flex-row" style={{ marginTop: 'var(--space-6)', marginBottom: 'var(--space-3)' }}>
         <span className="icon-badge icon-badge-sm icon-badge-gray">
           <History />
         </span>
-        <h2 style={{ margin: 0 }}>Directive status</h2>
+        <h2 style={{ margin: 0 }}>{t('directives.statusHeading')}</h2>
       </div>
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('directives.loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
       <table>
         <thead>
           <tr>
-            <th>Type</th>
-            <th>Message</th>
-            <th>Target</th>
-            <th>Status</th>
-            <th>Pushed</th>
-            <th>Completion photo</th>
-            <th>Completion comment</th>
-            <th>Done at</th>
-            <th>Done by</th>
+            <th>{t('directives.table.type')}</th>
+            <th>{t('directives.table.message')}</th>
+            <th>{t('directives.table.target')}</th>
+            <th>{t('directives.table.status')}</th>
+            <th>{t('directives.table.pushed')}</th>
+            <th>{t('directives.table.completionPhoto')}</th>
+            <th>{t('directives.table.completionComment')}</th>
+            <th>{t('directives.table.doneAt')}</th>
+            <th>{t('directives.table.doneBy')}</th>
           </tr>
         </thead>
         <tbody>
           {directives?.length === 0 && (
             <tr>
-              <td colSpan={9}>No directives pushed yet.</td>
+              <td colSpan={9}>{t('directives.empty')}</td>
             </tr>
           )}
           {directives?.map((d) => (
@@ -248,11 +249,15 @@ function DirectivesSection({
               ref={d.id === highlightId ? highlightRef : undefined}
               className={d.id === highlightId ? 'highlight-row' : undefined}
             >
-              <td>{DIRECTIVE_TYPE_LABELS[d.type]}</td>
+              <td>{t(`directiveTypes.${d.type}`, { ns: 'common' })}</td>
               <td>{d.message}</td>
-              <td>{d.targetUserId ? onShiftStaff.find((s) => s.userId === d.targetUserId)?.userName ?? d.targetUserId : 'Anyone'}</td>
               <td>
-                <span className={`pill ${STATUS_PILL_CLASS[d.status]}`}>{d.status}</span>
+                {d.targetUserId
+                  ? onShiftStaff.find((s) => s.userId === d.targetUserId)?.userName ?? d.targetUserId
+                  : t('directives.anyone')}
+              </td>
+              <td>
+                <span className={`pill ${STATUS_PILL_CLASS[d.status]}`}>{t(`status.${d.status}`)}</span>
               </td>
               <td>{new Date(d.pushedAt).toLocaleString()}</td>
               <td>{d.completionPhotoUrl ? <PhotoThumbnailLink url={d.completionPhotoUrl} /> : '—'}</td>
@@ -274,6 +279,7 @@ function DirectivesSection({
  * person" — it's "publish this for whoever gets there first."
  */
 function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
+  const { t } = useTranslation('taskBoard');
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const { data: tasks, isPending, error } = useQuery({
@@ -327,7 +333,7 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
       setCreationComment('');
       queryClient.invalidateQueries({ queryKey: ['open-pool-tasks'] });
     } catch (err) {
-      setSubmitError(err instanceof ApiError ? err.message : 'Failed to publish task');
+      setSubmitError(err instanceof ApiError ? err.message : t('openPool.failedToPublish'));
     } finally {
       setIsSubmitting(false);
     }
@@ -339,20 +345,25 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
         <span className="icon-badge icon-badge-sm icon-badge-blue">
           <Radio />
         </span>
-        <h2 style={{ margin: 0 }}>Open Pool Tasks</h2>
+        <h2 style={{ margin: 0 }}>{t('openPool.heading')}</h2>
       </div>
       <p className="page-subtitle" style={{ marginBottom: 'var(--space-4)' }}>
-        Publish a task for any active staff member to claim — first to tap wins, no specific assignment needed.
+        {t('openPool.description')}
       </p>
 
       <div className="form-row">
-        <label className="form-label">Title</label>
-        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Recount aisle 4" />
+        <label className="form-label">{t('openPool.titleLabel')}</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t('openPool.titlePlaceholder')}
+        />
       </div>
       <div className="form-row">
-        <label className="form-label">Target</label>
+        <label className="form-label">{t('openPool.targetLabel')}</label>
         <select style={SELECT_STYLE} value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
-          <option value="">Anyone available</option>
+          <option value="">{t('openPool.anyoneAvailable')}</option>
           {staffUsers?.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -361,11 +372,11 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
         </select>
       </div>
       <div className="form-row">
-        <label className="form-label">Description (optional)</label>
+        <label className="form-label">{t('openPool.descriptionLabel')}</label>
         <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
       <div className="form-row">
-        <label className="form-label">Priority</label>
+        <label className="form-label">{t('openPool.priorityLabel')}</label>
         <div className="chip-row">
           {TASK_PRIORITIES.map((p) => (
             <button
@@ -374,74 +385,74 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
               className={`btn ${priority === p ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setPriority(p)}
             >
-              {PRIORITY_LABELS[p]}
+              {t(`priority.${p}`, { ns: 'common' })}
             </button>
           ))}
         </div>
       </div>
-      <PhotoUploadField label="Photo (optional)" value={creationPhotoUrl} onChange={setCreationPhotoUrl} />
+      <PhotoUploadField label={t('openPool.photoLabel')} value={creationPhotoUrl} onChange={setCreationPhotoUrl} />
       <div className="form-row">
-        <label className="form-label">Comment (optional)</label>
+        <label className="form-label">{t('openPool.commentLabel')}</label>
         <textarea
           rows={2}
           value={creationComment}
           onChange={(e) => setCreationComment(e.target.value)}
-          placeholder="Anything extra staff should see the moment they claim it"
+          placeholder={t('openPool.commentPlaceholder')}
         />
       </div>
       {submitError && <p className="error-text">{submitError}</p>}
       <button className="btn btn-accent" onClick={handlePublish} disabled={isSubmitting || !title.trim()}>
         <Send size={14} />
-        {isSubmitting ? 'Publishing…' : 'Publish to Open Pool'}
+        {isSubmitting ? t('openPool.publishing') : t('openPool.publish')}
       </button>
 
       <div className="flex-row" style={{ marginTop: 'var(--space-6)', marginBottom: 'var(--space-3)' }}>
         <span className="icon-badge icon-badge-sm icon-badge-gray">
           <History />
         </span>
-        <h2 style={{ margin: 0 }}>Open Pool status</h2>
+        <h2 style={{ margin: 0 }}>{t('openPool.statusHeading')}</h2>
       </div>
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('openPool.loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
       <table>
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Target</th>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th>Completion photo</th>
-            <th>Completion comment</th>
-            <th>Completed at</th>
-            <th>Completed by</th>
+            <th>{t('openPool.table.title')}</th>
+            <th>{t('openPool.table.description')}</th>
+            <th>{t('openPool.table.target')}</th>
+            <th>{t('openPool.table.priority')}</th>
+            <th>{t('openPool.table.status')}</th>
+            <th>{t('openPool.table.created')}</th>
+            <th>{t('openPool.table.completionPhoto')}</th>
+            <th>{t('openPool.table.completionComment')}</th>
+            <th>{t('openPool.table.completedAt')}</th>
+            <th>{t('openPool.table.completedBy')}</th>
           </tr>
         </thead>
         <tbody>
           {tasks?.length === 0 && (
             <tr>
-              <td colSpan={10}>No open pool tasks yet.</td>
+              <td colSpan={10}>{t('openPool.empty')}</td>
             </tr>
           )}
-          {tasks?.map((t) => (
+          {tasks?.map((task) => (
             <tr
-              key={t.id}
-              ref={t.id === highlightId ? highlightRef : undefined}
-              className={t.id === highlightId ? 'highlight-row' : undefined}
+              key={task.id}
+              ref={task.id === highlightId ? highlightRef : undefined}
+              className={task.id === highlightId ? 'highlight-row' : undefined}
             >
-              <td>{t.title}</td>
-              <td>{t.description ?? '—'}</td>
-              <td>{t.targetUserId ? staffName(t.targetUserId) : 'Anyone'}</td>
-              <td>{PRIORITY_LABELS[t.priority]}</td>
+              <td>{task.title}</td>
+              <td>{task.description ?? '—'}</td>
+              <td>{task.targetUserId ? staffName(task.targetUserId) : t('openPool.anyone')}</td>
+              <td>{t(`priority.${task.priority}`, { ns: 'common' })}</td>
               <td>
-                <span className={`pill ${STATUS_PILL_CLASS[t.status]}`}>{t.status}</span>
+                <span className={`pill ${STATUS_PILL_CLASS[task.status]}`}>{t(`status.${task.status}`)}</span>
               </td>
-              <td>{new Date(t.createdAt).toLocaleString()}</td>
-              <td>{t.completionPhotoUrl ? <PhotoThumbnailLink url={t.completionPhotoUrl} /> : '—'}</td>
-              <td>{t.completionComment ?? '—'}</td>
-              <td>{t.completedAt ? new Date(t.completedAt).toLocaleString() : '—'}</td>
-              <td>{staffName(t.claimedByUserId)}</td>
+              <td>{new Date(task.createdAt).toLocaleString()}</td>
+              <td>{task.completionPhotoUrl ? <PhotoThumbnailLink url={task.completionPhotoUrl} /> : '—'}</td>
+              <td>{task.completionComment ?? '—'}</td>
+              <td>{task.completedAt ? new Date(task.completedAt).toLocaleString() : '—'}</td>
+              <td>{staffName(task.claimedByUserId)}</td>
             </tr>
           ))}
         </tbody>

@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import elnoLogo from '../assets/elno-logo.png';
 import { useAuth } from '../core/auth/AuthContext';
 
 export function LoginPage() {
+  const { t } = useTranslation('login');
   const { login, status, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,12 +23,12 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <img src={elnoLogo} alt="ELNO" className="login-logo" />
-        <p className="page-subtitle">Powered by OVOKO France</p>
+        <p className="page-subtitle">{t('poweredBy')}</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <label className="form-label" htmlFor="email">
-              Email
+              {t('email')}
             </label>
             <input
               id="email"
@@ -39,7 +41,7 @@ export function LoginPage() {
           </div>
           <div className="form-row">
             <label className="form-label" htmlFor="password">
-              Password
+              {t('password')}
             </label>
             <input
               id="password"
@@ -54,7 +56,7 @@ export function LoginPage() {
           {error && <p className="error-text">{error}</p>}
 
           <button type="submit" className="btn btn-primary" disabled={isLoading || !email || !password}>
-            {isLoading ? 'Signing in…' : 'Sign in'}
+            {isLoading ? t('signingIn') : t('signIn')}
           </button>
         </form>
       </div>

@@ -1,0 +1,12 @@
+{
+  "viewChart": "Voir le graphique",
+  "viewAsTable": "Voir en tableau",
+  "noData": "Aucune donnée pour cette période.",
+  "tableHeaders": {
+    "period": "Période",
+    "label": "Libellé",
+    "value": "Valeur",
+    "total": "Total"
+  },
+  "vsLastPeriod": "{{percent}}% vs la période précédente"
+}

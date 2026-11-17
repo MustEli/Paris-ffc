@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { Layout } from './components/Layout';
@@ -12,6 +13,7 @@ import { SchedulesPage } from './pages/SchedulesPage';
 import { TaskBoardPage } from './pages/TaskBoardPage';
 
 export function App() {
+  const { t } = useTranslation('common');
   const { status } = useAuth();
 
   if (status !== 'authenticated') {
@@ -32,18 +34,31 @@ export function App() {
         <Route path="/reception-reports" element={<ReceptionReportsPage />} />
         <Route
           path="/order-prep"
-          element={<PlaceholderPage title="Order Prep (Pick & Pack)" description="Labor calculator and staggering." />}
+          element={
+            <PlaceholderPage
+              variant="orderPrep"
+              title={t('nav.orderPrep')}
+              description={t('placeholder.orderPrepDescription')}
+            />
+          }
         />
         <Route
           path="/return-processing"
-          element={<PlaceholderPage title="Return Processing" description="Returns processing workflow." />}
+          element={
+            <PlaceholderPage
+              variant="returnProcessing"
+              title={t('nav.returnProcessing')}
+              description={t('placeholder.returnProcessingDescription')}
+            />
+          }
         />
         <Route
           path="/issue-queue"
           element={
             <PlaceholderPage
-              title="Exceptions & Issue Queue"
-              description="Damaged stock, overweight flags, incidents, requests, and questions."
+              variant="issueQueue"
+              title={t('nav.issueQueue')}
+              description={t('placeholder.issueQueueDescription')}
             />
           }
         />

@@ -8,13 +8,13 @@ export type ReferenceListCategory =
   | 'color_tag'
   | 'seller_name';
 
-export const REFERENCE_LIST_LABELS: Record<ReferenceListCategory, string> = {
-  transporter_company: 'Transporter Companies',
-  packaging_type: 'Packaging Types',
-  issue_type: 'Report Issue Types',
-  color_tag: 'Color Tags',
-  seller_name: 'Sellers',
-};
+export const REFERENCE_LIST_CATEGORIES: ReferenceListCategory[] = [
+  'transporter_company',
+  'packaging_type',
+  'issue_type',
+  'color_tag',
+  'seller_name',
+];
 
 export interface ReferenceListValue {
   id: string;

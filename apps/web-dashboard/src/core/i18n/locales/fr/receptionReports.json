@@ -1,0 +1,60 @@
+{
+  "title": "Rapports de réception",
+  "subtitle": "Volume de livraisons, temps de traitement, qualité du stock vendeur, sources et fiabilité.",
+  "filters": {
+    "granularity": "Granularité",
+    "from": "Du",
+    "to": "Au",
+    "clearDates": "Effacer les dates",
+    "granularityOptions": {
+      "day": "Jour",
+      "week": "Semaine",
+      "month": "Mois",
+      "quarter": "Trimestre"
+    }
+  },
+  "stats": {
+    "deliveriesLatestPeriod": "Livraisons (dernière période)",
+    "avgReceptionDuration": "Durée moyenne de réception",
+    "sellerStockProblemRate": "Taux de problèmes du stock vendeur",
+    "abandonedReceptionRate": "Taux de réceptions abandonnées"
+  },
+  "loading": "Chargement…",
+  "categoryLabels": {
+    "return_parcels": "Colis retournés",
+    "packaging_stock": "Stock d'emballage",
+    "sellers_stock": "Stock vendeurs",
+    "equipment_other": "Équipement & autres"
+  },
+  "weekdayLabels": {
+    "MON": "Lun",
+    "TUE": "Mar",
+    "WED": "Mer",
+    "THU": "Jeu",
+    "FRI": "Ven",
+    "SAT": "Sam",
+    "SUN": "Dim"
+  },
+  "sections": {
+    "deliveryVolume": "Volume de livraisons",
+    "receptionDuration": "Durée de réception",
+    "sellerStockQuality": "Qualité du stock vendeur",
+    "receptionSources": "Sources de réception",
+    "receptionReliability": "Fiabilité de réception"
+  },
+  "charts": {
+    "byCategory": "Par catégorie",
+    "deliveriesByDayOfWeek": "Livraisons par jour de la semaine",
+    "trend": "Tendance",
+    "byCategoryTab": "Par catégorie",
+    "byStaffTab": "Par employé",
+    "averageDurationByCategory": "Durée moyenne par catégorie",
+    "averageDurationByStaff": "Durée moyenne par employé",
+    "allProblems": "Tous les problèmes",
+    "overweightOnly": "Surpoids uniquement",
+    "problemRateBySeller": "Taux de problèmes par vendeur",
+    "overweightRateBySeller": "Taux de surpoids par vendeur",
+    "volumeByTransporterCompany": "Volume par transporteur",
+    "abandonedReceptionRateByStaff": "Taux de réceptions abandonnées par employé"
+  }
+}

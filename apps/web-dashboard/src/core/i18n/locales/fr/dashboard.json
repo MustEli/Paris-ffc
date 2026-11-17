@@ -1,0 +1,81 @@
+{
+  "title": "Tableau de bord",
+  "loading": "Chargement…",
+  "currentStatus": {
+    "heading": "Statut actuel",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "staffOnShift": "Employés en service",
+    "palletsPendingReview": "Palettes en attente de vérification",
+    "openPutAwayTasks": "Tâches de rangement ouvertes",
+    "activeOrderPrepSessions": "Sessions de préparation de commande actives"
+  },
+  "today": {
+    "heading": "Aujourd'hui",
+    "receptionsLogged": "Réceptions enregistrées",
+    "receptionsCompleted": "Réceptions terminées",
+    "palletsLogged": "Palettes enregistrées",
+    "putAwayCompleted": "Rangements terminés"
+  },
+  "staffTable": {
+    "heading": "Personnel",
+    "name": "Nom",
+    "status": "Statut",
+    "shiftsToday": "Quarts aujourd'hui",
+    "hoursWorkedToday": "Heures travaillées aujourd'hui",
+    "putAwayDone": "Rangements effectués",
+    "orderPrepDone": "Préparations effectuées",
+    "noStaffAccounts": "Aucun compte employé pour le moment.",
+    "onShift": "En service",
+    "onShiftSince": "En service depuis {{time}}",
+    "offShift": "Hors service",
+    "onBreak": "En pause",
+    "shortBreakRemaining": "Pause courte — {{time}} restantes",
+    "lunchBreakRemaining": "Pause déjeuner — {{time}} restantes",
+    "lunchBreakOver": "Pause déjeuner — {{time}} de dépassement"
+  },
+  "staffHistory": {
+    "heading": "Historique du personnel",
+    "download": "Télécharger",
+    "loading": "Chargement…",
+    "noShiftsYet": "Aucun quart terminé pour le moment.",
+    "noStaffAccounts": "Aucun compte employé pour le moment.",
+    "staffColumn": "Employé",
+    "cumulative": "Cumul",
+    "todaySuffix": "{{day}} (Aujourd'hui)",
+    "columns": {
+      "planned": "Prévu",
+      "floorTask": "Tâche terrain",
+      "reception": "Réception",
+      "openPool": "Bassin commun",
+      "urgentTask": "Tâche urgente",
+      "actual": "Réel"
+    }
+  },
+  "staffActivity": {
+    "heading": "Activité du personnel",
+    "live": "En direct",
+    "recent": "Récent",
+    "loading": "Chargement…",
+    "staffColumn": "Employé",
+    "hoursWorkedToday": "Heures travaillées aujourd'hui",
+    "type": "Type",
+    "detail": "Détail",
+    "started": "Début",
+    "duration": "Durée",
+    "finished": "Terminé",
+    "noneLive": "Personne n'est occupé pour le moment.",
+    "noneRecent": "Rien n'a encore été terminé.",
+    "cancelled": "Annulé",
+    "scannedSuffix": "— scanné : {{barcode}}",
+    "notYetScanned": "— pas encore scanné",
+    "receptionNoDelivery": "Réception — aucune livraison confirmée",
+    "reception": "Réception",
+    "types": {
+      "floorTask": "Tâche terrain",
+      "reception": "Réception",
+      "openPool": "Bassin commun",
+      "directive": "Tâche urgente"
+    }
+  }
+}

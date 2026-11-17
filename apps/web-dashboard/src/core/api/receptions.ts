@@ -49,30 +49,27 @@ export interface Reception {
   priority: TaskPriority;
 }
 
-export const CATEGORY_LABELS: Record<ReceptionCategory, string> = {
-  return_parcels: 'Return Parcels',
-  packaging_stock: 'Packaging Stock',
-  sellers_stock: 'Sellers Stock',
-  equipment_other: 'Equipment & Other',
-};
+export const RECEPTION_CATEGORIES: ReceptionCategory[] = [
+  'return_parcels',
+  'packaging_stock',
+  'sellers_stock',
+  'equipment_other',
+];
 
-export const STATUS_LABELS: Record<ReceptionStatus, string> = {
-  arrived: 'Awaiting instructions',
-  ready_for_putaway: 'Ready for put-away',
-  completed: 'Completed',
-};
+export const RECEPTION_STATUSES: ReceptionStatus[] = ['arrived', 'ready_for_putaway', 'completed'];
 
-export function summarizeDetails(reception: Reception): string {
+/** `t` is any translator bound to (or able to reach via `{ ns: 'common' }`) the `common.receptionSummary.*` keys — pass the page's own `t`. */
+export function summarizeDetails(reception: Reception, t: (key: string, options?: Record<string, unknown>) => string): string {
   const { details } = reception;
   switch (details.category) {
     case 'return_parcels':
-      return `${details.parcelCount} parcel(s) from ${details.transporterCompany}`;
+      return t('receptionSummary.parcelsFrom', { ns: 'common', count: details.parcelCount, transporter: details.transporterCompany });
     case 'packaging_stock':
-      return `${details.parcelCount} parcel(s) — ${details.packagingType}`;
+      return t('receptionSummary.parcelsPackaging', { ns: 'common', count: details.parcelCount, packagingType: details.packagingType });
     case 'sellers_stock':
-      return `${details.palletCount} pallet(s)`;
+      return t('receptionSummary.pallets', { ns: 'common', count: details.palletCount });
     case 'equipment_other':
-      return `${details.parcelCount} parcel(s) — ${details.itemDescription}`;
+      return t('receptionSummary.parcelsItem', { ns: 'common', count: details.parcelCount, item: details.itemDescription });
   }
 }
 

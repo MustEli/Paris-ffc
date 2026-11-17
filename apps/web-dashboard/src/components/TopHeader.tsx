@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Bell, ChevronDown, LogOut, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { fetchSearch, type PalletSearchResult, type StaffSearchResult, type TaskSearchResult } from '../core/api/search';
 import { useAuth } from '../core/auth/AuthContext';
+import { setLanguage } from '../core/i18n/config';
 
 /** Debounced so every keystroke doesn't fire a request. */
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -17,20 +19,17 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 /**
- * The global header from the customer's spec. Per the resolved scope
- * ("1. Elno first. 2. Leave it for now. ... 4. just set the switcher
- * option place and design ... 5/6. Leave it for now. 7. Yes fully
- * functional"): the language switcher, live-status dot, and
- * notification bell are visual placeholders only — search is the one
- * fully wired piece.
+ * The global header from the customer's spec. The live-status dot and
+ * notification bell remain visual placeholders — search and the
+ * language switcher are fully wired.
  */
 export function TopHeader() {
+  const { t, i18n } = useTranslation('common');
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [language, setLanguage] = useState<'EN' | 'FR'>('EN');
   const containerRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -92,18 +91,18 @@ export function TopHeader() {
           <Search size={15} className="top-header-search-icon" />
           <input
             type="text"
-            placeholder="Search by Pallet ID, Box #, Seller Name, Staff Name, or Task ID"
+            placeholder={t('search.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
           />
           {showDropdown && (
             <div className="top-header-search-dropdown">
-              {isFetching && <div className="top-header-search-empty">Searching…</div>}
-              {!isFetching && !hasResults && <div className="top-header-search-empty">No matches.</div>}
+              {isFetching && <div className="top-header-search-empty">{t('search.searching')}</div>}
+              {!isFetching && !hasResults && <div className="top-header-search-empty">{t('search.noMatches')}</div>}
               {!isFetching && data && data.pallets.length > 0 && (
                 <div className="top-header-search-group">
-                  <div className="top-header-search-group-label">Pallets</div>
+                  <div className="top-header-search-group-label">{t('search.pallets')}</div>
                   {data.pallets.map((p) => (
                     <button key={p.id} className="top-header-search-result" onClick={() => goToPallet(p)}>
                       <strong>{p.palletIndex}</strong> — {p.sellerName} ({p.boxNumber})
@@ -113,7 +112,7 @@ export function TopHeader() {
               )}
               {!isFetching && data && data.staff.length > 0 && (
                 <div className="top-header-search-group">
-                  <div className="top-header-search-group-label">Staff</div>
+                  <div className="top-header-search-group-label">{t('search.staff')}</div>
                   {data.staff.map((s) => (
                     <button key={s.id} className="top-header-search-result" onClick={() => goToStaff(s)}>
                       {s.name}
@@ -123,10 +122,10 @@ export function TopHeader() {
               )}
               {!isFetching && data && data.tasks.length > 0 && (
                 <div className="top-header-search-group">
-                  <div className="top-header-search-group-label">Tasks</div>
-                  {data.tasks.map((t) => (
-                    <button key={t.id} className="top-header-search-result" onClick={() => goToTask(t)}>
-                      {t.label}
+                  <div className="top-header-search-group-label">{t('search.tasks')}</div>
+                  {data.tasks.map((task) => (
+                    <button key={task.id} className="top-header-search-result" onClick={() => goToTask(task)}>
+                      {task.label}
                     </button>
                   ))}
                 </div>
@@ -139,18 +138,18 @@ export function TopHeader() {
           <button
             type="button"
             className="top-header-lang"
-            onClick={() => setLanguage((l) => (l === 'EN' ? 'FR' : 'EN'))}
-            title="Language (display only for now)"
+            onClick={() => setLanguage(i18n.language === 'fr' ? 'en' : 'fr')}
+            title={t('language')}
           >
-            {language}
+            {i18n.language === 'fr' ? 'FR' : 'EN'}
           </button>
 
-          <div className="top-header-status" title="Live System Status">
+          <div className="top-header-status" title={t('liveStatus')}>
             <span className="top-header-status-dot" />
-            <span className="top-header-status-label">Live</span>
+            <span className="top-header-status-label">{t('liveStatus')}</span>
           </div>
 
-          <button type="button" className="top-header-bell" title="Notifications">
+          <button type="button" className="top-header-bell" title={t('notifications')}>
             <Bell size={17} />
             <span className="top-header-bell-badge" />
           </button>
@@ -165,7 +164,7 @@ export function TopHeader() {
               <div className="top-header-profile-dropdown">
                 <button type="button" className="top-header-profile-dropdown-item" onClick={logout}>
                   <LogOut size={14} />
-                  Log out
+                  {t('logOut')}
                 </button>
               </div>
             )}

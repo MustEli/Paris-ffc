@@ -1,0 +1,81 @@
+{
+  "pallets": {
+    "title": "Seller Stock Pallets",
+    "subtitle": "Every pallet received, with full details, condition, and photos.",
+    "loading": "Loading…",
+    "filters": {
+      "sellerPlaceholder": "Filter by seller",
+      "allStatuses": "All statuses"
+    },
+    "toolbar": {
+      "selectAll": "Select all",
+      "clearSelection": "Clear selection",
+      "deleteSelected": "Delete selected ({{count}})",
+      "downloadExcel": "Download as Excel ({{count}})",
+      "downloadZip": "Download photos ZIP ({{count}})",
+      "zipping": "Zipping…",
+      "zippingWithProgress": "Zipping {{done}}/{{total}}…"
+    },
+    "table": {
+      "pallet": "Pallet",
+      "dateTime": "Date & Time",
+      "boxNumber": "Box Number",
+      "seller": "Seller",
+      "weightKg": "Weight (kg)",
+      "condition": "Condition",
+      "status": "Status",
+      "photos": "Photos",
+      "overweight": "Overweight",
+      "noResults": "No pallets match these filters.",
+      "goodCondition": "Good Condition",
+      "damaged": "Damaged",
+      "overweightYes": "Yes",
+      "overweightNo": "No",
+      "damageRemarks": "Damage Remarks",
+      "putAwayLocation": "Put-Away Location",
+      "putAwayAt": "Put Away At"
+    },
+    "actions": {
+      "viewPhotos": "View photos",
+      "downloadThisOne": "Download this one",
+      "delete": "Delete"
+    },
+    "errors": {
+      "deleteFailed": "Failed to delete",
+      "deleteSelectedFailed": "Failed to delete selected",
+      "noPhotosFound": "No photos found for the selected pallet(s).",
+      "fetchPhotoFailed": "Failed to fetch a photo (status {{status}})",
+      "zipFailed": "Failed to build the zip file."
+    },
+    "confirm": {
+      "deleteOne": "Delete this pallet permanently? This cannot be undone.",
+      "deleteSelected": "Delete {{count}} selected pallet(s) permanently? This cannot be undone."
+    },
+    "gallery": {
+      "palletTitle": "Pallet {{index}}",
+      "close": "Close",
+      "deliveryProof": "Delivery Proof ({{count}})",
+      "damageEvidence": "Damage Evidence ({{count}})",
+      "noPhotos": "No photos.",
+      "deliveryProofAlt": "Delivery proof {{index}}",
+      "damageEvidenceAlt": "Damage evidence {{index}}"
+    }
+  },
+  "dispatchPanel": {
+    "title": "Send {{count}} selected as Open Pool task(s)",
+    "commentForAll": "Comment for all",
+    "commentPlaceholder": "e.g. Stack in aisle 4, bay 2",
+    "applyToAll": "Apply to all",
+    "sendTo": "Send to",
+    "anyoneAvailable": "Anyone available",
+    "perItemComment": "Per-item comment",
+    "sending": "Sending…",
+    "sendTasks": "Send {{count}} task(s)",
+    "sent": "Sent",
+    "failed": "Failed: {{error}}",
+    "errors": {
+      "commentRequired": "Every selected item needs a comment before sending.",
+      "dispatchFailed": "Failed to send as Open Pool task(s)"
+    }
+  }
+}

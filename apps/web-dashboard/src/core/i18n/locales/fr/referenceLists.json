@@ -1,0 +1,14 @@
+{
+  "title": "Gérer les listes",
+  "subtitle": "Ces valeurs alimentent les listes déroulantes utilisées par le personnel sur l'application mobile (par exemple les champs Transporteur et Type d'emballage de la Réception) — tout ajout ou suppression ici se reflète immédiatement là-bas.",
+  "loading": "Chargement…",
+  "noValues": "Aucune valeur pour le moment.",
+  "remove": "Supprimer",
+  "removeAriaLabel": "Supprimer {{value}}",
+  "addPlaceholder": "Ajouter une valeur…",
+  "add": "Ajouter",
+  "errors": {
+    "addFailed": "Échec de l'ajout de la valeur",
+    "removeFailed": "Échec de la suppression de la valeur"
+  }
+}

@@ -5,6 +5,7 @@ import { HashRouter } from 'react-router-dom';
 
 import { App } from './App';
 import { AuthProvider } from './core/auth/AuthContext';
+import './core/i18n/config';
 import './styles.css';
 
 const queryClient = new QueryClient();

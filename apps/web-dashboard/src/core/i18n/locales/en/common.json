@@ -1,0 +1,93 @@
+{
+  "nav": {
+    "dashboard": "Dashboard / Operations Overview",
+    "taskBoard": "Task Board",
+    "schedules": "Attendance & Shift Roster",
+    "receptionIntake": "Reception & Intake",
+    "receptionReports": "Reception Reports",
+    "orderPrep": "Order Prep (Pick & Pack)",
+    "returnProcessing": "Return Processing",
+    "issueQueue": "Exceptions & Issue Queue",
+    "referenceLists": "User & Access Management"
+  },
+  "placeholder": {
+    "orderPrepDescription": "Labor calculator and staggering.",
+    "returnProcessingDescription": "Returns processing workflow.",
+    "issueQueueDescription": "Damaged stock, overweight flags, incidents, requests, and questions.",
+    "comingSoon": "This section is coming soon — check back after the next update."
+  },
+  "logOut": "Log out",
+  "search": {
+    "placeholder": "Search by Pallet ID, Box #, Seller Name, Staff Name, or Task ID",
+    "searching": "Searching…",
+    "noMatches": "No matches.",
+    "pallets": "Pallets",
+    "staff": "Staff",
+    "tasks": "Tasks"
+  },
+  "liveStatus": "Live",
+  "notifications": "Notifications",
+  "language": "Language",
+  "priority": {
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "directiveTypes": {
+    "photo_demand": "Photo Required",
+    "clear_stalled_task": "Clear Stalled Task",
+    "recount_inventory": "Re-count Inventory",
+    "verify_location": "Verify Location",
+    "custom": "Custom"
+  },
+  "floorTaskCategories": {
+    "pick": "Pick",
+    "pack": "Pack",
+    "dispatch": "Dispatch",
+    "return_processing": "Return",
+    "box_prep": "Box Prep",
+    "warehousing_inventory_check": "Warehousing — Inventory Check",
+    "warehousing_location_adjustment": "Warehousing — Location Adjustment",
+    "backup_box": "Backup — Box",
+    "backup_shredder": "Backup — Shredder",
+    "backup_other": "Backup — Other"
+  },
+  "referenceListCategories": {
+    "transporter_company": "Transporter Companies",
+    "packaging_type": "Packaging Types",
+    "issue_type": "Report Issue Types",
+    "color_tag": "Color Tags",
+    "seller_name": "Sellers"
+  },
+  "receptionCategory": {
+    "return_parcels": "Return Parcels",
+    "packaging_stock": "Packaging Stock",
+    "sellers_stock": "Sellers Stock",
+    "equipment_other": "Equipment & Other"
+  },
+  "receptionStatus": {
+    "arrived": "Awaiting instructions",
+    "ready_for_putaway": "Ready for put-away",
+    "completed": "Completed"
+  },
+  "sellerStockStatus": {
+    "ready_for_putaway": "In put-away pipeline",
+    "pending_admin_review": "Pending admin review",
+    "instructed": "Instructed — ready to place",
+    "put_away": "Put away"
+  },
+  "conditionFlags": {
+    "good": "Good Condition",
+    "overweight": "Over Weight",
+    "overloaded": "Over Loaded",
+    "damaged": "Damaged",
+    "location_name_needed": "Location Name Needed",
+    "other": "Other"
+  },
+  "receptionSummary": {
+    "parcelsFrom": "{{count}} parcel(s) from {{transporter}}",
+    "parcelsPackaging": "{{count}} parcel(s) — {{packagingType}}",
+    "pallets": "{{count}} pallet(s)",
+    "parcelsItem": "{{count}} parcel(s) — {{item}}"
+  }
+}

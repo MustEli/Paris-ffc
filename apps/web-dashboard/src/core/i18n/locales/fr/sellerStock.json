@@ -1,0 +1,81 @@
+{
+  "pallets": {
+    "title": "Palettes en stock vendeur",
+    "subtitle": "Chaque palette reçue, avec tous les détails, l'état et les photos.",
+    "loading": "Chargement…",
+    "filters": {
+      "sellerPlaceholder": "Filtrer par vendeur",
+      "allStatuses": "Tous les statuts"
+    },
+    "toolbar": {
+      "selectAll": "Tout sélectionner",
+      "clearSelection": "Effacer la sélection",
+      "deleteSelected": "Supprimer la sélection ({{count}})",
+      "downloadExcel": "Télécharger en Excel ({{count}})",
+      "downloadZip": "Télécharger les photos en ZIP ({{count}})",
+      "zipping": "Compression…",
+      "zippingWithProgress": "Compression {{done}}/{{total}}…"
+    },
+    "table": {
+      "pallet": "Palette",
+      "dateTime": "Date et heure",
+      "boxNumber": "N° de carton",
+      "seller": "Vendeur",
+      "weightKg": "Poids (kg)",
+      "condition": "État",
+      "status": "Statut",
+      "photos": "Photos",
+      "overweight": "Surpoids",
+      "noResults": "Aucune palette ne correspond à ces filtres.",
+      "goodCondition": "Bon état",
+      "damaged": "Endommagée",
+      "overweightYes": "Oui",
+      "overweightNo": "Non",
+      "damageRemarks": "Remarques sur les dommages",
+      "putAwayLocation": "Emplacement de rangement",
+      "putAwayAt": "Rangé le"
+    },
+    "actions": {
+      "viewPhotos": "Voir les photos",
+      "downloadThisOne": "Télécharger celle-ci",
+      "delete": "Supprimer"
+    },
+    "errors": {
+      "deleteFailed": "Échec de la suppression",
+      "deleteSelectedFailed": "Échec de la suppression de la sélection",
+      "noPhotosFound": "Aucune photo trouvée pour la ou les palettes sélectionnées.",
+      "fetchPhotoFailed": "Échec du téléchargement d'une photo (statut {{status}})",
+      "zipFailed": "Échec de la création du fichier ZIP."
+    },
+    "confirm": {
+      "deleteOne": "Supprimer cette palette définitivement ? Cette action est irréversible.",
+      "deleteSelected": "Supprimer {{count}} palette(s) sélectionnée(s) définitivement ? Cette action est irréversible."
+    },
+    "gallery": {
+      "palletTitle": "Palette {{index}}",
+      "close": "Fermer",
+      "deliveryProof": "Preuve de livraison ({{count}})",
+      "damageEvidence": "Preuves de dommages ({{count}})",
+      "noPhotos": "Aucune photo.",
+      "deliveryProofAlt": "Preuve de livraison {{index}}",
+      "damageEvidenceAlt": "Preuve de dommage {{index}}"
+    }
+  },
+  "dispatchPanel": {
+    "title": "Envoyer {{count}} élément(s) sélectionné(s) comme tâche(s) de bassin commun",
+    "commentForAll": "Commentaire pour tous",
+    "commentPlaceholder": "ex. Empiler dans l'allée 4, baie 2",
+    "applyToAll": "Appliquer à tous",
+    "sendTo": "Envoyer à",
+    "anyoneAvailable": "N'importe qui disponible",
+    "perItemComment": "Commentaire par élément",
+    "sending": "Envoi en cours…",
+    "sendTasks": "Envoyer {{count}} tâche(s)",
+    "sent": "Envoyé",
+    "failed": "Échec : {{error}}",
+    "errors": {
+      "commentRequired": "Chaque élément sélectionné doit avoir un commentaire avant l'envoi.",
+      "dispatchFailed": "Échec de l'envoi en tant que tâche(s) de bassin commun"
+    }
+  }
+}

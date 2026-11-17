@@ -1,0 +1,80 @@
+{
+  "pageTitle": "Tableau des tâches",
+  "pageSubtitle": "Envoyez une directive urgente au personnel, ou publiez une tâche que n'importe quel employé en poste pourra prendre en charge.",
+  "directives": {
+    "heading": "Directives administrateur",
+    "description": "Envoyez une demande urgente à un employé précis en poste, ou à n'importe qui disponible — ils reçoivent une alerte en temps réel avec un son.",
+    "targetLabel": "Destinataire",
+    "anyoneAvailable": "N'importe qui disponible",
+    "typeLabel": "Type de directive",
+    "messageLabel": "Message",
+    "messagePlaceholder": "ex. : Envoyer immédiatement une photo de l'article manquant à l'allée 4B, rack 3",
+    "photoLabel": "Photo (facultatif)",
+    "commentLabel": "Commentaire (facultatif)",
+    "commentPlaceholder": "Tout élément supplémentaire que le personnel doit voir au moment où il accepte",
+    "sending": "Envoi en cours…",
+    "sendAlert": "Envoyer l'alerte au personnel",
+    "failedToPush": "Échec de l'envoi de la directive",
+    "statusHeading": "Statut des directives",
+    "loading": "Chargement…",
+    "empty": "Aucune directive envoyée pour le moment.",
+    "anyone": "N'importe qui",
+    "table": {
+      "type": "Type",
+      "message": "Message",
+      "target": "Destinataire",
+      "status": "Statut",
+      "pushed": "Envoyée",
+      "completionPhoto": "Photo de fin",
+      "completionComment": "Commentaire de fin",
+      "doneAt": "Terminée le",
+      "doneBy": "Terminée par"
+    }
+  },
+  "openPool": {
+    "heading": "Tâches du bassin commun",
+    "description": "Publiez une tâche que n'importe quel employé actif peut prendre en charge — premier arrivé, premier servi, aucune assignation spécifique nécessaire.",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "ex. : Recompter l'allée 4",
+    "targetLabel": "Destinataire",
+    "anyoneAvailable": "N'importe qui disponible",
+    "descriptionLabel": "Description (facultatif)",
+    "priorityLabel": "Priorité",
+    "photoLabel": "Photo (facultatif)",
+    "commentLabel": "Commentaire (facultatif)",
+    "commentPlaceholder": "Tout élément supplémentaire que le personnel doit voir au moment où il la prend en charge",
+    "publishing": "Publication en cours…",
+    "publish": "Publier dans le bassin commun",
+    "failedToPublish": "Échec de la publication de la tâche",
+    "statusHeading": "Statut du bassin commun",
+    "loading": "Chargement…",
+    "empty": "Aucune tâche dans le bassin commun pour le moment.",
+    "anyone": "N'importe qui",
+    "table": {
+      "title": "Titre",
+      "description": "Description",
+      "target": "Destinataire",
+      "priority": "Priorité",
+      "status": "Statut",
+      "created": "Créée",
+      "completionPhoto": "Photo de fin",
+      "completionComment": "Commentaire de fin",
+      "completedAt": "Terminée le",
+      "completedBy": "Terminée par"
+    }
+  },
+  "status": {
+    "open": "Ouverte",
+    "claimed": "Prise en charge",
+    "completed": "Terminée",
+    "pushed": "Envoyée",
+    "in_progress": "En cours",
+    "resolved": "Résolue"
+  },
+  "photoUpload": {
+    "remove": "Supprimer",
+    "uploading": "Téléversement en cours…",
+    "upload": "Téléverser une photo",
+    "failedToUpload": "Échec du téléversement de la photo"
+  }
+}

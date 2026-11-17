@@ -1,0 +1,116 @@
+{
+  "deliveries": {
+    "title": "Livraisons",
+    "loading": "Chargement…"
+  },
+  "filters": {
+    "allCategories": "Toutes les catégories",
+    "allStatuses": "Tous les statuts",
+    "filterByStaff": "Filtrer par employé",
+    "flaggedOnly": "Signalées uniquement"
+  },
+  "actions": {
+    "selectAll": "Tout sélectionner ({{count}})",
+    "clearSelection": "Effacer la sélection",
+    "deleteSelected": "Supprimer la sélection ({{count}})",
+    "downloadExcel": "Télécharger en Excel ({{count}})",
+    "downloadZip": "Télécharger les photos en ZIP ({{count}})",
+    "zipping": "Compression {{progress}}…"
+  },
+  "table": {
+    "dateTime": "Date & heure",
+    "category": "Catégorie",
+    "staff": "Employé",
+    "summary": "Résumé",
+    "status": "Statut",
+    "photos": "Photos",
+    "noResults": "Aucune livraison ne correspond à ces filtres.",
+    "flagged": "Signalée",
+    "viewDetails": "Voir les détails",
+    "photosAction": "Photos",
+    "delete": "Supprimer"
+  },
+  "modal": {
+    "close": "Fermer",
+    "status": "Statut",
+    "loggedBy": "Enregistrée par",
+    "arrivedAt": "Arrivée le",
+    "transporterCompany": "Société de transport",
+    "packagingType": "Type d'emballage",
+    "seller": "Vendeur",
+    "itemDescription": "Description de l'article",
+    "instructions": "Instructions",
+    "assignedTo": "Assignée à",
+    "priority": "Priorité",
+    "assignedAt": "Assignée le",
+    "putAwayAt": "Rangée le",
+    "processingTime": "Temps de traitement",
+    "processingTimeValue": "{{minutes}} min",
+    "noValue": "—"
+  },
+  "gallery": {
+    "noPhotos": "Aucune photo.",
+    "equipmentPhotos": "Photo(s) d'équipement",
+    "invoicePhotos": "Photo(s) de facture"
+  },
+  "confirm": {
+    "deleteOne": "Supprimer définitivement cette livraison ? Cette action est irréversible.",
+    "deleteSelected": "Supprimer définitivement {{count}} livraison(s) sélectionnée(s) ? Cette action est irréversible."
+  },
+  "errors": {
+    "deleteFailed": "Échec de la suppression",
+    "deleteSelectedFailed": "Échec de la suppression de la sélection",
+    "noPhotosFound": "Aucune photo trouvée pour les livraisons sélectionnées.",
+    "zipFailed": "Échec de la création du fichier ZIP."
+  },
+  "excel": {
+    "id": "ID",
+    "dateTime": "Date & heure",
+    "category": "Catégorie",
+    "staff": "Employé",
+    "summary": "Résumé",
+    "status": "Statut",
+    "flagged": "Signalée",
+    "instructions": "Instructions",
+    "assignedTo": "Assignée à",
+    "priority": "Priorité",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "intakePage": {
+    "title": "Réception & prise en charge",
+    "subtitle": "Toutes les livraisons et palettes de stock vendeur reçues, avec détails complets et photos."
+  },
+  "pendingReview": {
+    "title": "À valider par l'administrateur",
+    "pendingCount": "{{count}} en attente",
+    "empty": "Rien n'est en attente de validation pour le moment.",
+    "boxPrefix": "Carton {{boxNumber}}",
+    "assign": "Assigner…",
+    "onlineStaffLabel": "Employés en ligne — glissez une carte ici",
+    "noOneOnShift": "Personne n'est en service.",
+    "flaggedForReview": "Signalée pour vérification",
+    "weightKg": "{{weight}} kg"
+  },
+  "assignModal": {
+    "title": "Assigner {{palletIndex}} — {{sellerName}}",
+    "close": "Fermer",
+    "assignTo": "Assigner à",
+    "selectStaffPlaceholder": "Sélectionner un employé…",
+    "instructionsLocation": "Instructions / emplacement de rangement",
+    "locationPlaceholder": "ex. : Mettre de côté dans l'allée 4 — reconditionner avant rangement",
+    "additionalNotes": "Notes supplémentaires (facultatif)",
+    "priority": "Priorité",
+    "photosForStaff": "Photos pour l'employé (facultatif)",
+    "uploadPhotos": "Charger des photo(s)",
+    "uploading": "Chargement…",
+    "removePhoto": "Supprimer la photo",
+    "sendInstructions": "Envoyer les instructions",
+    "sending": "Envoi en cours…",
+    "errors": {
+      "missingFields": "Choisissez un employé et saisissez une instruction avant d'envoyer.",
+      "uploadFailed": "Échec du chargement d'une photo",
+      "assignFailed": "Échec de l'assignation de cette palette"
+    }
+  }
+}

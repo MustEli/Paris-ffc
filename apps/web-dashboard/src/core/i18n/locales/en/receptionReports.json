@@ -1,0 +1,60 @@
+{
+  "title": "Reception Reports",
+  "subtitle": "Delivery volume, processing time, Seller Stock quality, sources, and reliability.",
+  "filters": {
+    "granularity": "Granularity",
+    "from": "From",
+    "to": "To",
+    "clearDates": "Clear dates",
+    "granularityOptions": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter"
+    }
+  },
+  "stats": {
+    "deliveriesLatestPeriod": "Deliveries (latest period)",
+    "avgReceptionDuration": "Avg. reception duration",
+    "sellerStockProblemRate": "Seller Stock problem rate",
+    "abandonedReceptionRate": "Abandoned-reception rate"
+  },
+  "loading": "Loading…",
+  "categoryLabels": {
+    "return_parcels": "Return Parcels",
+    "packaging_stock": "Packaging Stock",
+    "sellers_stock": "Sellers Stock",
+    "equipment_other": "Equipment & Other"
+  },
+  "weekdayLabels": {
+    "MON": "Mon",
+    "TUE": "Tue",
+    "WED": "Wed",
+    "THU": "Thu",
+    "FRI": "Fri",
+    "SAT": "Sat",
+    "SUN": "Sun"
+  },
+  "sections": {
+    "deliveryVolume": "Delivery Volume",
+    "receptionDuration": "Reception Duration",
+    "sellerStockQuality": "Seller Stock Quality",
+    "receptionSources": "Reception Sources",
+    "receptionReliability": "Reception Reliability"
+  },
+  "charts": {
+    "byCategory": "By Category",
+    "deliveriesByDayOfWeek": "Deliveries by Day of Week",
+    "trend": "Trend",
+    "byCategoryTab": "By Category",
+    "byStaffTab": "By Staff",
+    "averageDurationByCategory": "Average Duration by Category",
+    "averageDurationByStaff": "Average Duration by Staff",
+    "allProblems": "All problems",
+    "overweightOnly": "Overweight only",
+    "problemRateBySeller": "Problem Rate by Seller",
+    "overweightRateBySeller": "Overweight Rate by Seller",
+    "volumeByTransporterCompany": "Volume by Transporter Company",
+    "abandonedReceptionRateByStaff": "Abandoned-Reception Rate by Staff"
+  }
+}

@@ -3,17 +3,17 @@ import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Download, FileArchive, Image, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
 import { ApiError } from '../core/api/client';
 import { dispatchPalletsAsTasks } from '../core/api/openPool';
 import {
-  CONDITION_FLAG_LABELS,
   deletePallet,
   deletePallets,
   fetchPallets,
-  STATUS_LABELS,
+  SELLER_STOCK_STATUSES,
   type SellerStockPallet,
 } from '../core/api/sellerStock';
 import { useAuth } from '../core/auth/AuthContext';
@@ -54,27 +54,27 @@ function extensionFromUrl(url: string): string {
   return match ? `.${match[1].toLowerCase()}` : '.jpg';
 }
 
-function conditionLabel(pallet: SellerStockPallet): string {
+function conditionLabel(pallet: SellerStockPallet, t: (key: string, options?: Record<string, unknown>) => string): string {
   return pallet.conditionFlags.length > 0
-    ? pallet.conditionFlags.map((f) => CONDITION_FLAG_LABELS[f]).join(', ')
+    ? pallet.conditionFlags.map((f) => t(`conditionFlags.${f}`, { ns: 'common' })).join(', ')
     : pallet.condition === 'good'
-      ? 'Good Condition'
-      : 'Damaged';
+      ? t('pallets.table.goodCondition')
+      : t('pallets.table.damaged');
 }
 
-function downloadPalletsExcel(pallets: SellerStockPallet[], filenameSuffix: string) {
+function downloadPalletsExcel(pallets: SellerStockPallet[], filenameSuffix: string, t: (key: string, options?: Record<string, unknown>) => string) {
   const rows = pallets.map((p) => ({
-    Pallet: p.palletIndex,
-    'Date & Time': new Date(p.createdAt).toLocaleString(),
-    'Box Number': p.boxNumber,
-    Seller: p.sellerName,
-    'Weight (kg)': p.weightKg,
-    Overweight: p.overweightFlag ? 'Yes' : 'No',
-    Condition: conditionLabel(p),
-    Status: STATUS_LABELS[p.status],
-    'Damage Remarks': p.damageRemarks ?? '',
-    'Put-Away Location': p.putAwayLocation ?? '',
-    'Put Away At': p.putAwayAt ? new Date(p.putAwayAt).toLocaleString() : '',
+    [t('pallets.table.pallet')]: p.palletIndex,
+    [t('pallets.table.dateTime')]: new Date(p.createdAt).toLocaleString(),
+    [t('pallets.table.boxNumber')]: p.boxNumber,
+    [t('pallets.table.seller')]: p.sellerName,
+    [t('pallets.table.weightKg')]: p.weightKg,
+    [t('pallets.table.overweight')]: p.overweightFlag ? t('pallets.table.overweightYes') : t('pallets.table.overweightNo'),
+    [t('pallets.table.condition')]: conditionLabel(p, t),
+    [t('pallets.table.status')]: t(`sellerStockStatus.${p.status}`, { ns: 'common' }),
+    [t('pallets.table.damageRemarks')]: p.damageRemarks ?? '',
+    [t('pallets.table.putAwayLocation')]: p.putAwayLocation ?? '',
+    [t('pallets.table.putAwayAt')]: p.putAwayAt ? new Date(p.putAwayAt).toLocaleString() : '',
   }));
   const sheet = XLSX.utils.json_to_sheet(rows);
   const book = XLSX.utils.book_new();
@@ -90,6 +90,7 @@ function downloadPalletsExcel(pallets: SellerStockPallet[], filenameSuffix: stri
  * small backend proxy endpoint; not needed for now.
  */
 export function SellerStockSection() {
+  const { t } = useTranslation('sellerStock');
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const { data, isPending, error } = useQuery({
@@ -174,7 +175,7 @@ export function SellerStockSection() {
   }
 
   async function handleDeleteOne(id: string) {
-    if (!window.confirm('Delete this pallet permanently? This cannot be undone.')) return;
+    if (!window.confirm(t('pallets.confirm.deleteOne'))) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
@@ -186,7 +187,7 @@ export function SellerStockSection() {
       });
       refresh();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : 'Failed to delete');
+      setDeleteError(err instanceof ApiError ? err.message : t('pallets.errors.deleteFailed'));
     } finally {
       setIsDeleting(false);
     }
@@ -194,7 +195,7 @@ export function SellerStockSection() {
 
   async function handleDeleteSelected() {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} selected pallet(s) permanently? This cannot be undone.`)) return;
+    if (!window.confirm(t('pallets.confirm.deleteSelected', { count: selectedIds.size }))) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
@@ -202,7 +203,7 @@ export function SellerStockSection() {
       setSelectedIds(new Set());
       refresh();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : 'Failed to delete selected');
+      setDeleteError(err instanceof ApiError ? err.message : t('pallets.errors.deleteSelectedFailed'));
     } finally {
       setIsDeleting(false);
     }
@@ -220,7 +221,7 @@ export function SellerStockSection() {
     }
 
     if (entries.length === 0) {
-      setZipError('No photos found for the selected pallet(s).');
+      setZipError(t('pallets.errors.noPhotosFound'));
       return;
     }
 
@@ -233,7 +234,7 @@ export function SellerStockSection() {
       await Promise.all(
         entries.map(async (entry) => {
           const response = await fetch(entry.url);
-          if (!response.ok) throw new Error(`Failed to fetch a photo (status ${response.status})`);
+          if (!response.ok) throw new Error(t('pallets.errors.fetchPhotoFailed', { status: response.status }));
           const blob = await response.blob();
           zip.file(entry.filename, blob);
           done += 1;
@@ -243,7 +244,7 @@ export function SellerStockSection() {
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       saveAs(zipBlob, `elno-pallet-photos-${new Date().toISOString().slice(0, 10)}.zip`);
     } catch (err) {
-      setZipError(err instanceof Error ? err.message : 'Failed to build the zip file.');
+      setZipError(err instanceof Error ? err.message : t('pallets.errors.zipFailed'));
     } finally {
       setIsZipping(false);
       setZipProgress(null);
@@ -258,11 +259,11 @@ export function SellerStockSection() {
         <span className="icon-badge icon-badge-sm icon-badge-purple">
           <Boxes />
         </span>
-        <h2 style={{ margin: 0 }}>Seller Stock Pallets</h2>
+        <h2 style={{ margin: 0 }}>{t('pallets.title')}</h2>
       </div>
-      <p className="page-subtitle">Every pallet received, with full details, condition, and photos.</p>
+      <p className="page-subtitle">{t('pallets.subtitle')}</p>
 
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('pallets.loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
 
       {all.length > 0 && (
@@ -271,15 +272,15 @@ export function SellerStockSection() {
             <input
               type="text"
               style={{ ...filterControlStyle, flex: '2 1 200px' }}
-              placeholder="Filter by seller"
+              placeholder={t('pallets.filters.sellerPlaceholder')}
               value={sellerFilter}
               onChange={(e) => setSellerFilter(e.target.value)}
             />
             <select style={{ ...filterControlStyle, flex: '1 1 160px' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="">All statuses</option>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option value="">{t('pallets.filters.allStatuses')}</option>
+              {SELLER_STOCK_STATUSES.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(`sellerStockStatus.${value}`, { ns: 'common' })}
                 </option>
               ))}
             </select>
@@ -290,10 +291,10 @@ export function SellerStockSection() {
           <div className="section-toolbar">
             <div className="flex-row" style={{ flexWrap: 'wrap' }}>
               <button className="btn btn-outline" onClick={() => setSelectedIds(new Set(pallets.map((p) => p.id)))}>
-                Select all
+                {t('pallets.toolbar.selectAll')}
               </button>
               <button className="btn btn-outline" onClick={() => setSelectedIds(new Set())}>
-                Clear selection
+                {t('pallets.toolbar.clearSelection')}
               </button>
               <button
                 className="btn-danger-text"
@@ -302,14 +303,16 @@ export function SellerStockSection() {
                 disabled={isDeleting || selectedIds.size === 0}
               >
                 <Trash2 size={13} />
-                Delete selected ({selectedIds.size})
+                {t('pallets.toolbar.deleteSelected', { count: selectedIds.size })}
               </button>
               <button
                 className="btn btn-outline"
-                onClick={() => downloadPalletsExcel(selectedPallets.length > 0 ? selectedPallets : pallets, selectedPallets.length > 0 ? 'selected' : 'all')}
+                onClick={() =>
+                  downloadPalletsExcel(selectedPallets.length > 0 ? selectedPallets : pallets, selectedPallets.length > 0 ? 'selected' : 'all', t)
+                }
               >
                 <Download size={14} />
-                Download as Excel ({selectedPallets.length > 0 ? selectedPallets.length : pallets.length})
+                {t('pallets.toolbar.downloadExcel', { count: selectedPallets.length > 0 ? selectedPallets.length : pallets.length })}
               </button>
             </div>
             <button
@@ -319,8 +322,10 @@ export function SellerStockSection() {
             >
               <FileArchive size={14} />
               {isZipping
-                ? `Zipping ${zipProgress ? `${zipProgress.done}/${zipProgress.total}` : ''}…`
-                : `Download photos ZIP (${selectedPallets.length > 0 ? selectedPallets.length : pallets.length})`}
+                ? zipProgress
+                  ? t('pallets.toolbar.zippingWithProgress', { done: zipProgress.done, total: zipProgress.total })
+                  : t('pallets.toolbar.zipping')
+                : t('pallets.toolbar.downloadZip', { count: selectedPallets.length > 0 ? selectedPallets.length : pallets.length })}
             </button>
           </div>
           {zipError && <p className="error-text">{zipError}</p>}
@@ -330,21 +335,21 @@ export function SellerStockSection() {
             <thead>
               <tr>
                 <th></th>
-                <th>Pallet</th>
-                <SortHeader label="Date & Time" active={sortKey === 'createdAt'} dir={sortDir} onClick={() => toggleSort('createdAt')} />
-                <th>Box Number</th>
-                <SortHeader label="Seller" active={sortKey === 'sellerName'} dir={sortDir} onClick={() => toggleSort('sellerName')} />
-                <SortHeader label="Weight (kg)" active={sortKey === 'weightKg'} dir={sortDir} onClick={() => toggleSort('weightKg')} />
-                <th>Condition</th>
-                <th>Status</th>
-                <th>Photos</th>
+                <th>{t('pallets.table.pallet')}</th>
+                <SortHeader label={t('pallets.table.dateTime')} active={sortKey === 'createdAt'} dir={sortDir} onClick={() => toggleSort('createdAt')} />
+                <th>{t('pallets.table.boxNumber')}</th>
+                <SortHeader label={t('pallets.table.seller')} active={sortKey === 'sellerName'} dir={sortDir} onClick={() => toggleSort('sellerName')} />
+                <SortHeader label={t('pallets.table.weightKg')} active={sortKey === 'weightKg'} dir={sortDir} onClick={() => toggleSort('weightKg')} />
+                <th>{t('pallets.table.condition')}</th>
+                <th>{t('pallets.table.status')}</th>
+                <th>{t('pallets.table.photos')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {pallets.length === 0 && (
                 <tr>
-                  <td colSpan={10}>No pallets match these filters.</td>
+                  <td colSpan={10}>{t('pallets.table.noResults')}</td>
                 </tr>
               )}
               {pallets.map((pallet) => {
@@ -370,12 +375,12 @@ export function SellerStockSection() {
                       {pallet.weightKg.toLocaleString()}
                       {pallet.overweightFlag && (
                         <span className="pill pill-amber" style={{ marginLeft: 6 }}>
-                          Overweight
+                          {t('pallets.table.overweight')}
                         </span>
                       )}
                     </td>
-                    <td>{conditionLabel(pallet)}</td>
-                    <td>{STATUS_LABELS[pallet.status]}</td>
+                    <td>{conditionLabel(pallet, t)}</td>
+                    <td>{t(`sellerStockStatus.${pallet.status}`, { ns: 'common' })}</td>
                     <td>{photoCount}</td>
                     <td>
                       <div className="flex-row">
@@ -386,7 +391,7 @@ export function SellerStockSection() {
                           disabled={photoCount === 0}
                         >
                           <Image size={13} />
-                          View photos
+                          {t('pallets.actions.viewPhotos')}
                         </button>
                         <button
                           className="btn-danger-text"
@@ -395,7 +400,7 @@ export function SellerStockSection() {
                           disabled={isZipping || photoCount === 0}
                         >
                           <Download size={13} />
-                          Download this one
+                          {t('pallets.actions.downloadThisOne')}
                         </button>
                         <button
                           className="btn-danger-text"
@@ -404,7 +409,7 @@ export function SellerStockSection() {
                           disabled={isDeleting}
                         >
                           <Trash2 size={13} />
-                          Delete
+                          {t('pallets.actions.delete')}
                         </button>
                       </div>
                     </td>
@@ -427,24 +432,24 @@ export function SellerStockSection() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h2 style={{ margin: 0 }}>Pallet {galleryPallet.palletIndex}</h2>
+                <h2 style={{ margin: 0 }}>{t('pallets.gallery.palletTitle', { index: galleryPallet.palletIndex })}</h2>
                 <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{galleryPallet.sellerName}</p>
               </div>
-              <button className="modal-close" onClick={() => setGalleryPallet(null)} aria-label="Close">
+              <button className="modal-close" onClick={() => setGalleryPallet(null)} aria-label={t('pallets.gallery.close')}>
                 ✕
               </button>
             </div>
 
-            <h2>Delivery Proof ({galleryPallet.labelPhotoUrls.length})</h2>
+            <h2>{t('pallets.gallery.deliveryProof', { count: galleryPallet.labelPhotoUrls.length })}</h2>
             {galleryPallet.labelPhotoUrls.length === 0 ? (
-              <p className="hint-text">No photos.</p>
+              <p className="hint-text">{t('pallets.gallery.noPhotos')}</p>
             ) : (
               <div className="photo-grid">
                 {galleryPallet.labelPhotoUrls.map((url, i) => (
                   <img
                     key={i}
                     src={url}
-                    alt={`Delivery proof ${i + 1}`}
+                    alt={t('pallets.gallery.deliveryProofAlt', { index: i + 1 })}
                     className="photo-thumb"
                     onClick={() => setLightboxUrl(url)}
                   />
@@ -452,16 +457,16 @@ export function SellerStockSection() {
               </div>
             )}
 
-            <h2>Damage Evidence ({galleryPallet.damageEvidencePhotoUrls.length})</h2>
+            <h2>{t('pallets.gallery.damageEvidence', { count: galleryPallet.damageEvidencePhotoUrls.length })}</h2>
             {galleryPallet.damageEvidencePhotoUrls.length === 0 ? (
-              <p className="hint-text">No photos.</p>
+              <p className="hint-text">{t('pallets.gallery.noPhotos')}</p>
             ) : (
               <div className="photo-grid">
                 {galleryPallet.damageEvidencePhotoUrls.map((url, i) => (
                   <img
                     key={i}
                     src={url}
-                    alt={`Damage evidence ${i + 1}`}
+                    alt={t('pallets.gallery.damageEvidenceAlt', { index: i + 1 })}
                     className="photo-thumb"
                     onClick={() => setLightboxUrl(url)}
                   />

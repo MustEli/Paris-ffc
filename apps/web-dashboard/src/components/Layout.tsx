@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { type ComponentType, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
 import { useAuth } from '../core/auth/AuthContext';
@@ -22,19 +23,20 @@ import { TopHeader } from './TopHeader';
 // PlaceholderPage.tsx's "coming soon" pages — nothing is built for
 // them yet. "Put-Away & Location Assignment" was removed entirely
 // (customer request — locations are predefined/obvious to staff).
-const NAV_ITEMS: { to: string; label: string; end?: boolean; icon: ComponentType<{ size?: number }> }[] = [
-  { to: '/', label: 'Dashboard / Operations Overview', end: true, icon: LayoutDashboard },
-  { to: '/task-board', label: 'Task Board', icon: ClipboardList },
-  { to: '/schedules', label: 'Attendance & Shift Roster', icon: CalendarClock },
-  { to: '/reception-intake', label: 'Reception & Intake', icon: PackageSearch },
-  { to: '/reception-reports', label: 'Reception Reports', icon: BarChart3 },
-  { to: '/order-prep', label: 'Order Prep (Pick & Pack)', icon: ShoppingCart },
-  { to: '/return-processing', label: 'Return Processing', icon: RotateCcw },
-  { to: '/issue-queue', label: 'Exceptions & Issue Queue', icon: AlertTriangle },
-  { to: '/reference-lists', label: 'User & Access Management', icon: Users },
+const NAV_ITEMS: { to: string; labelKey: string; end?: boolean; icon: ComponentType<{ size?: number }> }[] = [
+  { to: '/', labelKey: 'nav.dashboard', end: true, icon: LayoutDashboard },
+  { to: '/task-board', labelKey: 'nav.taskBoard', icon: ClipboardList },
+  { to: '/schedules', labelKey: 'nav.schedules', icon: CalendarClock },
+  { to: '/reception-intake', labelKey: 'nav.receptionIntake', icon: PackageSearch },
+  { to: '/reception-reports', labelKey: 'nav.receptionReports', icon: BarChart3 },
+  { to: '/order-prep', labelKey: 'nav.orderPrep', icon: ShoppingCart },
+  { to: '/return-processing', labelKey: 'nav.returnProcessing', icon: RotateCcw },
+  { to: '/issue-queue', labelKey: 'nav.issueQueue', icon: AlertTriangle },
+  { to: '/reference-lists', labelKey: 'nav.referenceLists', icon: Users },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('common');
   const { user, logout } = useAuth();
 
   return (
@@ -53,7 +55,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
                 >
                   <Icon size={17} />
-                  {item.label}
+                  {t(item.labelKey)}
                 </NavLink>
               );
             })}
@@ -62,7 +64,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <div className="sidebar-user">{user?.name}</div>
             <button className="btn btn-outline-accent" onClick={logout}>
               <LogOut size={14} />
-              Log out
+              {t('logOut')}
             </button>
           </div>
         </aside>

@@ -3,15 +3,16 @@ import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Eye, FileArchive, Image, Package, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
 
 import { ApiError } from '../core/api/client';
 import {
-  CATEGORY_LABELS,
   deleteReception,
   deleteReceptions,
   fetchReceptions,
-  STATUS_LABELS,
+  RECEPTION_CATEGORIES,
+  RECEPTION_STATUSES,
   summarizeDetails,
   type Reception,
   type ReceptionCategory,
@@ -55,13 +56,14 @@ function extensionFromUrl(url: string): string {
   return match ? `.${match[1].toLowerCase()}` : '.jpg';
 }
 
-function receptionPhotos(r: Reception): { label: string; urls: string[] }[] {
-  const groups: { label: string; urls: string[] }[] = [];
+/** `labelKey` is a translation key into the `receptions` namespace's `gallery.*` group; it also doubles as the stable (English) identifier used for zip filenames. */
+function receptionPhotos(r: Reception): { labelKey: 'gallery.equipmentPhotos' | 'gallery.invoicePhotos'; urls: string[] }[] {
+  const groups: { labelKey: 'gallery.equipmentPhotos' | 'gallery.invoicePhotos'; urls: string[] }[] = [];
   if (r.details.category === 'equipment_other') {
-    groups.push({ label: 'Equipment Photo(s)', urls: r.details.photoUrls });
+    groups.push({ labelKey: 'gallery.equipmentPhotos', urls: r.details.photoUrls });
   }
   if (r.details.category === 'packaging_stock' || r.details.category === 'equipment_other') {
-    groups.push({ label: 'Invoice Photo(s)', urls: r.details.invoicePhotoUrls });
+    groups.push({ labelKey: 'gallery.invoicePhotos', urls: r.details.invoicePhotoUrls });
   }
   return groups;
 }
@@ -70,18 +72,24 @@ function receptionPhotoCount(r: Reception): number {
   return receptionPhotos(r).reduce((total, g) => total + g.urls.length, 0);
 }
 
-function downloadReceptionsExcel(receptions: Reception[], staffName: (id: string | null) => string, filenameSuffix: string) {
+function downloadReceptionsExcel(
+  receptions: Reception[],
+  staffName: (id: string | null) => string,
+  filenameSuffix: string,
+  excelLabels: { id: string; dateTime: string; category: string; staff: string; summary: string; status: string; flagged: string; instructions: string; assignedTo: string; priority: string; yes: string; no: string },
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
   const rows = receptions.map((r) => ({
-    ID: r.id,
-    'Date & Time': new Date(r.arrivedAt).toLocaleString(),
-    Category: CATEGORY_LABELS[r.details.category],
-    Staff: staffName(r.createdByUserId),
-    Summary: summarizeDetails(r),
-    Status: STATUS_LABELS[r.status],
-    Flagged: r.flaggedForReview ? 'Yes' : 'No',
-    Instructions: r.instructions ?? '',
-    'Assigned To': r.assignedToUserId ? staffName(r.assignedToUserId) : '',
-    Priority: r.priority,
+    [excelLabels.id]: r.id,
+    [excelLabels.dateTime]: new Date(r.arrivedAt).toLocaleString(),
+    [excelLabels.category]: t(`receptionCategory.${r.details.category}`, { ns: 'common' }),
+    [excelLabels.staff]: staffName(r.createdByUserId),
+    [excelLabels.summary]: summarizeDetails(r, t),
+    [excelLabels.status]: t(`receptionStatus.${r.status}`, { ns: 'common' }),
+    [excelLabels.flagged]: r.flaggedForReview ? excelLabels.yes : excelLabels.no,
+    [excelLabels.instructions]: r.instructions ?? '',
+    [excelLabels.assignedTo]: r.assignedToUserId ? staffName(r.assignedToUserId) : '',
+    [excelLabels.priority]: t(`priority.${r.priority}`, { ns: 'common' }),
   }));
   const sheet = XLSX.utils.json_to_sheet(rows);
   const book = XLSX.utils.book_new();
@@ -97,7 +105,7 @@ async function downloadReceptionsPhotosZip(
   for (const r of receptions) {
     for (const group of receptionPhotos(r)) {
       group.urls.forEach((url, i) =>
-        entries.push({ url, filename: `${r.id}/${group.label.replace(/[^a-z0-9]+/gi, '-')}-${i + 1}${extensionFromUrl(url)}` }),
+        entries.push({ url, filename: `${r.id}/${group.labelKey.replace(/[^a-z0-9]+/gi, '-')}-${i + 1}${extensionFromUrl(url)}` }),
       );
     }
   }
@@ -128,6 +136,7 @@ async function downloadReceptionsPhotosZip(
  * a place to action anything that needs a decision.
  */
 export function DeliveriesSection() {
+  const { t } = useTranslation('receptions');
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const staffName = useStaffNames();
@@ -206,7 +215,7 @@ export function DeliveriesSection() {
   }
 
   async function handleDeleteOne(id: string) {
-    if (!window.confirm('Delete this delivery permanently? This cannot be undone.')) return;
+    if (!window.confirm(t('confirm.deleteOne'))) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
@@ -218,7 +227,7 @@ export function DeliveriesSection() {
       });
       refresh();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : 'Failed to delete');
+      setDeleteError(err instanceof ApiError ? err.message : t('errors.deleteFailed'));
     } finally {
       setIsDeleting(false);
     }
@@ -226,7 +235,7 @@ export function DeliveriesSection() {
 
   async function handleDeleteSelected() {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} selected delivery(ies) permanently? This cannot be undone.`)) return;
+    if (!window.confirm(t('confirm.deleteSelected', { count: selectedIds.size }))) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
@@ -234,7 +243,7 @@ export function DeliveriesSection() {
       setSelectedIds(new Set());
       refresh();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : 'Failed to delete selected');
+      setDeleteError(err instanceof ApiError ? err.message : t('errors.deleteSelectedFailed'));
     } finally {
       setIsDeleting(false);
     }
@@ -246,9 +255,9 @@ export function DeliveriesSection() {
     setZipProgress({ done: 0, total: 0 });
     try {
       const { entries } = await downloadReceptionsPhotosZip(targets, (done, total) => setZipProgress({ done, total }));
-      if (entries === 0) setZipError('No photos found for the selected delivery(ies).');
+      if (entries === 0) setZipError(t('errors.noPhotosFound'));
     } catch (err) {
-      setZipError(err instanceof Error ? err.message : 'Failed to build the zip file.');
+      setZipError(err instanceof Error ? err.message : t('errors.zipFailed'));
     } finally {
       setIsZipping(false);
       setZipProgress(null);
@@ -264,11 +273,11 @@ export function DeliveriesSection() {
           <span className="icon-badge icon-badge-sm icon-badge-blue">
             <Package />
           </span>
-          <h2 style={{ margin: 0 }}>Deliveries</h2>
+          <h2 style={{ margin: 0 }}>{t('deliveries.title')}</h2>
         </div>
       </div>
 
-      {isPending && <p>Loading…</p>}
+      {isPending && <p>{t('deliveries.loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
 
       {data && (
@@ -279,10 +288,10 @@ export function DeliveriesSection() {
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as ReceptionCategory | '')}
             >
-              <option value="">All categories</option>
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+              <option value="">{t('filters.allCategories')}</option>
+              {RECEPTION_CATEGORIES.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(`receptionCategory.${value}`, { ns: 'common' })}
                 </option>
               ))}
             </select>
@@ -291,17 +300,17 @@ export function DeliveriesSection() {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
             >
-              <option value="">All statuses</option>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option value="">{t('filters.allStatuses')}</option>
+              {RECEPTION_STATUSES.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(`receptionStatus.${value}`, { ns: 'common' })}
                 </option>
               ))}
             </select>
             <input
               type="text"
               style={{ ...filterControlStyle, flex: '2 1 200px' }}
-              placeholder="Filter by staff"
+              placeholder={t('filters.filterByStaff')}
               value={staffFilter}
               onChange={(e) => setStaffFilter(e.target.value)}
             />
@@ -309,17 +318,17 @@ export function DeliveriesSection() {
             <input type="date" style={{ ...filterControlStyle, flex: '0 0 auto' }} value={toDate} onChange={(e) => setToDate(e.target.value)} />
             <label className="flex-row" style={{ alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', flex: '0 0 auto' }}>
               <input type="checkbox" checked={flaggedOnly} onChange={(e) => setFlaggedOnly(e.target.checked)} />
-              Flagged only
+              {t('filters.flaggedOnly')}
             </label>
           </div>
 
           <div className="flex-row" style={{ flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 14, gap: 10 }}>
             <div className="flex-row" style={{ flexWrap: 'wrap', gap: 10 }}>
               <button className="btn btn-outline" onClick={() => setSelectedIds(new Set(sorted.map((r) => r.id)))}>
-                Select all ({sorted.length})
+                {t('actions.selectAll', { count: sorted.length })}
               </button>
               <button className="btn btn-outline" onClick={() => setSelectedIds(new Set())}>
-                Clear selection
+                {t('actions.clearSelection')}
               </button>
               <button
                 className="btn-danger-text"
@@ -328,18 +337,37 @@ export function DeliveriesSection() {
                 style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: 5 }}
               >
                 <Trash2 size={13} />
-                Delete selected ({selectedIds.size})
+                {t('actions.deleteSelected', { count: selectedIds.size })}
               </button>
             </div>
             <div className="flex-row" style={{ flexWrap: 'wrap', gap: 10 }}>
             <button
               className="btn btn-outline"
               onClick={() =>
-                downloadReceptionsExcel(selectedReceptions.length > 0 ? selectedReceptions : sorted, staffName, selectedReceptions.length > 0 ? 'selected' : 'all')
+                downloadReceptionsExcel(
+                  selectedReceptions.length > 0 ? selectedReceptions : sorted,
+                  staffName,
+                  selectedReceptions.length > 0 ? 'selected' : 'all',
+                  {
+                    id: t('excel.id'),
+                    dateTime: t('excel.dateTime'),
+                    category: t('excel.category'),
+                    staff: t('excel.staff'),
+                    summary: t('excel.summary'),
+                    status: t('excel.status'),
+                    flagged: t('excel.flagged'),
+                    instructions: t('excel.instructions'),
+                    assignedTo: t('excel.assignedTo'),
+                    priority: t('excel.priority'),
+                    yes: t('excel.yes'),
+                    no: t('excel.no'),
+                  },
+                  t,
+                )
               }
             >
               <Download size={14} />
-              Download as Excel ({selectedReceptions.length > 0 ? selectedReceptions.length : sorted.length})
+              {t('actions.downloadExcel', { count: selectedReceptions.length > 0 ? selectedReceptions.length : sorted.length })}
             </button>
             <button
               className="btn btn-accent"
@@ -348,8 +376,8 @@ export function DeliveriesSection() {
             >
               <FileArchive size={14} />
               {isZipping
-                ? `Zipping ${zipProgress ? `${zipProgress.done}/${zipProgress.total}` : ''}…`
-                : `Download photos as ZIP (${selectedReceptions.length > 0 ? selectedReceptions.length : sorted.length})`}
+                ? t('actions.zipping', { progress: zipProgress ? `${zipProgress.done}/${zipProgress.total}` : '' })
+                : t('actions.downloadZip', { count: selectedReceptions.length > 0 ? selectedReceptions.length : sorted.length })}
             </button>
             </div>
           </div>
@@ -360,19 +388,19 @@ export function DeliveriesSection() {
             <thead>
               <tr>
                 <th></th>
-                <SortHeader label="Date & Time" active={sortKey === 'arrivedAt'} dir={sortDir} onClick={() => toggleSort('arrivedAt')} />
-                <SortHeader label="Category" active={sortKey === 'category'} dir={sortDir} onClick={() => toggleSort('category')} />
-                <th>Staff</th>
-                <th>Summary</th>
-                <SortHeader label="Status" active={sortKey === 'status'} dir={sortDir} onClick={() => toggleSort('status')} />
-                <th>Photos</th>
+                <SortHeader label={t('table.dateTime')} active={sortKey === 'arrivedAt'} dir={sortDir} onClick={() => toggleSort('arrivedAt')} />
+                <SortHeader label={t('table.category')} active={sortKey === 'category'} dir={sortDir} onClick={() => toggleSort('category')} />
+                <th>{t('table.staff')}</th>
+                <th>{t('table.summary')}</th>
+                <SortHeader label={t('table.status')} active={sortKey === 'status'} dir={sortDir} onClick={() => toggleSort('status')} />
+                <th>{t('table.photos')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={8}>No deliveries match these filters.</td>
+                  <td colSpan={8}>{t('table.noResults')}</td>
                 </tr>
               )}
               {sorted.map((r) => {
@@ -383,14 +411,14 @@ export function DeliveriesSection() {
                       <input type="checkbox" checked={selectedIds.has(r.id)} onChange={() => toggleSelected(r.id)} />
                     </td>
                     <td>{formatDateTime(r.arrivedAt)}</td>
-                    <td>{CATEGORY_LABELS[r.details.category]}</td>
+                    <td>{t(`receptionCategory.${r.details.category}`, { ns: 'common' })}</td>
                     <td>{staffName(r.createdByUserId)}</td>
-                    <td>{summarizeDetails(r)}</td>
+                    <td>{summarizeDetails(r, t)}</td>
                     <td>
-                      {STATUS_LABELS[r.status]}
+                      {t(`receptionStatus.${r.status}`, { ns: 'common' })}
                       {r.flaggedForReview && (
                         <span className="pill pill-red" style={{ marginLeft: 6 }}>
-                          Flagged
+                          {t('table.flagged')}
                         </span>
                       )}
                     </td>
@@ -403,7 +431,7 @@ export function DeliveriesSection() {
                           onClick={() => setDetailsReception(r)}
                         >
                           <Eye size={13} />
-                          View details
+                          {t('table.viewDetails')}
                         </button>
                         <button
                           className="btn-danger-text"
@@ -412,7 +440,7 @@ export function DeliveriesSection() {
                           disabled={photoCount === 0}
                         >
                           <Image size={13} />
-                          Photos
+                          {t('table.photosAction')}
                         </button>
                         <button
                           className="btn-danger-text"
@@ -421,7 +449,7 @@ export function DeliveriesSection() {
                           disabled={isDeleting}
                         >
                           <Trash2 size={13} />
-                          Delete
+                          {t('table.delete')}
                         </button>
                       </div>
                     </td>
@@ -438,39 +466,47 @@ export function DeliveriesSection() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h2 style={{ margin: 0 }}>{CATEGORY_LABELS[detailsReception.details.category]}</h2>
-                <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{summarizeDetails(detailsReception)}</p>
+                <h2 style={{ margin: 0 }}>{t(`receptionCategory.${detailsReception.details.category}`, { ns: 'common' })}</h2>
+                <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{summarizeDetails(detailsReception, t)}</p>
               </div>
-              <button className="modal-close" onClick={() => setDetailsReception(null)} aria-label="Close">
+              <button className="modal-close" onClick={() => setDetailsReception(null)} aria-label={t('modal.close')}>
                 ✕
               </button>
             </div>
-            <DetailRow label="Status" value={STATUS_LABELS[detailsReception.status]} />
-            <DetailRow label="Logged by" value={staffName(detailsReception.createdByUserId)} />
-            <DetailRow label="Arrived at" value={new Date(detailsReception.arrivedAt).toLocaleString()} />
+            <DetailRow label={t('modal.status')} value={t(`receptionStatus.${detailsReception.status}`, { ns: 'common' })} />
+            <DetailRow label={t('modal.loggedBy')} value={staffName(detailsReception.createdByUserId)} />
+            <DetailRow label={t('modal.arrivedAt')} value={new Date(detailsReception.arrivedAt).toLocaleString()} />
             {detailsReception.details.category === 'return_parcels' && (
-              <DetailRow label="Transporter company" value={detailsReception.details.transporterCompany} />
+              <DetailRow label={t('modal.transporterCompany')} value={detailsReception.details.transporterCompany} />
             )}
             {detailsReception.details.category === 'packaging_stock' && (
               <>
-                <DetailRow label="Packaging type" value={detailsReception.details.packagingType} />
-                {detailsReception.details.sellerName && <DetailRow label="Seller" value={detailsReception.details.sellerName} />}
+                <DetailRow label={t('modal.packagingType')} value={detailsReception.details.packagingType} />
+                {detailsReception.details.sellerName && <DetailRow label={t('modal.seller')} value={detailsReception.details.sellerName} />}
               </>
             )}
             {detailsReception.details.category === 'equipment_other' && (
-              <DetailRow label="Item description" value={detailsReception.details.itemDescription} />
+              <DetailRow label={t('modal.itemDescription')} value={detailsReception.details.itemDescription} />
             )}
-            {detailsReception.instructions && <DetailRow label="Instructions" value={detailsReception.instructions} />}
+            {detailsReception.instructions && <DetailRow label={t('modal.instructions')} value={detailsReception.instructions} />}
             {detailsReception.assignedToUserId && (
               <>
-                <DetailRow label="Assigned to" value={staffName(detailsReception.assignedToUserId)} />
-                <DetailRow label="Priority" value={detailsReception.priority} />
-                <DetailRow label="Assigned at" value={detailsReception.assignedAt ? new Date(detailsReception.assignedAt).toLocaleString() : '—'} />
+                <DetailRow label={t('modal.assignedTo')} value={staffName(detailsReception.assignedToUserId)} />
+                <DetailRow label={t('modal.priority')} value={detailsReception.priority} />
+                <DetailRow
+                  label={t('modal.assignedAt')}
+                  value={detailsReception.assignedAt ? new Date(detailsReception.assignedAt).toLocaleString() : t('modal.noValue')}
+                />
               </>
             )}
-            {detailsReception.putAwayAt && <DetailRow label="Put away at" value={new Date(detailsReception.putAwayAt).toLocaleString()} />}
+            {detailsReception.putAwayAt && (
+              <DetailRow label={t('modal.putAwayAt')} value={new Date(detailsReception.putAwayAt).toLocaleString()} />
+            )}
             {detailsReception.processingDurationMs !== null && (
-              <DetailRow label="Processing time" value={`${Math.round(detailsReception.processingDurationMs / 60_000)} min`} />
+              <DetailRow
+                label={t('modal.processingTime')}
+                value={t('modal.processingTimeValue', { minutes: Math.round(detailsReception.processingDurationMs / 60_000) })}
+              />
             )}
           </div>
         </div>
@@ -481,27 +517,27 @@ export function DeliveriesSection() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h2 style={{ margin: 0 }}>{CATEGORY_LABELS[galleryReception.details.category]}</h2>
-                <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{summarizeDetails(galleryReception)}</p>
+                <h2 style={{ margin: 0 }}>{t(`receptionCategory.${galleryReception.details.category}`, { ns: 'common' })}</h2>
+                <p className="page-subtitle" style={{ margin: '4px 0 0' }}>{summarizeDetails(galleryReception, t)}</p>
               </div>
-              <button className="modal-close" onClick={() => setGalleryReception(null)} aria-label="Close">
+              <button className="modal-close" onClick={() => setGalleryReception(null)} aria-label={t('modal.close')}>
                 ✕
               </button>
             </div>
             {receptionPhotos(galleryReception).map((group) => (
-              <div key={group.label}>
+              <div key={group.labelKey}>
                 <h2>
-                  {group.label} ({group.urls.length})
+                  {t(group.labelKey)} ({group.urls.length})
                 </h2>
                 {group.urls.length === 0 ? (
-                  <p className="hint-text">No photos.</p>
+                  <p className="hint-text">{t('gallery.noPhotos')}</p>
                 ) : (
                   <div className="photo-grid">
                     {group.urls.map((url, i) => (
                       <img
                         key={i}
                         src={url}
-                        alt={`${group.label} ${i + 1}`}
+                        alt={`${t(group.labelKey)} ${i + 1}`}
                         className="photo-thumb"
                         onClick={() => setLightboxUrl(url)}
                       />

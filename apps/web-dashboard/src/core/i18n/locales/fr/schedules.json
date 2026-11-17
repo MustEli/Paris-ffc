@@ -1,0 +1,37 @@
+{
+  "title": "Planning du personnel",
+  "subtitle": "Définissez pour chaque employé ses jours de travail, ses horaires de quart, ses heures requises par jour et ses pauses planifiées.",
+  "loading": "Chargement…",
+  "noStaffAccounts": "Aucun compte employé pour le moment.",
+  "selectStaffPrompt": "Sélectionnez un employé pour consulter ou modifier son planning.",
+  "attendanceTotals": {
+    "heading": "Total des jours de quart et des heures par employé",
+    "staff": "Employé",
+    "totalShiftDays": "Total des jours de quart",
+    "totalHoursWorked": "Total des heures travaillées",
+    "noCompletedShifts": "Aucun quart terminé pour le moment."
+  },
+  "editor": {
+    "workingDays": "Jours de travail",
+    "shiftStart": "Début du quart",
+    "requiredHoursPerDay": "Heures requises/jour",
+    "lunchBreakDurationMin": "Durée de la pause déjeuner (min)",
+    "totalTime": "Durée totale (heures requises + pause déjeuner)",
+    "shiftEndCalculated": "Fin du quart (calculée)",
+    "paidBreakDuration": "Durée de la pause payée",
+    "paidBreakFixed": "20 min (fixe)",
+    "saveFailed": "Échec de l'enregistrement du planning",
+    "saved": "Enregistré.",
+    "saving": "Enregistrement…",
+    "saveSchedule": "Enregistrer le planning"
+  },
+  "weekdays": {
+    "MON": "Lun",
+    "TUE": "Mar",
+    "WED": "Mer",
+    "THU": "Jeu",
+    "FRI": "Ven",
+    "SAT": "Sam",
+    "SUN": "Dim"
+  }
+}

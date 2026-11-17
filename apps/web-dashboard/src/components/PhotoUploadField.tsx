@@ -1,5 +1,6 @@
 import { Upload, X } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '../core/api/client';
 import { resolvePhotoUrl, uploadPhoto } from '../core/api/upload';
@@ -13,6 +14,7 @@ interface PhotoUploadFieldProps {
 
 /** A single-photo upload field — picks a file, uploads it immediately via POST /uploads, and stores the returned URL. */
 export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldProps) {
+  const { t } = useTranslation('taskBoard');
   const { token } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -29,7 +31,7 @@ export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldPro
       const url = await uploadPhoto(token!, file);
       onChange(url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to upload photo');
+      setError(err instanceof ApiError ? err.message : t('photoUpload.failedToUpload'));
     } finally {
       setIsUploading(false);
     }
@@ -43,7 +45,7 @@ export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldPro
           <img src={resolvePhotoUrl(value)} alt={label} style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
           <button className="btn btn-outline" onClick={() => onChange(null)}>
             <X size={14} />
-            Remove
+            {t('photoUpload.remove')}
           </button>
         </div>
       ) : (
@@ -53,7 +55,7 @@ export function PhotoUploadField({ label, value, onChange }: PhotoUploadFieldPro
           disabled={isUploading}
         >
           <Upload size={14} />
-          {isUploading ? 'Uploading…' : 'Upload photo'}
+          {isUploading ? t('photoUpload.uploading') : t('photoUpload.upload')}
         </button>
       )}
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileSelected} />

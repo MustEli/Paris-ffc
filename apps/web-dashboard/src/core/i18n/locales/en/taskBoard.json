@@ -1,0 +1,80 @@
+{
+  "pageTitle": "Task Board",
+  "pageSubtitle": "Push an urgent directive to staff, or publish a task for anyone on shift to claim.",
+  "directives": {
+    "heading": "Admin Directives",
+    "description": "Push an urgent demand to a specific on-shift staff member, or anyone available — they get a real-time alert with sound.",
+    "targetLabel": "Target",
+    "anyoneAvailable": "Anyone available",
+    "typeLabel": "Directive type",
+    "messageLabel": "Message",
+    "messagePlaceholder": "e.g. Upload photo of missing item at Aisle 4B Rack 3 immediately",
+    "photoLabel": "Photo (optional)",
+    "commentLabel": "Comment (optional)",
+    "commentPlaceholder": "Anything extra staff should see the moment they accept",
+    "sending": "Sending…",
+    "sendAlert": "Send Alert to Staff",
+    "failedToPush": "Failed to push directive",
+    "statusHeading": "Directive status",
+    "loading": "Loading…",
+    "empty": "No directives pushed yet.",
+    "anyone": "Anyone",
+    "table": {
+      "type": "Type",
+      "message": "Message",
+      "target": "Target",
+      "status": "Status",
+      "pushed": "Pushed",
+      "completionPhoto": "Completion photo",
+      "completionComment": "Completion comment",
+      "doneAt": "Done at",
+      "doneBy": "Done by"
+    }
+  },
+  "openPool": {
+    "heading": "Open Pool Tasks",
+    "description": "Publish a task for any active staff member to claim — first to tap wins, no specific assignment needed.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Recount aisle 4",
+    "targetLabel": "Target",
+    "anyoneAvailable": "Anyone available",
+    "descriptionLabel": "Description (optional)",
+    "priorityLabel": "Priority",
+    "photoLabel": "Photo (optional)",
+    "commentLabel": "Comment (optional)",
+    "commentPlaceholder": "Anything extra staff should see the moment they claim it",
+    "publishing": "Publishing…",
+    "publish": "Publish to Open Pool",
+    "failedToPublish": "Failed to publish task",
+    "statusHeading": "Open Pool status",
+    "loading": "Loading…",
+    "empty": "No open pool tasks yet.",
+    "anyone": "Anyone",
+    "table": {
+      "title": "Title",
+      "description": "Description",
+      "target": "Target",
+      "priority": "Priority",
+      "status": "Status",
+      "created": "Created",
+      "completionPhoto": "Completion photo",
+      "completionComment": "Completion comment",
+      "completedAt": "Completed at",
+      "completedBy": "Completed by"
+    }
+  },
+  "status": {
+    "open": "Open",
+    "claimed": "Claimed",
+    "completed": "Completed",
+    "pushed": "Pushed",
+    "in_progress": "In Progress",
+    "resolved": "Resolved"
+  },
+  "photoUpload": {
+    "remove": "Remove",
+    "uploading": "Uploading…",
+    "upload": "Upload photo",
+    "failedToUpload": "Failed to upload photo"
+  }
+}
