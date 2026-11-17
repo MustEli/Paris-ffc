@@ -43,13 +43,19 @@ export class SearchService {
         },
         take: RESULTS_PER_CATEGORY,
       }),
-      // "Pallet ID" means the human-readable "PLT-000001" index, not the
-      // raw UUID — that's derived from `seq` at read time (see
-      // SellerStockService's doc comment), not a real column, so it
-      // needs a raw query rather than a normal `where` filter.
+      // "Pallet ID" means the human-readable "{sellerName}-{boxNumber}"
+      // index (see SellerStockService's doc comment) — that composite
+      // isn't a real column, so matching the exact displayed string
+      // (e.g. someone pastes "Fandaki polo-12" in whole) needs a raw
+      // query rather than a normal `where` filter. This intentionally
+      // doesn't replicate SellerStockService's "(#seq)" disambiguation
+      // suffix for a colliding pallet — the boxNumber/sellerName
+      // `contains` filter just above already surfaces both colliding
+      // rows via their shared seller/box text; this path only adds
+      // whole-string composite matches on top of that.
       this.prisma.$queryRaw<
         { id: string; seq: number; boxNumber: string; sellerName: string }[]
-      >`SELECT id, seq, "boxNumber", "sellerName" FROM "SellerStockPallet" WHERE LPAD(seq::text, 6, '0') ILIKE ${'%' + q + '%'} ORDER BY seq DESC LIMIT ${RESULTS_PER_CATEGORY}`,
+      >`SELECT id, seq, "boxNumber", "sellerName" FROM "SellerStockPallet" WHERE ("sellerName" || '-' || "boxNumber") ILIKE ${'%' + q + '%'} ORDER BY seq DESC LIMIT ${RESULTS_PER_CATEGORY}`,
       this.prisma.user.findMany({
         where: { name: { contains: q, mode: 'insensitive' } },
         take: RESULTS_PER_CATEGORY,
@@ -93,7 +99,7 @@ export class SearchService {
     for (const p of pallets) {
       palletResults.set(p.id, {
         id: p.id,
-        palletIndex: `PLT-${String(p.seq).padStart(6, '0')}`,
+        palletIndex: `${p.sellerName}-${p.boxNumber}`,
         sellerName: p.sellerName,
         boxNumber: p.boxNumber,
       });
@@ -101,7 +107,7 @@ export class SearchService {
     for (const p of palletsByIndex) {
       palletResults.set(p.id, {
         id: p.id,
-        palletIndex: `PLT-${String(p.seq).padStart(6, '0')}`,
+        palletIndex: `${p.sellerName}-${p.boxNumber}`,
         sellerName: p.sellerName,
         boxNumber: p.boxNumber,
       });

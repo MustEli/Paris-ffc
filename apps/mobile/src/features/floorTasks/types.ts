@@ -18,6 +18,9 @@ export type FloorTaskCategory =
 
 export const FLOOR_TASK_MAX_PHOTOS = 8;
 
+/** Mirrors the backend's FLOOR_TASK_MAX_PAUSED — a staff member may have at most this many paused floor tasks parked at once. */
+export const FLOOR_TASK_MAX_PAUSED = 2;
+
 export interface FloorTaskLog {
   id: string;
   userId: string;
@@ -32,6 +35,8 @@ export interface FloorTaskLog {
   scannedBarcode: string | null;
   pausedAt: string | null;
   totalPausedMs: number;
+  /** Set only for a cancel 2+ minutes after start — a cancel under 2 minutes deletes the task instead, so this never shows that case. */
+  cancelledAt: string | null;
 }
 
 export interface CategoryMeta {

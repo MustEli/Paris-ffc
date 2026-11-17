@@ -130,6 +130,40 @@ describe('Warehouse HQ backend (e2e)', () => {
     expect(row.pausedAt).toBeNull();
   });
 
+  it('ending a shift force-stops every open floor task, not just one, when several are parked', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+
+    const first = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', auth)
+      .send({ category: 'pick' })
+      .expect(201);
+    await request(app.getHttpServer()).post(`/floor-tasks/${first.body.id}/pause`).set('Authorization', auth).expect(201);
+
+    // Pausing the first one clears the way to start a second, different
+    // category — the second stays actively running (not paused).
+    const second = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', auth)
+      .send({ category: 'pack' })
+      .expect(201);
+
+    await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(201);
+
+    const firstRow = await rawPrisma.floorTaskLog.findUniqueOrThrow({ where: { id: first.body.id } });
+    const secondRow = await rawPrisma.floorTaskLog.findUniqueOrThrow({ where: { id: second.body.id } });
+    expect(firstRow.endedAt).not.toBeNull();
+    expect(firstRow.pausedAt).toBeNull();
+    expect(secondRow.endedAt).not.toBeNull();
+    expect(secondRow.pausedAt).toBeNull();
+  });
+
   it('blocks starting a break while a floor task is actively running — staff must pause it first', async () => {
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
@@ -246,6 +280,15 @@ describe('Warehouse HQ backend (e2e)', () => {
     expect(statusWhileOnBreak.body.lunchBreakRemainingMs).toBeGreaterThan(0);
     expect(statusWhileOnBreak.body.lunchBreakRemainingMs).toBeLessThanOrEqual(60 * 60_000);
 
+    // Backdate past the 30-minute minimum (see shift.lunch_break_too_short)
+    // so this test can still exercise the full end-of-break flow without
+    // racing a real 30-minute wall-clock wait — that rule has its own
+    // dedicated test below.
+    await rawPrisma.break.update({
+      where: { id: breakStart.body.id },
+      data: { startedAt: new Date(Date.now() - 31 * 60_000) },
+    });
+
     await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
 
     // Ending again with nothing open is rejected.
@@ -259,6 +302,45 @@ describe('Warehouse HQ backend (e2e)', () => {
     expect(statusAfterBreak.body).toMatchObject({ active: true, onBreak: false, breakStartedAt: null });
 
     await request(app.getHttpServer()).post('/shifts/end').set('Authorization', auth).expect(201);
+  });
+
+  it('blocks ending a lunch break before 30 minutes, but allows it once that minimum is reached — and never restricts Short Break either way', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'staff@warehousehq.dev', password: 'password123' })
+      .expect(201);
+    const auth = `Bearer ${loginResponse.body.accessToken}`;
+
+    await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
+
+    const lunchStart = await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', auth)
+      .send({ type: 'lunch' })
+      .expect(201);
+
+    // Freshly started — well under 30 minutes in, so ending is rejected.
+    const tooSoon = await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(409);
+    expect(tooSoon.body.code).toBe('shift.lunch_break_too_short');
+
+    // The break is still open — confirmed via status, not silently ended.
+    const statusAfterBlock = await request(app.getHttpServer()).get('/shifts/status').set('Authorization', auth).expect(200);
+    expect(statusAfterBlock.body.onBreak).toBe(true);
+
+    // Backdate to exactly the 30-minute mark and confirm it now succeeds.
+    await rawPrisma.break.update({
+      where: { id: lunchStart.body.id },
+      data: { startedAt: new Date(Date.now() - 30 * 60_000) },
+    });
+    await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
+
+    // Short Break has no such minimum — endable immediately, every time.
+    await request(app.getHttpServer())
+      .post('/shifts/break/start')
+      .set('Authorization', auth)
+      .send({ type: 'short' })
+      .expect(201);
+    await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
   });
 
   it('ending a shift while on break also closes the open break', async () => {
@@ -365,7 +447,7 @@ describe('Warehouse HQ backend (e2e)', () => {
 
     await request(app.getHttpServer()).post('/shifts/start').set('Authorization', auth).expect(201);
 
-    await request(app.getHttpServer())
+    const lunchStart = await request(app.getHttpServer())
       .post('/shifts/break/start')
       .set('Authorization', auth)
       .send({ type: 'lunch' })
@@ -377,6 +459,11 @@ describe('Warehouse HQ backend (e2e)', () => {
       .send({ type: 'short' })
       .expect(409);
 
+    // Backdate past the 30-minute minimum (see shift.lunch_break_too_short) — not what this test is about.
+    await rawPrisma.break.update({
+      where: { id: lunchStart.body.id },
+      data: { startedAt: new Date(Date.now() - 31 * 60_000) },
+    });
     await request(app.getHttpServer()).post('/shifts/break/end').set('Authorization', auth).expect(201);
 
     await request(app.getHttpServer())

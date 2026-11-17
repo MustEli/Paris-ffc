@@ -25,6 +25,9 @@ import { useShiftStatus } from '../hooks/useShiftStatus';
 
 const LANGUAGE_NATIVE_NAME: Record<AppLanguage, string> = { en: 'English', fr: 'Français' };
 
+/** Mirrors LUNCH_BREAK_MINIMUM_MS in packages/backend/src/shifts/shift.types.ts. */
+const LUNCH_BREAK_MINIMUM_MS = 30 * 60_000;
+
 function formatDate(date: Date, locale: AppLanguage): string {
   return date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 }
@@ -96,6 +99,7 @@ export function ShiftStatusBar() {
     startBreakError,
     endBreak,
     isEndingBreak,
+    endBreakError,
   } = useShiftStatus();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -170,6 +174,13 @@ export function ShiftStatusBar() {
   const onLunchBreak = onBreak && status.breakType === 'lunch';
   const onShortBreak = onBreak && status.breakType === 'short';
   const shortBreakAvailable = status.shortBreakRemainingMs > 0;
+  // Mirrors the same 30-minute floor StaffAppShell's big End Break
+  // button enforces — this dropdown row is a second way to reach the
+  // same action, so it needs the same gate (the backend enforces it
+  // either way; this is just the UI side).
+  const lunchElapsedMs = onLunchBreak && status.breakStartedAt ? now.getTime() - new Date(status.breakStartedAt).getTime() : 0;
+  const lunchTooShort = onLunchBreak && lunchElapsedMs < LUNCH_BREAK_MINIMUM_MS;
+  const lunchMinimumRemainingMinutes = lunchTooShort ? Math.ceil((LUNCH_BREAK_MINIMUM_MS - lunchElapsedMs) / 60_000) : 0;
   // Neither Back nor Home make sense on the main menu — it's the root of
   // the stack, nothing to go back to and nowhere else "home" would mean.
   const showNavIcons = routeName !== null && routeName !== MAIN_MENU_ROUTE;
@@ -353,18 +364,29 @@ export function ShiftStatusBar() {
               </>
             )}
             {onBreak && (
-              <Pressable
-                style={styles.dropdownRow}
-                disabled={isEndingBreak}
-                onPress={() => {
-                  setIsOpen(false);
-                  endBreak();
-                }}
-              >
-                <Text style={styles.dropdownLabel}>
-                  {onLunchBreak ? t('shiftBar.endLunchBreak') : t('shiftBar.endShortBreak')}
-                </Text>
-              </Pressable>
+              <>
+                <Pressable
+                  style={[styles.dropdownRow, lunchTooShort && styles.dropdownRowDisabled]}
+                  disabled={isEndingBreak || lunchTooShort}
+                  onPress={() => {
+                    setIsOpen(false);
+                    endBreak();
+                  }}
+                >
+                  <Text style={styles.dropdownLabel}>
+                    {lunchTooShort
+                      ? t('shiftGate.endBreakAvailableIn', { minutes: lunchMinimumRemainingMinutes })
+                      : onLunchBreak
+                        ? t('shiftBar.endLunchBreak')
+                        : t('shiftBar.endShortBreak')}
+                  </Text>
+                </Pressable>
+                {endBreakError && (
+                  <View style={styles.breakErrorRow}>
+                    <Text style={styles.breakErrorText}>{translateError(endBreakError, t)}</Text>
+                  </View>
+                )}
+              </>
             )}
             <Pressable style={styles.dropdownRow} onPress={toggleLanguage}>
               <View style={styles.dropdownRowBetween}>

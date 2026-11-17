@@ -5,7 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { type PublicUser } from '../users/user.types';
 import { type EndFloorTaskDto } from './dto/end-floor-task.dto';
-import { type ActiveFloorTask, type FloorTaskCategory, type FloorTaskLog } from './floor-task.types';
+import {
+  type ActiveFloorTask,
+  FLOOR_TASK_CANCEL_NO_TRACE_WINDOW_MS,
+  FLOOR_TASK_MAX_PAUSED,
+  type FloorTaskCategory,
+  type FloorTaskLog,
+} from './floor-task.types';
 
 /**
  * Staff View doc's self-serve floor tasks — see schema.prisma's
@@ -33,6 +39,7 @@ export class FloorTasksService {
       scannedBarcode: row.scannedBarcode,
       pausedAt: row.pausedAt ? row.pausedAt.toISOString() : null,
       totalPausedMs: row.totalPausedMs,
+      cancelledAt: row.cancelledAt ? row.cancelledAt.toISOString() : null,
     };
   }
 
@@ -46,10 +53,15 @@ export class FloorTasksService {
         code: 'floor_task.box_prep_merged',
       });
     }
-    const existingOpen = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null } });
+    // Only an actively-*running* task blocks starting another — a
+    // merely-paused one doesn't (business owner's request: pausing one
+    // to go do something else should be possible, up to
+    // FLOOR_TASK_MAX_PAUSED parked at once — see pause() below for that
+    // cap). Used to block on ANY open task regardless of pausedAt.
+    const existingOpen = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null, pausedAt: null } });
     if (existingOpen) {
       throw new ConflictException({
-        message: 'Already have an open floor task — end it before starting another',
+        message: 'Already have a running floor task — pause or end it before starting another',
         code: 'floor_task.already_open',
       });
     }
@@ -76,15 +88,64 @@ export class FloorTasksService {
     }
   }
 
-  /** Pulled away for ad-hoc work mid-task — pausing (not ending) keeps duration reporting honest, see totalPausedMs. */
+  /**
+   * Pulled away for ad-hoc work mid-task — pausing (not ending) keeps
+   * duration reporting honest, see totalPausedMs. Capped at
+   * FLOOR_TASK_MAX_PAUSED parked tasks at once (not counting this one,
+   * which is about to become the Nth) — business owner's request, so
+   * unfinished work can't pile up without bound once starting a new
+   * category while one is paused became possible (see start() above).
+   */
   async pause(id: string, user: PublicUser): Promise<FloorTaskLog> {
     const task = await this.findOneRow(id);
     this.assertOwnedAndOpen(task, user);
     if (task.pausedAt) {
       throw new ConflictException({ message: 'This floor task is already paused', code: 'floor_task.already_paused' });
     }
+    const otherPausedCount = await this.prisma.floorTaskLog.count({
+      where: { userId: user.id, endedAt: null, pausedAt: { not: null }, id: { not: id } },
+    });
+    if (otherPausedCount >= FLOOR_TASK_MAX_PAUSED) {
+      throw new ConflictException({
+        message: `You already have ${FLOOR_TASK_MAX_PAUSED} paused tasks — finish one before parking another`,
+        code: 'floor_task.max_paused_reached',
+      });
+    }
     const row = await this.prisma.floorTaskLog.update({ where: { id }, data: { pausedAt: new Date() } });
     return this.toDomain(row);
+  }
+
+  /**
+   * "Never mind, I didn't mean to start this" — available for every
+   * category, any time the task is open (running or paused), not just
+   * Dispatch. Under FLOOR_TASK_CANCEL_NO_TRACE_WINDOW_MS since start,
+   * the row is deleted outright (no trace anywhere); at or past it, the
+   * row is kept and marked cancelledAt instead — still excluded from
+   * worked-hours totals (see ReportsService.staffHistory), but visible
+   * to Admin in Staff Activity's 'recent' scope so abandoned work isn't
+   * silently invisible once real time has gone into it.
+   */
+  async cancel(id: string, user: PublicUser): Promise<{ deleted: boolean }> {
+    const task = await this.findOneRow(id);
+    this.assertOwnedAndOpen(task, user);
+
+    const elapsedMs = Date.now() - task.startedAt.getTime();
+    if (elapsedMs < FLOOR_TASK_CANCEL_NO_TRACE_WINDOW_MS) {
+      await this.prisma.floorTaskLog.delete({ where: { id } });
+      return { deleted: true };
+    }
+
+    const stillOpenPauseMs = task.pausedAt ? Date.now() - task.pausedAt.getTime() : 0;
+    await this.prisma.floorTaskLog.update({
+      where: { id },
+      data: {
+        endedAt: new Date(),
+        cancelledAt: new Date(),
+        pausedAt: null,
+        totalPausedMs: { increment: stillOpenPauseMs },
+      },
+    });
+    return { deleted: false };
   }
 
   /**
@@ -153,9 +214,16 @@ export class FloorTasksService {
     return rows.map((row) => this.toDomain(row));
   }
 
+  /** The one actively-*running* (not paused) task, if any — used by things that only care about "what's live right now" (e.g. the global indicator pill). Use findMineOpenAll for the full open set, paused ones included. */
   async findMineOpen(userId: string): Promise<FloorTaskLog | null> {
-    const row = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null } });
+    const row = await this.prisma.floorTaskLog.findFirst({ where: { userId, endedAt: null, pausedAt: null } });
     return row ? this.toDomain(row) : null;
+  }
+
+  /** Every currently-open task (running or paused) — up to 1 running + FLOOR_TASK_MAX_PAUSED paused, now that pausing one no longer blocks starting another. */
+  async findMineOpenAll(userId: string): Promise<FloorTaskLog[]> {
+    const rows = await this.prisma.floorTaskLog.findMany({ where: { userId, endedAt: null }, orderBy: { startedAt: 'asc' } });
+    return rows.map((row) => this.toDomain(row));
   }
 
   /** Admin's live view: "who's on what — duration since start and declared counts so far" (Admin Conf / Integration docs) — no review/action needed from her, just visibility. */

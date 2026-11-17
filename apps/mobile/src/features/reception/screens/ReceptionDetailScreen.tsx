@@ -9,6 +9,7 @@ import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
+import { colors } from '../../../core/theme/colors';
 import { type ReceptionStackParamList } from '../../../navigation/types';
 import { useAddInstructions, useCompleteReception, useReception } from '../hooks/useReceptions';
 import { CATEGORY_LABELS } from '../types';
@@ -39,6 +40,9 @@ export function ReceptionDetailScreen({ route }: Props) {
 
   const addInstructions = useAddInstructions(id);
   const complete = useCompleteReception(id);
+
+  const isStaffDark = role === 'staff';
+  const styles = getStyles(isStaffDark);
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
   if (error || !reception) {
@@ -129,10 +133,10 @@ export function ReceptionDetailScreen({ route }: Props) {
             onPress={() => complete.mutate(undefined, { onSuccess: goToStaffHome })}
           >
             {complete.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={isStaffDark ? '#1a1200' : '#fff'} />
             ) : (
               <>
-                <Ionicons name="checkmark-circle-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Ionicons name="checkmark-circle-outline" size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>{t('reception.confirmPutAway')}</Text>
               </>
             )}
@@ -147,9 +151,12 @@ export function ReceptionDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+/** Shared between Staff (dark theme) and Admin (existing light theme, unchanged) — see PutAwayTaskDetailScreen.tsx for why this is a function of role rather than a static StyleSheet. */
+function getStyles(isStaffDark: boolean) {
+  return StyleSheet.create({
   container: {
     padding: 20,
+    ...(isStaffDark ? { backgroundColor: colors.background } : null),
   },
   spinner: {
     marginTop: 40,
@@ -157,11 +164,11 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0f172a',
+    color: isStaffDark ? colors.textPrimary : '#0f172a',
   },
   summary: {
     fontSize: 14,
-    color: '#4b5563',
+    color: isStaffDark ? colors.textSecondary : '#4b5563',
     marginTop: 4,
   },
   status: {
@@ -172,12 +179,12 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: isStaffDark ? colors.textMuted : '#9ca3af',
     marginTop: 4,
   },
   flag: {
     fontSize: 13,
-    color: '#b45309',
+    color: isStaffDark ? colors.brandOrange : '#b45309',
     marginTop: 8,
     fontWeight: '600',
   },
@@ -194,23 +201,23 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: isStaffDark ? colors.surfaceElevated : '#f3f4f6',
   },
   instructionsBox: {
     marginTop: 20,
     padding: 14,
     borderRadius: 10,
-    backgroundColor: '#eff6ff',
+    backgroundColor: isStaffDark ? colors.surfaceElevated : '#eff6ff',
   },
   instructionsLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1d4ed8',
+    color: isStaffDark ? colors.textSecondary : '#1d4ed8',
     marginBottom: 4,
   },
   instructionsText: {
     fontSize: 14,
-    color: '#1e3a8a',
+    color: isStaffDark ? colors.textPrimary : '#1e3a8a',
   },
   actionBox: {
     marginTop: 28,
@@ -218,22 +225,23 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: isStaffDark ? colors.textSecondary : '#374151',
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: isStaffDark ? colors.border : '#d1d5db',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
     minHeight: 80,
     textAlignVertical: 'top',
+    ...(isStaffDark ? { color: colors.textPrimary, backgroundColor: colors.surface } : null),
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#0f172a',
+    backgroundColor: isStaffDark ? colors.brandOrange : '#0f172a',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
@@ -247,19 +255,20 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: isStaffDark ? '#1a1200' : '#fff',
     fontSize: 15,
     fontWeight: '600',
   },
   error: {
-    color: '#dc2626',
+    color: isStaffDark ? colors.alert : '#dc2626',
     fontSize: 13,
     marginTop: 8,
   },
   waiting: {
     marginTop: 28,
     textAlign: 'center',
-    color: '#9ca3af',
+    color: isStaffDark ? colors.textMuted : '#9ca3af',
     fontStyle: 'italic',
   },
-});
+  });
+}

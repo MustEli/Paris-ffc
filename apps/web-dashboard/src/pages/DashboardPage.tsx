@@ -535,6 +535,7 @@ function StaffActivitySection({
           <thead>
             <tr>
               <th>Staff</th>
+              <th>Hours worked today</th>
               <th>Type</th>
               <th>Detail</th>
               <th>Started</th>
@@ -544,7 +545,7 @@ function StaffActivitySection({
           <tbody>
             {data && data.entries.length === 0 && (
               <tr>
-                <td colSpan={5}>{scope === 'live' ? 'No one is on anything right now.' : 'Nothing finished yet.'}</td>
+                <td colSpan={6}>{scope === 'live' ? 'No one is on anything right now.' : 'Nothing finished yet.'}</td>
               </tr>
             )}
             {data?.entries.map((entry) => (
@@ -554,8 +555,16 @@ function StaffActivitySection({
                 className={entry.id === highlightId ? 'highlight-row' : undefined}
               >
                 <td>{entry.userName}</td>
+                <td>{entry.hoursWorkedToday}h</td>
                 <td>{STAFF_ACTIVITY_TYPE_LABELS[entry.type]}</td>
-                <td>{staffActivityDetail(entry)}</td>
+                <td>
+                  {staffActivityDetail(entry)}
+                  {entry.floorTaskOutcome === 'cancelled' && (
+                    <span className="pill pill-gray" style={{ marginLeft: 6 }}>
+                      Cancelled
+                    </span>
+                  )}
+                </td>
                 <td>{formatLocalTime(entry.startedAt)}</td>
                 <td>
                   {scope === 'live' ? elapsedSince(entry.startedAt) : entry.endedAt ? formatLocalTime(entry.endedAt) : '—'}

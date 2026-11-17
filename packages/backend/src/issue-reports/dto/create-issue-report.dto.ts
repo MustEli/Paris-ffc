@@ -2,7 +2,6 @@ import { IsArray, IsIn, IsOptional, IsString, Matches } from 'class-validator';
 
 import {
   ISSUE_REPORT_CATEGORIES,
-  LOCATION_ID_PATTERN,
   NUMERIC_ONLY_PATTERN,
   TRACKING_ID_PATTERN,
   type IssueReportCategory,
@@ -39,11 +38,16 @@ export class CreateIssueReportDto {
   @Matches(NUMERIC_ONLY_PATTERN, { message: 'idNumber must contain numbers only' })
   idNumber?: string;
 
+  /** Deliberately no character-set restriction — client location names may contain any character. */
   @IsOptional()
-  @Matches(LOCATION_ID_PATTERN, { message: 'locationId must be letters and numbers only, no spaces' })
+  @IsString()
   locationId?: string;
 
   @IsOptional()
   @IsString()
   comment?: string;
+
+  @IsOptional()
+  @IsString()
+  contextLabel?: string;
 }

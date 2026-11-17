@@ -28,6 +28,14 @@ export const SHORT_BREAK_LIMIT_MS = 20 * 60_000;
  */
 export const LUNCH_BREAK_SUGGESTED_DURATION_MS = 60 * 60_000;
 
+/**
+ * Unlike the suggested duration above (a display target, never
+ * enforced), this one IS enforced: ending a lunch break before 30
+ * minutes have passed is blocked outright — see ShiftsService.endBreak.
+ * Short Break has no equivalent minimum; it's unaffected.
+ */
+export const LUNCH_BREAK_MINIMUM_MS = 30 * 60_000;
+
 export interface ShiftStatus {
   active: boolean;
   shiftId: string | null;

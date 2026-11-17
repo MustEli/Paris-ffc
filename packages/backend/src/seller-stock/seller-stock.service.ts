@@ -14,18 +14,36 @@ import {
 
 /**
  * Backed by Postgres via Prisma now — see users.service.ts for the
- * pattern and why. The human-readable palletIndex ("PLT-000001") used
- * to come from a service-level counter; now it's derived from the
- * model's `seq` autoincrement column (a real DB sequence) at read time.
+ * pattern and why. The human-readable palletIndex used to be a
+ * sequential counter-based code ("PLT-000001"); the customer asked for
+ * "{sellerName}-{boxNumber}" instead (e.g. "Fandaki polo-12") since
+ * that's what's actually meaningful to them. Since that's built from
+ * free-text fields rather than a guaranteed-unique sequence, two
+ * pallets from the same seller reusing the same box number would
+ * otherwise render identically — disambiguated below by appending the
+ * pallet's own `seq` (the old counter column, kept in the schema and
+ * reused here rather than inventing a new one) whenever a collision
+ * exists ANYWHERE in the table, not just within whatever subset of
+ * rows a given call happens to return. Deliberately exact-match
+ * (case-sensitive), not case-insensitive — the two collision-detection
+ * paths below (single-row vs. list) need to agree with each other, and
+ * case-insensitive matching is only straightforward for one of them
+ * (the list path's groupBy can't express LOWER() without raw SQL), so
+ * consistency between the two wins over the nice-to-have.
  */
 @Injectable()
 export class SellerStockService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toDomain(row: PrismaPallet): SellerStockPallet {
+  private palletIndexFor(row: Pick<PrismaPallet, 'sellerName' | 'boxNumber' | 'seq'>, isAmbiguous: boolean): string {
+    const base = `${row.sellerName}-${row.boxNumber}`;
+    return isAmbiguous ? `${base} (#${row.seq})` : base;
+  }
+
+  private rowToDomain(row: PrismaPallet, isAmbiguous: boolean): SellerStockPallet {
     return {
       id: row.id,
-      palletIndex: `PLT-${String(row.seq).padStart(6, '0')}`,
+      palletIndex: this.palletIndexFor(row, isAmbiguous),
       boxNumber: row.boxNumber,
       sellerName: row.sellerName,
       weightKg: row.weightKg,
@@ -41,6 +59,29 @@ export class SellerStockService {
       createdAt: row.createdAt.toISOString(),
       putAwayAt: row.putAwayAt ? row.putAwayAt.toISOString() : null,
     };
+  }
+
+  /** Single-row path — one targeted count query against the rest of the table. */
+  private async toDomain(row: PrismaPallet): Promise<SellerStockPallet> {
+    const collidingCount = await this.prisma.sellerStockPallet.count({
+      where: { sellerName: row.sellerName, boxNumber: row.boxNumber, id: { not: row.id } },
+    });
+    return this.rowToDomain(row, collidingCount > 0);
+  }
+
+  /** List path — one groupBy for the whole table instead of a count-per-row (would be N+1). */
+  private async toDomainList(rows: PrismaPallet[]): Promise<SellerStockPallet[]> {
+    if (rows.length === 0) return [];
+    const groups = await this.prisma.sellerStockPallet.groupBy({
+      by: ['sellerName', 'boxNumber'],
+      _count: { _all: true },
+    });
+    // \u0000-joined so e.g. sellerName="A-B"+boxNumber="C" can't collide
+    // with sellerName="A"+boxNumber="B-C" the way a "-"-joined key could.
+    const ambiguousKeys = new Set(
+      groups.filter((g) => g._count._all > 1).map((g) => `${g.sellerName}\u0000${g.boxNumber}`),
+    );
+    return rows.map((row) => this.rowToDomain(row, ambiguousKeys.has(`${row.sellerName}\u0000${row.boxNumber}`)));
   }
 
   async create(userId: string, dto: CreatePalletDto): Promise<SellerStockPallet> {
@@ -96,7 +137,7 @@ export class SellerStockService {
 
   async findAll(): Promise<SellerStockPallet[]> {
     const rows = await this.prisma.sellerStockPallet.findMany({ orderBy: { createdAt: 'desc' } });
-    return rows.map((row) => this.toDomain(row));
+    return this.toDomainList(rows);
   }
 
   private async findOneRow(id: string): Promise<PrismaPallet> {

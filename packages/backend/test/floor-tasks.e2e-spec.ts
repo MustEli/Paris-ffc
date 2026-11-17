@@ -1,10 +1,13 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
 import { closeTestDb, resetDatabase } from './utils/db';
+
+const rawPrisma = new PrismaClient();
 
 async function loginAs(app: INestApplication<App>, email: string): Promise<{ token: string; id: string }> {
   const response = await request(app.getHttpServer())
@@ -44,6 +47,7 @@ describe('Floor Tasks (e2e)', () => {
   });
 
   afterAll(async () => {
+    await rawPrisma.$disconnect();
     await closeTestDb();
   });
 
@@ -176,12 +180,21 @@ describe('Floor Tasks (e2e)', () => {
       .set('Authorization', `Bearer ${staff.token}`)
       .expect(201);
 
+    // /mine/open is active-only now (see findMineOpen's doc comment) — a
+    // paused task no longer shows there; /mine/open-all still has it.
     const mineOpen = await request(app.getHttpServer())
       .get('/floor-tasks/mine/open')
       .set('Authorization', `Bearer ${staff.token}`)
       .expect(200);
-    expect(mineOpen.body.id).toBe(started.body.id);
-    expect(mineOpen.body.pausedAt).not.toBeNull();
+    expect(mineOpen.body?.id).toBeUndefined();
+
+    const mineOpenAll = await request(app.getHttpServer())
+      .get('/floor-tasks/mine/open-all')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+    expect(mineOpenAll.body).toHaveLength(1);
+    expect(mineOpenAll.body[0].id).toBe(started.body.id);
+    expect(mineOpenAll.body[0].pausedAt).not.toBeNull();
 
     // Already paused — calling again must still be a no-op, not a 409.
     await request(app.getHttpServer())
@@ -260,7 +273,7 @@ describe('Floor Tasks (e2e)', () => {
       .send({ category: 'pack' })
       .expect(409);
     expect(rejected.body.code).toBe('floor_task.already_open');
-    expect(rejected.body.message).toContain('Already have an open floor task');
+    expect(rejected.body.message).toContain('Already have a running floor task');
   });
 
   it('rejects starting a floor task with the merged-away "box_prep" category', () => {
@@ -319,6 +332,133 @@ describe('Floor Tasks (e2e)', () => {
       .get('/floor-tasks/active')
       .set('Authorization', `Bearer ${staff.token}`)
       .expect(403);
+  });
+
+  it('cancels a floor task under 2 minutes old with no trace — the row is deleted outright', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/cancel`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    const row = await rawPrisma.floorTaskLog.findUnique({ where: { id: started.body.id } });
+    expect(row).toBeNull();
+
+    // Nothing left open, so a fresh start must succeed immediately.
+    await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pack' })
+      .expect(201);
+  });
+
+  it('cancels a floor task 2+ minutes old by marking it cancelled, keeping the row', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    await rawPrisma.floorTaskLog.update({
+      where: { id: started.body.id },
+      data: { startedAt: new Date(Date.now() - 3 * 60_000) },
+    });
+
+    const cancelled = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/cancel`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+    expect(cancelled.body.deleted).toBe(false);
+
+    const row = await rawPrisma.floorTaskLog.findUniqueOrThrow({ where: { id: started.body.id } });
+    expect(row.cancelledAt).not.toBeNull();
+    expect(row.endedAt).not.toBeNull();
+  });
+
+  it("rejects cancelling someone else's floor task", async () => {
+    const started = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    const management = await loginAs(app, 'management@warehousehq.dev');
+    return request(app.getHttpServer())
+      .post(`/floor-tasks/${started.body.id}/cancel`)
+      .set('Authorization', `Bearer ${management.token}`)
+      .expect(403);
+  });
+
+  it('allows starting a different category while one is merely paused, but still blocks while one is actively running', async () => {
+    const pick = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pick' })
+      .expect(201);
+
+    // Still running (not paused) — blocked, same as before this change.
+    await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pack' })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .post(`/floor-tasks/${pick.body.id}/pause`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(201);
+
+    // Now only paused — starting a different category must succeed.
+    const pack = await request(app.getHttpServer())
+      .post('/floor-tasks/start')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'pack' })
+      .expect(201);
+
+    const openAll = await request(app.getHttpServer())
+      .get('/floor-tasks/mine/open-all')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+    expect(openAll.body).toHaveLength(2);
+    expect(openAll.body.map((t: { id: string }) => t.id).sort()).toEqual([pack.body.id, pick.body.id].sort());
+
+    // /mine/open now reflects only the actively-running one.
+    const mineOpen = await request(app.getHttpServer())
+      .get('/floor-tasks/mine/open')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(200);
+    expect(mineOpen.body.id).toBe(pack.body.id);
+  });
+
+  it('caps paused floor tasks at 2 — a third pause attempt is rejected', async () => {
+    const started: { body: { id: string } }[] = [];
+    for (const category of ['pick', 'pack', 'backup_box']) {
+      // Each new Start only succeeds because the previous one gets paused first.
+      const res = await request(app.getHttpServer())
+        .post('/floor-tasks/start')
+        .set('Authorization', `Bearer ${staff.token}`)
+        .send({ category })
+        .expect(201);
+      started.push(res);
+      if (category !== 'backup_box') {
+        await request(app.getHttpServer())
+          .post(`/floor-tasks/${res.body.id}/pause`)
+          .set('Authorization', `Bearer ${staff.token}`)
+          .expect(201);
+      }
+    }
+
+    // Two are already paused (pick, pack) — pausing this third one (backup_box) must be rejected.
+    const rejected = await request(app.getHttpServer())
+      .post(`/floor-tasks/${started[2].body.id}/pause`)
+      .set('Authorization', `Bearer ${staff.token}`)
+      .expect(409);
+    expect(rejected.body.code).toBe('floor_task.max_paused_reached');
   });
 
   it('blocks Staff from this controller entirely without an active shift, but never blocks Admin', async () => {

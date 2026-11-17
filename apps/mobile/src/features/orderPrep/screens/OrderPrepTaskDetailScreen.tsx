@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, type RouteProp } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskContextStore';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
+import { colors } from '../../../core/theme/colors';
 import { type OrderPrepStackParamList } from '../../../navigation/types';
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../tasks/priority';
 import { useCompleteOrderPrepTask, useOrderPrepTask, useStartOrderPrepTask } from '../hooks/useOrderPrep';
@@ -26,6 +29,20 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
   const { data: task, isPending, error } = useOrderPrepTask(id);
   const start = useStartOrderPrepTask(id);
   const complete = useCompleteOrderPrepTask(id);
+
+  const isStaffDark = role === 'staff';
+  const styles = getStyles(isStaffDark);
+  const primaryIconColor = isStaffDark ? '#1a1200' : '#fff';
+
+  const setLabel = useActiveTaskContextStore((s) => s.setLabel);
+  useFocusEffect(
+    useCallback(() => {
+      if (task?.status === 'in_progress') {
+        setLabel(`Order Prep — ${task.role === 'picker' ? 'Picker task' : 'Packer task'}`);
+      }
+      return () => setLabel(null);
+    }, [task?.status, task?.role, setLabel]),
+  );
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
   if (error || !task) {
@@ -57,10 +74,10 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
           {start.error && <Text style={styles.error}>{start.error.message}</Text>}
           <Pressable style={styles.button} disabled={start.isPending} onPress={() => start.mutate()}>
             {start.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={primaryIconColor} />
             ) : (
               <>
-                <Ionicons name="play-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Ionicons name="play-outline" size={16} color={primaryIconColor} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Start task</Text>
               </>
             )}
@@ -77,10 +94,10 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
             onPress={() => complete.mutate(undefined, { onSuccess: goToStaffHome })}
           >
             {complete.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={primaryIconColor} />
             ) : (
               <>
-                <Ionicons name="checkmark-done-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Ionicons name="checkmark-done-outline" size={16} color={primaryIconColor} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Task completed</Text>
               </>
             )}
@@ -91,81 +108,85 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-  },
-  spinner: {
-    marginTop: 40,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  priorityPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  priorityText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  instructionsBox: {
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: '#f1f5f9',
-  },
-  instructionsLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 4,
-  },
-  instructionsText: {
-    fontSize: 14,
-    color: '#1e293b',
-  },
-  status: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563eb',
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  meta: {
-    fontSize: 13,
-    color: '#374151',
-    marginTop: 2,
-  },
-  button: {
-    flexDirection: 'row',
-    backgroundColor: '#0f172a',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 28,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginTop: 16,
-  },
-});
+/** Shared between Staff (dark theme) and Admin/Management (existing light theme, unchanged) — see PutAwayTaskDetailScreen.tsx for why this is a function of role rather than a static StyleSheet. */
+function getStyles(isStaffDark: boolean) {
+  return StyleSheet.create({
+    container: {
+      padding: 20,
+      ...(isStaffDark ? { backgroundColor: colors.background } : null),
+    },
+    spinner: {
+      marginTop: 40,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: isStaffDark ? colors.textPrimary : '#0f172a',
+    },
+    priorityPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    priorityText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    instructionsBox: {
+      marginTop: 14,
+      padding: 14,
+      borderRadius: 10,
+      backgroundColor: isStaffDark ? colors.surfaceElevated : '#f1f5f9',
+    },
+    instructionsLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: isStaffDark ? colors.textSecondary : '#334155',
+      marginBottom: 4,
+    },
+    instructionsText: {
+      fontSize: 14,
+      color: isStaffDark ? colors.textPrimary : '#1e293b',
+    },
+    status: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#2563eb',
+      marginTop: 4,
+      marginBottom: 14,
+    },
+    meta: {
+      fontSize: 13,
+      color: isStaffDark ? colors.textSecondary : '#374151',
+      marginTop: 2,
+    },
+    button: {
+      flexDirection: 'row',
+      backgroundColor: isStaffDark ? colors.brandOrange : '#0f172a',
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 28,
+    },
+    buttonIcon: {
+      marginRight: 8,
+    },
+    buttonText: {
+      color: isStaffDark ? '#1a1200' : '#fff',
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    error: {
+      color: isStaffDark ? colors.alert : '#dc2626',
+      fontSize: 13,
+      marginTop: 16,
+    },
+  });
+}

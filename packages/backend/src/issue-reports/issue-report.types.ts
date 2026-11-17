@@ -66,8 +66,6 @@ export const ALERTING_CATEGORIES: IssueReportCategory[] = [
 export const TRACKING_ID_PATTERN = /^[A-Z0-9]+$/;
 /** "Only numbers, no character or letter" per the doc — used for both Order Number and ID Number. */
 export const NUMERIC_ONLY_PATTERN = /^[0-9]+$/;
-/** "Numbers, letters, no space" per the doc — used for Location ID. */
-export const LOCATION_ID_PATTERN = /^[A-Za-z0-9]+$/;
 
 export interface IssueReport {
   id: string;
@@ -80,6 +78,8 @@ export interface IssueReport {
   idNumber: string | null;
   locationId: string | null;
   comment: string | null;
+  /** What the staff member was doing when they raised this (e.g. "Floor Task — Pick") — only set by the in-task quick-report shortcut, never by the full Issue Reporting menu flow. */
+  contextLabel: string | null;
   alertsAdmin: boolean;
   createdAt: string;
 }

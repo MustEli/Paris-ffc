@@ -308,10 +308,12 @@ describe('Put-Away (e2e)', () => {
   });
 
   it('blocks Staff from this controller while on any break, and restores access once it ends', async () => {
+    // Short, not lunch — lunch now has a 30-minute minimum before it can
+    // be ended (see shifts.service.ts), which this test isn't about.
     await request(app.getHttpServer())
       .post('/shifts/break/start')
       .set('Authorization', `Bearer ${staff.token}`)
-      .send({ type: 'lunch' })
+      .send({ type: 'short' })
       .expect(201);
 
     await request(app.getHttpServer())

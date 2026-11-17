@@ -150,7 +150,7 @@ describe('Seller Stock (e2e)', () => {
     expect(created.body.status).toBe('put_away');
     expect(created.body.putAwayLocation).toBeNull();
     expect(created.body.putAwayAt).not.toBeNull();
-    expect(created.body.palletIndex).toMatch(/^PLT-\d{6}$/);
+    expect(created.body.palletIndex).toBe('Acme Parts-B-3');
     expect(created.body.labelPhotoUrls).toEqual([labelPhotoUrl1, labelPhotoUrl2]);
 
     const listed = await request(app.getHttpServer())
@@ -158,6 +158,47 @@ describe('Seller Stock (e2e)', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .expect(200);
     expect(listed.body.some((p: { id: string }) => p.id === created.body.id)).toBe(true);
+  });
+
+  it('disambiguates palletIndex with "(#seq)" when two pallets share the same seller + box number, on both the single-pallet and list endpoints', async () => {
+    const labelPhotoUrl = await uploadFakePhoto(app, staffToken);
+    const makePallet = () =>
+      request(app.getHttpServer())
+        .post('/seller-stock')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          labelPhotoUrls: [labelPhotoUrl, labelPhotoUrl],
+          boxNumber: 'B-DUPE',
+          sellerName: 'Dupe Seller',
+          weightKg: 10,
+          conditionFlags: ['good'],
+        })
+        .expect(201);
+
+    const first = await makePallet();
+    // Not yet ambiguous — it's the only "Dupe Seller-B-DUPE" pallet so far.
+    expect(first.body.palletIndex).toBe('Dupe Seller-B-DUPE');
+
+    const second = await makePallet();
+    expect(second.body.palletIndex).toBe(`Dupe Seller-B-DUPE (#${second.body.palletIndex.match(/#(\d+)/)![1]})`);
+
+    // Re-fetching the first one directly now also shows it as ambiguous
+    // (collision detection isn't a one-time snapshot from creation time).
+    const firstRefetched = await request(app.getHttpServer())
+      .get(`/seller-stock/${first.body.id}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(200);
+    expect(firstRefetched.body.palletIndex).toMatch(/^Dupe Seller-B-DUPE \(#\d+\)$/);
+
+    const listed = await request(app.getHttpServer())
+      .get('/seller-stock')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .expect(200);
+    const listedFirst = listed.body.find((p: { id: string }) => p.id === first.body.id);
+    const listedSecond = listed.body.find((p: { id: string }) => p.id === second.body.id);
+    expect(listedFirst.palletIndex).toMatch(/^Dupe Seller-B-DUPE \(#\d+\)$/);
+    expect(listedSecond.palletIndex).toMatch(/^Dupe Seller-B-DUPE \(#\d+\)$/);
+    expect(listedFirst.palletIndex).not.toBe(listedSecond.palletIndex);
   });
 
   it('rejects a pallet flagged good + damaged together without damage remarks/evidence', async () => {

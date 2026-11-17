@@ -14,6 +14,11 @@ export const fr = {
     onShortBreak: 'En pause courte',
     onBreakSubtitle: 'Tout le reste est verrouillé jusqu’à la fin de votre pause.',
     endBreak: 'Terminer la pause',
+    endBreakAvailableIn: 'Disponible dans {{minutes}} min',
+    breakTenMinutesLeftTitle: 'Il reste 10 minutes',
+    breakTenMinutesLeftBody: 'Il vous reste 10 minutes de pause.',
+    breakOverTitle: 'Pause terminée',
+    breakOverBody: 'Il est temps de reprendre le travail.',
   },
 
   shiftBar: {
@@ -147,6 +152,12 @@ export const fr = {
     stopConfirmTitle: 'Terminer : {{label}}',
     stopConfirmMessage: 'Remplissez les détails ci-dessous, puis confirmez — vous ne pourrez plus rien y ajouter ensuite.',
     confirmEnd: 'Confirmer et terminer la tâche',
+    cancel: 'Annuler',
+    cancelConfirmTitle: 'Annuler {{label}} ?',
+    cancelConfirmMessage: 'Cela supprime la tâche — rien n’est enregistré. Êtes-vous sûr ?',
+    unfinishedTasksHeader: 'Tâches non terminées',
+    pausedFor: 'En pause depuis {{time}}',
+    tapToResume: 'Toucher pour reprendre',
     category: {
       pick: 'Prélèvement',
       pack: 'Emballage',
@@ -194,6 +205,15 @@ export const fr = {
     trackingIdInvalid: 'Lettres majuscules et chiffres uniquement, sans espace.',
     numbersOnly: 'Chiffres uniquement.',
     locationIdInvalid: 'Lettres et chiffres uniquement, sans espace.',
+    quick: {
+      buttonLabel: 'Signaler un problème',
+      title: 'Signaler un problème',
+      contextLabel: 'Signalement pendant : {{context}}',
+      placeholder: 'Qu’est-ce qui ne va pas ?',
+      send: 'Envoyer',
+      cancel: 'Annuler',
+      sent: 'Signalé — merci, un administrateur a été notifié.',
+    },
     category: {
       non_traceable_return_parcel: 'Colis de retour introuvable',
       non_fulfillment_return_parcel: 'Colis de retour non conforme',
@@ -278,14 +298,16 @@ export const fr = {
       short_break_used_up: 'Le quota de pause courte pour ce service est déjà épuisé.',
       no_break_to_end: 'Aucune pause en cours à terminer.',
       active_task_running: 'Mettez votre tâche en cours en pause avant de démarrer une pause.',
+      lunch_break_too_short: 'La pause déjeuner doit durer au moins 30 minutes avant de pouvoir être terminée.',
     },
     floorTask: {
       box_prep_merged: '« Box Prep » a été fusionné avec « Secours — Carton » — utilisez celui-ci à la place.',
-      already_open: 'Vous avez déjà une tâche en cours — arrêtez-la avant d’en démarrer une autre.',
+      already_open: 'Vous avez déjà une tâche en cours — mettez-la en pause ou arrêtez-la avant d’en démarrer une autre.',
       not_yours: 'Cette tâche ne vous appartient pas.',
       already_ended: 'Cette tâche est déjà terminée.',
       already_paused: 'Cette tâche est déjà en pause.',
       not_paused: 'Cette tâche n’est pas en pause.',
+      max_paused_reached: 'Vous avez déjà 2 tâches en pause — terminez-en une avant d’en mettre une autre de côté.',
     },
     reception: {
       missing_required_fields: 'Veuillez remplir tous les champs requis pour cette catégorie.',

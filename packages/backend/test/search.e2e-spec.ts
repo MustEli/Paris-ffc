@@ -90,7 +90,7 @@ describe('Search (e2e)', () => {
 
     const byIndex = await request(app.getHttpServer())
       .get('/search')
-      .query({ q: pallet.body.palletIndex.replace('PLT-', '') })
+      .query({ q: pallet.body.palletIndex })
       .set('Authorization', `Bearer ${admin.token}`)
       .expect(200);
     expect(byIndex.body.pallets.some((p: { id: string }) => p.id === pallet.body.id)).toBe(true);

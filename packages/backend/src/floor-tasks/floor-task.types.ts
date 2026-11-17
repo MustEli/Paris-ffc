@@ -55,6 +55,12 @@ export const SELECTABLE_FLOOR_TASK_CATEGORIES: FloorTaskCategory[] = FLOOR_TASK_
 /** Up to 8 photos — Staff View doc's Warehousing Tasks spec. */
 export const FLOOR_TASK_MAX_PHOTOS = 8;
 
+/** Cancelling this soon after Start leaves no trace at all (row deleted) — long enough past this and it's treated as real, if abandoned, work (row kept, marked cancelledAt). */
+export const FLOOR_TASK_CANCEL_NO_TRACE_WINDOW_MS = 2 * 60_000;
+
+/** A staff member may have at most this many *paused* floor tasks parked at once (not counting whichever one is currently active) — business owner's call, to stop unfinished work from piling up unbounded. */
+export const FLOOR_TASK_MAX_PAUSED = 2;
+
 export interface FloorTaskLog {
   id: string;
   userId: string;
@@ -72,6 +78,8 @@ export interface FloorTaskLog {
   pausedAt: string | null;
   /** Cumulative paused time across every pause/resume cycle, in ms. */
   totalPausedMs: number;
+  /** Set only for a cancel 2+ minutes after start — see FloorTasksService.cancel(). A cancel under 2 minutes deletes the row instead, so this field never shows that case. */
+  cancelledAt: string | null;
 }
 
 /** Admin's live "who's on what floor task right now" view. */

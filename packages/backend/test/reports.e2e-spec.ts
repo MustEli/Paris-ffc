@@ -233,6 +233,38 @@ describe('Reports (e2e)', () => {
     expect(staffRow.cumulative.plannedHours).toBeGreaterThan(0);
   });
 
+  it('staff-history excludes a cancelled floor task from floorTaskHours (and its cumulative)', async () => {
+    await rawPrisma.shift.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        startedAt: new Date('2026-02-02T08:00:00.000Z'),
+        endedAt: new Date('2026-02-02T16:00:00.000Z'),
+      },
+    });
+    await rawPrisma.floorTaskLog.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        category: 'pick',
+        startedAt: new Date('2026-02-02T09:00:00.000Z'),
+        endedAt: new Date('2026-02-02T10:00:00.000Z'), // 1h, but cancelled — must not count
+        cancelledAt: new Date('2026-02-02T10:00:00.000Z'),
+      },
+    });
+
+    const report = await request(app.getHttpServer())
+      .get('/reports/staff-history')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+
+    const staffRow = report.body.staff.find((r: { userId: string }) => r.userId === staff.id);
+    expect(staffRow.days['2026-02-02'].floorTaskHours).toBe(0);
+    expect(staffRow.cumulative.floorTaskHours).toBe(0);
+    // actualHours (clocked shift time) is unaffected by the cancel — it's a separate figure entirely.
+    expect(staffRow.days['2026-02-02'].actualHours).toBe(8);
+  });
+
   it('staff-history breaks down actual hours by category (Floor Task / Reception / Open Pool / Urgent Task) and sums a cumulative total', async () => {
     await rawPrisma.shift.create({
       data: {
@@ -416,6 +448,58 @@ describe('Reports (e2e)', () => {
       expect(entry.endedAt).toBeNull();
       expect(entry.durationMs).toBeNull();
     }
+  });
+
+  it('staff-activity marks a cancelled Floor Task distinctly in "recent", excludes it from "live", and attaches hoursWorkedToday to every entry', async () => {
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+    const shiftStart = new Date(startOfToday.getTime() + 8 * 3_600_000); // 08:00 UTC today
+    const shiftEnd = new Date(startOfToday.getTime() + 16 * 3_600_000); // 16:00 UTC today — 8h, no break
+    await rawPrisma.shift.create({
+      data: { id: randomUUID(), userId: staff.id, startedAt: shiftStart, endedAt: shiftEnd },
+    });
+
+    // Cancelled 2+ minutes in (see FloorTasksService.cancel) — endedAt is set, cancelledAt is too.
+    await rawPrisma.floorTaskLog.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        category: 'pick',
+        startedAt: new Date('2026-02-02T09:00:00.000Z'),
+        endedAt: new Date('2026-02-02T09:05:00.000Z'),
+        cancelledAt: new Date('2026-02-02T09:05:00.000Z'),
+      },
+    });
+    // A normal completed one too, so "recent" has something to contrast against.
+    await rawPrisma.floorTaskLog.create({
+      data: {
+        id: randomUUID(),
+        userId: staff.id,
+        category: 'pack',
+        startedAt: new Date('2026-02-02T10:00:00.000Z'),
+        endedAt: new Date('2026-02-02T10:10:00.000Z'),
+      },
+    });
+
+    const recent = await request(app.getHttpServer())
+      .get('/reports/staff-activity?scope=recent')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    expect(recent.body.entries).toHaveLength(2);
+    const cancelledEntry = recent.body.entries.find((e: { floorTaskCategory: string }) => e.floorTaskCategory === 'pick');
+    const completedEntry = recent.body.entries.find((e: { floorTaskCategory: string }) => e.floorTaskCategory === 'pack');
+    expect(cancelledEntry.floorTaskOutcome).toBe('cancelled');
+    expect(completedEntry.floorTaskOutcome).toBe('completed');
+    // Both entries belong to the same staff member, clocked in for 8h today.
+    expect(cancelledEntry.hoursWorkedToday).toBe(8);
+    expect(completedEntry.hoursWorkedToday).toBe(8);
+
+    // A cancelled task is always ended, so it never shows up in "live".
+    const live = await request(app.getHttpServer())
+      .get('/reports/staff-activity')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .expect(200);
+    expect(live.body.entries).toHaveLength(0);
   });
 
   it('reception report breaks down by category, including flagged count', async () => {

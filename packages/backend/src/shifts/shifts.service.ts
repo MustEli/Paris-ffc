@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { formatTimestampForSheet, SheetsService } from '../sheets/sheets.service';
 import { UsersService } from '../users/users.service';
 import {
+  LUNCH_BREAK_MINIMUM_MS,
   LUNCH_BREAK_SUGGESTED_DURATION_MS,
   SHORT_BREAK_LIMIT_MS,
   type Break,
@@ -140,14 +141,17 @@ export class ShiftsService {
       await this.prisma.break.update({ where: { id: openBreak.id }, data: { endedAt } });
     }
 
-    // Same for a still-open Floor Task — direct Prisma access rather
+    // Same for any still-open Floor Tasks — direct Prisma access rather
     // than importing FloorTasksModule, which already imports this
     // module (for ActiveShiftGuard) and would make it circular. Folds
     // any open pause into totalPausedMs exactly like a normal Stop
     // would, via the same force-close path, not FloorTasksService's
     // validated end() — there's no form left open to validate against.
-    const openFloorTask = await this.prisma.floorTaskLog.findFirst({ where: { userId: shift.userId, endedAt: null } });
-    if (openFloorTask) {
+    // A staff member can have more than one open Floor Task at once now
+    // (one running, up to two parked/paused — see FloorTasksService),
+    // so every open one needs closing here, not just the first found.
+    const openFloorTasks = await this.prisma.floorTaskLog.findMany({ where: { userId: shift.userId, endedAt: null } });
+    for (const openFloorTask of openFloorTasks) {
       const stillOpenPauseMs = openFloorTask.pausedAt ? endedAt.getTime() - openFloorTask.pausedAt.getTime() : 0;
       await this.prisma.floorTaskLog.update({
         where: { id: openFloorTask.id },
@@ -296,6 +300,13 @@ export class ShiftsService {
     const activeBreak = await this.findActiveBreak(shift.id);
     if (!activeBreak) {
       throw new NotFoundException({ message: 'No break in progress to end', code: 'shift.no_break_to_end' });
+    }
+
+    if (activeBreak.type === 'lunch' && Date.now() - activeBreak.startedAt.getTime() < LUNCH_BREAK_MINIMUM_MS) {
+      throw new ConflictException({
+        message: 'Lunch break must be at least 30 minutes before it can be ended',
+        code: 'shift.lunch_break_too_short',
+      });
     }
 
     const updated = await this.prisma.break.update({

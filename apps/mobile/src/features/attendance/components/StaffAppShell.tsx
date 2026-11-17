@@ -1,3 +1,4 @@
+import * as Notifications from 'expo-notifications';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -9,6 +10,11 @@ import { ActiveFloorTaskIndicator } from '../../floorTasks/components/ActiveFloo
 import { useShiftStatus } from '../hooks/useShiftStatus';
 import { ShiftStatusBar } from './ShiftStatusBar';
 import { LockedGate } from '../../../core/components/LockedGate';
+
+/** Mirrors LUNCH_BREAK_MINIMUM_MS in packages/backend/src/shifts/shift.types.ts — lunch can't be ended before this, enforced there too. */
+const LUNCH_BREAK_MINIMUM_MS = 30 * 60_000;
+/** How far before a break's target duration the "10 minutes left" reminder fires. */
+const TEN_MINUTES_MS = 10 * 60_000;
 
 /** "MM:SS", counting down; past zero it flips to "+MM:SS" (over), rather than going negative. */
 function formatCountdown(ms: number): string {
@@ -86,6 +92,57 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
         ? formatCountdown(status.lunchBreakRemainingMs - (now - statusUpdatedAt))
         : undefined;
 
+  // Lunch can't be ended before 30 minutes in — enforced on the backend
+  // too (see shift.lunch_break_too_short), this is just the UI side so
+  // staff aren't hitting a dead-end tap. Short Break has no such floor.
+  const lunchElapsedMs = status?.breakType === 'lunch' && status.breakStartedAt ? now - new Date(status.breakStartedAt).getTime() : 0;
+  const lunchTooShort = status?.breakType === 'lunch' && lunchElapsedMs < LUNCH_BREAK_MINIMUM_MS;
+  const lunchMinimumRemainingMinutes = lunchTooShort ? Math.ceil((LUNCH_BREAK_MINIMUM_MS - lunchElapsedMs) / 60_000) : 0;
+
+  // Schedules the "10 minutes left" + "break's over" local notifications
+  // the instant a break starts, and cancels whichever hasn't fired yet
+  // the instant it ends (however it ends — normally, early, or this
+  // component unmounting mid-break) — same local-notification mechanism
+  // Directives already use, see core/notifications/setup.ts. Deliberately
+  // keyed only on [onBreak, breakType], not on the remaining-ms fields
+  // (those change every 5s poll while on break, which would reschedule
+  // repeatedly) — reads status's remaining-ms fields via closure instead,
+  // which is correct because they're read once, right as the break
+  // starts, not tracked live.
+  const scheduledNotificationIdsRef = useRef<string[]>([]);
+  useEffect(() => {
+    if (!onBreak) return;
+    const remainingMs = status?.breakType === 'short' ? status.shortBreakRemainingMs : status?.lunchBreakRemainingMs;
+    if (remainingMs === null || remainingMs === undefined) return;
+
+    const ids: Promise<string>[] = [];
+    if (remainingMs > TEN_MINUTES_MS) {
+      ids.push(
+        Notifications.scheduleNotificationAsync({
+          content: { title: t('shiftGate.breakTenMinutesLeftTitle'), body: t('shiftGate.breakTenMinutesLeftBody'), sound: 'default' },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.round((remainingMs - TEN_MINUTES_MS) / 1000) },
+        }),
+      );
+    }
+    if (remainingMs > 0) {
+      ids.push(
+        Notifications.scheduleNotificationAsync({
+          content: { title: t('shiftGate.breakOverTitle'), body: t('shiftGate.breakOverBody'), sound: 'default' },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.round(remainingMs / 1000) },
+        }),
+      );
+    }
+    Promise.all(ids).then((resolved) => {
+      scheduledNotificationIdsRef.current = resolved;
+    });
+
+    return () => {
+      scheduledNotificationIdsRef.current.forEach((id) => Notifications.cancelScheduledNotificationAsync(id));
+      scheduledNotificationIdsRef.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately not reacting to status's remaining-ms fields, see comment above
+  }, [onBreak, status?.breakType]);
+
   function handleStartShift() {
     start(undefined, {
       onSuccess: () => {
@@ -120,9 +177,10 @@ export function StaffAppShell({ children }: { children: ReactNode }) {
             counter={breakCounter}
             title={status?.breakType === 'lunch' ? t('shiftGate.onLunchBreak') : t('shiftGate.onShortBreak')}
             subtitle={t('shiftGate.onBreakSubtitle')}
-            buttonLabel={t('shiftGate.endBreak')}
+            buttonLabel={lunchTooShort ? t('shiftGate.endBreakAvailableIn', { minutes: lunchMinimumRemainingMinutes }) : t('shiftGate.endBreak')}
             onPress={() => endBreak()}
             isBusy={isEndingBreak}
+            disabled={lunchTooShort}
           />
         )}
 

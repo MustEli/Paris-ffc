@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type RouteProp } from '@react-navigation/native';
+import { type RouteProp, useFocusEffect } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,14 +9,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarcodeScanButton } from '../../../core/components/BarcodeScanButton';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
 import { translateError } from '../../../core/i18n/errorCodes';
-import { useActiveTaskGuardStore } from '../../../core/navigation/activeTaskGuardStore';
+import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskContextStore';
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
 import {
+  useCancelFloorTask,
   useEndFloorTask,
-  useMyOpenFloorTask,
+  useMyOpenFloorTasks,
   usePauseFloorTask,
   useResumeFloorTask,
   useStartFloorTask,
@@ -54,16 +55,26 @@ function formatElapsed(ms: number): string {
  * row (or the global ActiveFloorTaskIndicator popup), no separate
  * "press Start to even see this" wall. Its fields are visible either
  * way; only the bottom action changes: Start before a FloorTaskLog
- * exists, then live duration + Pause/Stop once it does. If a *different*
- * task is already open (only one can be, backend-enforced), this shows
- * that one's content instead of a dead-end "Start" for the category
- * that was actually tapped — the same rule FloorTasksScreen's redirect
- * relies on.
+ * exists, then live duration + Pause/Stop/Cancel once it does.
+ *
+ * A staff member can have more than one task open at once now (one
+ * running + up to FLOOR_TASK_MAX_PAUSED paused — see
+ * FloorTasksService.start()/pause()), so "what does this page show" is
+ * resolved as: my own task for the tapped category if I have one
+ * (running or paused — resume its state), else whichever *different*
+ * category is actively running, if any (redirect to that, same as
+ * before — starting a new one is blocked while something else is
+ * running), else nothing open (show the plain "Start" button for the
+ * tapped category).
  */
 export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { data: openTask, isPending } = useMyOpenFloorTask();
+  const { data: openTasksData, isPending } = useMyOpenFloorTasks();
+  const openTasks = openTasksData ?? [];
+  const matchingOwnTask = openTasks.find((task) => task.category === route.params.category);
+  const activeTaskOther = openTasks.find((task) => !task.pausedAt && task.category !== route.params.category);
+  const openTask = matchingOwnTask ?? activeTaskOther ?? null;
   const activeCategory = openTask?.category ?? route.params.category;
   const meta = metaFor(activeCategory);
 
@@ -86,6 +97,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const end = useEndFloorTask(openTask?.id ?? '');
   const pause = usePauseFloorTask(openTask?.id ?? '');
   const resume = useResumeFloorTask(openTask?.id ?? '');
+  const cancel = useCancelFloorTask(openTask?.id ?? '');
   const isPaused = !!openTask?.pausedAt;
 
   const [now, setNow] = useState(() => Date.now());
@@ -94,6 +106,35 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [openTask, isPaused]);
+
+  // Lets the floating "report an issue" button (mounted globally) know
+  // what the staff member is doing right now, and stamps any report
+  // they send with it — see activeTaskContextStore's doc comment.
+  // useFocusEffect (not plain useEffect) so switching between screens
+  // always reflects whichever one is actually focused.
+  const setTaskContextLabel = useActiveTaskContextStore((state) => state.setLabel);
+  useFocusEffect(
+    useCallback(() => {
+      if (openTask) setTaskContextLabel(`${t('floorTasks.title')} — ${t(meta.label)}`);
+      return () => setTaskContextLabel(null);
+    }, [openTask, meta.label, setTaskContextLabel, t]),
+  );
+
+  function handleCancel() {
+    if (!openTask) return;
+    Alert.alert(
+      t('floorTasks.cancelConfirmTitle', { label: t(meta.label) }),
+      t('floorTasks.cancelConfirmMessage'),
+      [
+        { text: t('floorTasks.keepWorking'), style: 'cancel' },
+        {
+          text: t('floorTasks.cancel'),
+          style: 'destructive',
+          onPress: () => cancel.mutate(undefined, { onSuccess: goToStaffHome }),
+        },
+      ],
+    );
+  }
 
   const needsComment = meta.category === 'backup_other' || meta.needsComment;
   const commentRequired = meta.category === 'backup_other';
@@ -156,14 +197,13 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
     });
   }, [isRunning, navigation, pause]);
 
-  // The Home icon jumps straight to StaffHome from a different part of
-  // the stack, which doesn't fire this screen's beforeRemove listener —
-  // mirror isRunning into a global store so it can block that path too.
-  const setIsTaskRunning = useActiveTaskGuardStore((state) => state.setIsTaskRunning);
-  useEffect(() => {
-    setIsTaskRunning(isRunning);
-    return () => setIsTaskRunning(false);
-  }, [isRunning, setIsTaskRunning]);
+  // The Home icon's guard (global isTaskRunning store) is synced by
+  // ActiveFloorTaskIndicator instead of here — it's always mounted,
+  // unlike this screen, so it stays correct even while this screen is
+  // showing one of MY OWN paused tasks and a *different* category is
+  // still actively running elsewhere (that other one is still real,
+  // unprotected work; syncing from a screen that isn't even displaying
+  // it would be wrong). See that component for the actual sync.
 
   // Once the number boxes are filled (required — see requireCountsThen),
   // confirming always succeeds whatever else is or isn't filled in — no
@@ -348,8 +388,24 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
             </Pressable>
             <Text style={styles.iconButtonLabel}>{t('floorTasks.stop')}</Text>
           </View>
+
+          <View style={styles.iconButtonGroup}>
+            <Pressable
+              style={[styles.iconButton, styles.cancelIconButton, cancel.isPending && styles.buttonBusy]}
+              disabled={cancel.isPending}
+              onPress={handleCancel}
+            >
+              {cancel.isPending ? (
+                <ActivityIndicator color={colors.textSecondary} />
+              ) : (
+                <Ionicons name="close" size={28} color={colors.textSecondary} />
+              )}
+            </Pressable>
+            <Text style={styles.iconButtonLabel}>{t('floorTasks.cancel')}</Text>
+          </View>
         </View>
       )}
+      {cancel.error && <Text style={styles.error}>{translateError(cancel.error, t)}</Text>}
     </KeyboardAwareScreen>
   );
 }
@@ -488,7 +544,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 40,
+    gap: 24,
     marginTop: 32,
   },
   iconButtonGroup: {
@@ -509,6 +565,11 @@ const styles = StyleSheet.create({
   },
   stopIconButton: {
     backgroundColor: colors.alert,
+  },
+  cancelIconButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   iconButtonLabel: {
     fontSize: 12,

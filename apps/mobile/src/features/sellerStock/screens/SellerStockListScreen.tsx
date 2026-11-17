@@ -3,6 +3,8 @@ import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
+import { colors } from '../../../core/theme/colors';
+import { elevation } from '../../../core/theme/elevation';
 import { type SellerStockStackParamList } from '../../../navigation/types';
 import { usePallets } from '../hooks/useSellerStock';
 import { STATUS_LABELS, type SellerStockStatus } from '../types';
@@ -33,7 +35,7 @@ export function SellerStockListScreen({ navigation }: Props) {
     <View style={styles.container}>
       {role === 'staff' && (
         <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewPallet')}>
-          <Ionicons name="add" size={18} color="#fff" />
+          <Ionicons name="add" size={18} color="#1a1200" />
           <Text style={styles.newButtonText}>New Pallet</Text>
         </Pressable>
       )}
@@ -74,33 +76,33 @@ export function SellerStockListScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   newButton: {
     flexDirection: 'row',
     gap: 6,
     margin: 16,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.brandOrange,
     paddingVertical: 12,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   newButtonText: {
-    color: '#fff',
+    color: '#1a1200',
     fontWeight: '600',
   },
   spinner: {
     marginTop: 24,
   },
   error: {
-    color: '#dc2626',
+    color: colors.alert,
     textAlign: 'center',
     marginTop: 16,
   },
   empty: {
     textAlign: 'center',
-    color: '#9ca3af',
+    color: colors.textMuted,
     marginTop: 40,
   },
   list: {
@@ -109,16 +111,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   row: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 16,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    ...elevation.sm,
   },
   rowHeader: {
     flexDirection: 'row',
@@ -129,7 +127,7 @@ const styles = StyleSheet.create({
   index: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.textPrimary,
   },
   statusPill: {
     paddingHorizontal: 10,
@@ -143,11 +141,12 @@ const styles = StyleSheet.create({
   },
   summary: {
     fontSize: 13,
-    color: '#4b5563',
+    color: colors.textSecondary,
   },
   flag: {
     fontSize: 12,
-    color: '#b45309',
+    color: colors.brandOrange,
     marginTop: 4,
+    fontWeight: '600',
   },
 });

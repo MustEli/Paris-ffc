@@ -67,6 +67,7 @@ export class IssueReportsService {
       idNumber: row.idNumber,
       locationId: row.locationId,
       comment: row.comment,
+      contextLabel: row.contextLabel,
       alertsAdmin: row.alertsAdmin,
       createdAt: row.createdAt.toISOString(),
     };
@@ -113,6 +114,7 @@ export class IssueReportsService {
         idNumber: dto.idNumber ?? null,
         locationId: dto.locationId ?? null,
         comment: dto.comment ?? null,
+        contextLabel: dto.contextLabel ?? null,
         alertsAdmin,
       },
     });

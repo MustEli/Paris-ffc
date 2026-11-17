@@ -5,6 +5,7 @@ import { Image, ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { colors } from '../../../core/theme/colors';
 import { type PutAwayStackParamList, type SellerStockStackParamList } from '../../../navigation/types';
 import { useSelfPutAway, usePallet } from '../hooks/useSellerStock';
 import { CONDITION_FLAG_LABELS, OVERWEIGHT_THRESHOLD_KG, STATUS_LABELS } from '../types';
@@ -30,6 +31,9 @@ export function SellerStockDetailScreen({ route }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<PutAwayStackParamList>>();
 
   const selfPutAway = useSelfPutAway(id);
+
+  const isStaffDark = role === 'staff';
+  const styles = getStyles(isStaffDark);
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
   if (error || !pallet) {
@@ -127,9 +131,12 @@ export function SellerStockDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+/** Shared between Staff (dark theme) and Admin (existing light theme, unchanged) — see PutAwayTaskDetailScreen.tsx for why this is a function of role rather than a static StyleSheet. */
+function getStyles(isStaffDark: boolean) {
+  return StyleSheet.create({
   container: {
     padding: 20,
+    ...(isStaffDark ? { backgroundColor: colors.background } : null),
   },
   spinner: {
     marginTop: 40,
@@ -137,7 +144,7 @@ const styles = StyleSheet.create({
   index: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0f172a',
+    color: isStaffDark ? colors.textPrimary : '#0f172a',
   },
   status: {
     fontSize: 13,
@@ -151,16 +158,16 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 10,
     marginBottom: 14,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: isStaffDark ? colors.surfaceElevated : '#f3f4f6',
   },
   meta: {
     fontSize: 14,
-    color: '#374151',
+    color: isStaffDark ? colors.textSecondary : '#374151',
     marginTop: 2,
   },
   flag: {
     fontSize: 13,
-    color: '#b45309',
+    color: isStaffDark ? colors.brandOrange : '#b45309',
     fontWeight: '600',
     marginTop: 4,
   },
@@ -168,17 +175,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 14,
     borderRadius: 10,
-    backgroundColor: '#fef2f2',
+    backgroundColor: isStaffDark ? colors.alertSurface : '#fef2f2',
   },
   damageLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#b91c1c',
+    color: isStaffDark ? colors.alert : '#b91c1c',
     marginBottom: 4,
   },
   damageText: {
     fontSize: 14,
-    color: '#7f1d1d',
+    color: isStaffDark ? colors.textSecondary : '#7f1d1d',
     marginBottom: 8,
   },
   photoRow: {
@@ -195,29 +202,29 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 14,
     borderRadius: 10,
-    backgroundColor: '#eff6ff',
+    backgroundColor: isStaffDark ? colors.surfaceElevated : '#eff6ff',
   },
   instructionsLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1d4ed8',
+    color: isStaffDark ? colors.textSecondary : '#1d4ed8',
     marginBottom: 4,
   },
   instructionsText: {
     fontSize: 14,
-    color: '#1e3a8a',
+    color: isStaffDark ? colors.textPrimary : '#1e3a8a',
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: isStaffDark ? colors.textSecondary : '#374151',
     marginBottom: 8,
   },
   selfPutAwayBox: {
     marginTop: 28,
     padding: 14,
     borderRadius: 10,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: isStaffDark ? colors.surfaceElevated : '#f0fdf4',
   },
   button: {
     flexDirection: 'row',
@@ -249,14 +256,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   error: {
-    color: '#dc2626',
+    color: isStaffDark ? colors.alert : '#dc2626',
     fontSize: 13,
     marginTop: 8,
   },
   waiting: {
     marginTop: 28,
     textAlign: 'center',
-    color: '#9ca3af',
+    color: isStaffDark ? colors.textMuted : '#9ca3af',
     fontStyle: 'italic',
   },
-});
+  });
+}

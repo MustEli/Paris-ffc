@@ -7,6 +7,7 @@ import { useCurrentRouteStore } from '../core/navigation/currentRouteStore';
 import { navigationRef } from '../core/navigation/navigationRef';
 import { useRealtimeConnection } from '../core/realtime/useRealtimeConnection';
 import { DirectiveOverlay } from '../features/directives/components/DirectiveOverlay';
+import { QuickIssueButton } from '../features/issueReports/components/QuickIssueButton';
 import { AdminNavigator } from './AdminNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { ManagementNavigator } from './ManagementNavigator';
@@ -44,6 +45,7 @@ export function RootNavigator() {
       {user?.role === 'admin' && <AdminNavigator />}
       {user?.role === 'management' && <ManagementNavigator />}
       <DirectiveOverlay />
+      <QuickIssueButton />
     </NavigationContainer>
   );
 }

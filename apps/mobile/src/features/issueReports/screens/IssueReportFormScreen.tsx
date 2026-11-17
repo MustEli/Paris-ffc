@@ -24,7 +24,6 @@ interface Props {
 
 const TRACKING_ID_PATTERN = /^[A-Z0-9]+$/;
 const NUMERIC_ONLY_PATTERN = /^[0-9]+$/;
-const LOCATION_ID_PATTERN = /^[A-Za-z0-9]+$/;
 
 /** One screen for all 9 categories, driven by CATEGORY_META — see issue-report.types.ts on the backend for why these are fixed fields rather than an Admin-editable form builder. */
 export function IssueReportFormScreen({ navigation, route }: Props) {
@@ -55,7 +54,6 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
   const trackingIdValid = !meta.trackingId || TRACKING_ID_PATTERN.test(trackingId);
   const orderNumberValid = !meta.orderNumber || NUMERIC_ONLY_PATTERN.test(orderNumber);
   const idNumberValid = !meta.idNumber || NUMERIC_ONLY_PATTERN.test(idNumber);
-  const locationIdValid = !meta.locationId || LOCATION_ID_PATTERN.test(locationId);
 
   const isValid =
     (!meta.photos || meta.photos.optional || photos.length > 0) &&
@@ -63,7 +61,7 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
     (!meta.orderNumber || (orderNumber.trim() !== '' && orderNumberValid)) &&
     (!meta.errorNo || errorNo.trim() !== '') &&
     (!meta.idNumber || (idNumber.trim() !== '' && idNumberValid)) &&
-    (!meta.locationId || (locationId.trim() !== '' && locationIdValid)) &&
+    (!meta.locationId || locationId.trim() !== '') &&
     (!meta.comment || comment.trim() !== '');
 
   function handleSubmit() {
@@ -162,9 +160,6 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
             autoCapitalize="characters"
             placeholderTextColor={colors.textMuted}
           />
-          {locationId.length > 0 && !locationIdValid && (
-            <Text style={styles.fieldError}>{t('issueReports.locationIdInvalid')}</Text>
-          )}
         </View>
       )}
 

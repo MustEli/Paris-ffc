@@ -190,11 +190,15 @@ export interface StaffActivityEntry {
   durationMs: number | null;
   floorTaskCategory?: string;
   scannedBarcode?: string | null;
+  /** type === 'floor_task', scope 'recent' only — undefined for 'live' (a floor task is never ended there). */
+  floorTaskOutcome?: 'completed' | 'cancelled';
   receptionOutcome?: 'completed' | 'unfinished' | null;
   openPoolTitle?: string;
   openPoolDescription?: string | null;
   directiveType?: string;
   directiveMessage?: string;
+  /** This person's total clocked shift time today (net of lunch break) — same figure on every one of their rows. */
+  hoursWorkedToday: number;
 }
 
 export interface StaffActivityReport {

@@ -11,6 +11,8 @@ interface Props {
   buttonLabel: string;
   onPress: () => void;
   isBusy?: boolean;
+  /** Greys the button out and blocks the tap entirely — e.g. lunch break's 30-minute minimum before it can be ended. `buttonLabel` is still shown as passed in, so the caller can swap it to something like "Available in 12m" while this is true. */
+  disabled?: boolean;
   /** Secondary, less prominent action below the main button — e.g. "Log out" while off-shift. */
   secondaryLabel?: string;
   onSecondaryPress?: () => void;
@@ -24,7 +26,7 @@ interface Props {
  * one bright orange button already reads as "this is the one thing to
  * do right now" without it.
  */
-export function LockedGate({ title, counter, subtitle, buttonLabel, onPress, isBusy, secondaryLabel, onSecondaryPress }: Props) {
+export function LockedGate({ title, counter, subtitle, buttonLabel, onPress, isBusy, disabled, secondaryLabel, onSecondaryPress }: Props) {
   return (
     <View style={styles.scrim}>
       <View style={styles.content}>
@@ -33,9 +35,13 @@ export function LockedGate({ title, counter, subtitle, buttonLabel, onPress, isB
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
         <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, isBusy && styles.buttonBusy]}
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed,
+            (isBusy || disabled) && styles.buttonBusy,
+          ]}
           onPress={onPress}
-          disabled={isBusy}
+          disabled={isBusy || disabled}
         >
           {isBusy ? <ActivityIndicator color={colors.textPrimary} /> : <Text style={styles.buttonText}>{buttonLabel}</Text>}
         </Pressable>

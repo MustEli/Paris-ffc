@@ -185,6 +185,8 @@ export interface StaffActivityEntry {
   floorTaskCategory?: FloorTaskCategory;
   /** type === 'floor_task' && floorTaskCategory === 'dispatch' only. */
   scannedBarcode?: string | null;
+  /** type === 'floor_task' && scope 'recent' only — a floor task cancelled 2+ minutes after start still shows up here (cancelling that late keeps the row, just excluded from worked-hours totals), distinguished from a normal completion. Undefined for 'live' entries, where a floor task is never in an ended state at all. */
+  floorTaskOutcome?: 'completed' | 'cancelled';
   /** type === 'reception' only — null while still live (only set once ended). */
   receptionOutcome?: 'completed' | 'unfinished' | null;
   /** type === 'open_pool' only. */
@@ -193,6 +195,8 @@ export interface StaffActivityEntry {
   /** type === 'directive' only. */
   directiveType?: string;
   directiveMessage?: string;
+  /** This person's total clocked shift time today (net of lunch break) — same figure as StaffStatus.hoursWorkedToday, repeated on every one of their rows so admin can compare a specific activity's duration against their overall day without cross-referencing the Staff table. */
+  hoursWorkedToday: number;
 }
 
 export interface StaffActivityReport {

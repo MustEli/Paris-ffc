@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MenuBox } from '../../../core/components/MenuBox';
 import { useActiveReceptionTaskStore } from '../../../core/navigation/activeReceptionTaskStore';
+import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskContextStore';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import {
@@ -59,6 +61,17 @@ export function ReceptionMenuScreen({ navigation }: Props) {
     setActiveReceptionTaskId(isRunning ? (activeTask?.id ?? null) : null);
     return () => setActiveReceptionTaskId(null);
   }, [isRunning, activeTask?.id, setActiveReceptionTaskId]);
+
+  // Powers the floating "report an issue" shortcut elsewhere — only
+  // while focused, so switching to another tab (e.g. Floor Tasks)
+  // doesn't leave this label stuck set.
+  const setContextLabel = useActiveTaskContextStore((state) => state.setLabel);
+  useFocusEffect(
+    useCallback(() => {
+      if (isRunning) setContextLabel('Reception');
+      return () => setContextLabel(null);
+    }, [isRunning, setContextLabel]),
+  );
 
   return (
     <ScrollView

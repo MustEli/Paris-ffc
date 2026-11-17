@@ -430,6 +430,8 @@ model FloorTaskLog {
   pausedAt     DateTime?
   /** Cumulative paused time across every pause/resume cycle this task has had, so a duration computed from startedAt/endedAt can subtract it back out. */
   totalPausedMs Int              @default(0)
+  /** Set only by FloorTasksService.cancel()'s "2+ minutes in" branch — endedAt is also set at the same time (a cancelled task is still an ended one), but excluded from worked-hours totals and shown distinctly in Staff Activity. A cancel under 2 minutes deletes the row outright instead of setting this. */
+  cancelledAt  DateTime?
 
   @@index([userId])
 }
@@ -574,6 +576,8 @@ model IssueReport {
   idNumber    String?
   locationId  String?
   comment     String?
+  /** What the staff member was doing when they raised this — e.g. "Floor Task — Pick". Only ever set by the in-task quick-report shortcut; the full Issue Reporting menu flow leaves it null. */
+  contextLabel String?
   alertsAdmin Boolean
   createdAt   DateTime            @default(now())
 

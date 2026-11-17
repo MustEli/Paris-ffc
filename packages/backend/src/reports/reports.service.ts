@@ -243,7 +243,8 @@ export class ReportsService {
 
     const [breaks, floorTasks, receptionTasks, openPoolTasks, directives] = await Promise.all([
       this.prisma.break.findMany({ where: { shiftId: { in: completedShifts.map((s) => s.id) } } }),
-      this.prisma.floorTaskLog.findMany({ where: { endedAt: { not: null } } }),
+      // cancelledAt: null — a cancelled floor task (see FloorTasksService.cancel()) isn't real completed work, so it's excluded from floorTaskHours the same way it's excluded everywhere else hours are totalled.
+      this.prisma.floorTaskLog.findMany({ where: { endedAt: { not: null }, cancelledAt: null } }),
       this.prisma.receptionTask.findMany({ where: { endedAt: { not: null } } }),
       this.prisma.openPoolTask.findMany({ where: { claimedByUserId: { not: null }, completedAt: { not: null } } }),
       this.prisma.directive.findMany({ where: { receivedByUserId: { not: null }, resolvedAt: { not: null } } }),
@@ -339,6 +340,34 @@ export class ReportsService {
   }
 
   /**
+   * Each staff member's total clocked shift time today (net of lunch
+   * break) — the same figure adminDashboard() computes per-user inline
+   * for StaffStatus.hoursWorkedToday, pulled out so staffActivity() can
+   * reuse it without duplicating adminDashboard()'s larger method.
+   * Deliberately only sums *ended* shifts (an in-progress shift's
+   * duration isn't known yet), same rule as everywhere else this figure
+   * appears.
+   */
+  private async hoursWorkedTodayByUser(): Promise<Map<string, number>> {
+    const now = new Date();
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const shiftsToday = await this.prisma.shift.findMany({ where: { startedAt: { gte: startOfDay } } });
+    const breaksToday = await this.prisma.break.findMany({ where: { shiftId: { in: shiftsToday.map((s) => s.id) } } });
+    const breakMsByShift = sumBreakMsByShift(breaksToday);
+
+    const totalMsByUser = new Map<string, number>();
+    for (const shift of shiftsToday) {
+      if (!shift.endedAt) continue;
+      const ms = shift.endedAt.getTime() - shift.startedAt.getTime() - (breakMsByShift.get(shift.id) ?? 0);
+      totalMsByUser.set(shift.userId, (totalMsByUser.get(shift.userId) ?? 0) + ms);
+    }
+
+    const hoursByUser = new Map<string, number>();
+    for (const [userId, ms] of totalMsByUser) hoursByUser.set(userId, Math.round((ms / 3_600_000) * 10) / 10);
+    return hoursByUser;
+  }
+
+  /**
    * Backs the web dashboard's "Staff Activity" section — see
    * StaffActivityEntry's doc comment for why this merges 4 sources.
    * `scope: 'live'` reads each source's in-progress rows; `'recent'`
@@ -385,9 +414,13 @@ export class ReportsService {
     for (const t of receptionTasks) userIds.add(t.userId);
     for (const t of openPoolTasks) if (t.claimedByUserId) userIds.add(t.claimedByUserId);
     for (const d of directives) if (d.receivedByUserId) userIds.add(d.receivedByUserId);
-    const users = await this.prisma.user.findMany({ where: { id: { in: [...userIds] } } });
+    const [users, hoursWorkedTodayByUser] = await Promise.all([
+      this.prisma.user.findMany({ where: { id: { in: [...userIds] } } }),
+      this.hoursWorkedTodayByUser(),
+    ]);
     const nameById = new Map(users.map((u) => [u.id, u.name]));
     const nameFor = (userId: string) => nameById.get(userId) ?? 'Unknown';
+    const hoursWorkedTodayFor = (userId: string) => hoursWorkedTodayByUser.get(userId) ?? 0;
 
     const entries: StaffActivityEntry[] = [
       ...floorTasks.map((t): StaffActivityEntry => {
@@ -402,6 +435,8 @@ export class ReportsService {
           durationMs: t.endedAt ? t.endedAt.getTime() - t.startedAt.getTime() - t.totalPausedMs : null,
           floorTaskCategory: t.category,
           scannedBarcode: t.category === 'dispatch' ? t.scannedBarcode : undefined,
+          floorTaskOutcome: isLive ? undefined : t.cancelledAt ? 'cancelled' : 'completed',
+          hoursWorkedToday: hoursWorkedTodayFor(t.userId),
         };
       }),
       ...receptionTasks.map(
@@ -414,6 +449,7 @@ export class ReportsService {
           endedAt: t.endedAt ? t.endedAt.toISOString() : null,
           durationMs: t.endedAt ? t.endedAt.getTime() - t.startedAt.getTime() - t.totalPausedMs : null,
           receptionOutcome: t.outcome,
+          hoursWorkedToday: hoursWorkedTodayFor(t.userId),
         }),
       ),
       ...openPoolTasks.map(
@@ -427,6 +463,7 @@ export class ReportsService {
           durationMs: t.completedAt && t.claimedAt ? t.completedAt.getTime() - t.claimedAt.getTime() : null,
           openPoolTitle: t.title,
           openPoolDescription: t.description,
+          hoursWorkedToday: hoursWorkedTodayFor(t.claimedByUserId!),
         }),
       ),
       ...directives.map(
@@ -440,6 +477,7 @@ export class ReportsService {
           durationMs: d.resolvedAt && d.receivedAt ? d.resolvedAt.getTime() - d.receivedAt.getTime() : null,
           directiveType: d.type,
           directiveMessage: d.message,
+          hoursWorkedToday: hoursWorkedTodayFor(d.receivedByUserId!),
         }),
       ),
     ];

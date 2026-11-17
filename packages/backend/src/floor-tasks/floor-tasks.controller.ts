@@ -36,6 +36,11 @@ export class FloorTasksController {
     return this.floorTasksService.resume(id, user);
   }
 
+  @Post(':id/cancel')
+  cancel(@Param('id') id: string, @CurrentUser() user: PublicUser) {
+    return this.floorTasksService.cancel(id, user);
+  }
+
   /**
    * Self-service pause with no task id needed — for callers (the global
    * Home-icon leaving-guard) that only know "I have *some* floor task
@@ -55,6 +60,11 @@ export class FloorTasksController {
   @Get('mine/open')
   findMineOpen(@CurrentUser() user: PublicUser) {
     return this.floorTasksService.findMineOpen(user.id);
+  }
+
+  @Get('mine/open-all')
+  findMineOpenAll(@CurrentUser() user: PublicUser) {
+    return this.floorTasksService.findMineOpenAll(user.id);
   }
 
   @Get('active')

@@ -20,6 +20,11 @@ export const en = {
     onShortBreak: 'On Short Break',
     onBreakSubtitle: 'Everything else is locked until you end your break.',
     endBreak: 'End Break',
+    endBreakAvailableIn: 'Available in {{minutes}}m',
+    breakTenMinutesLeftTitle: '10 minutes left',
+    breakTenMinutesLeftBody: "You've got 10 minutes left on your break.",
+    breakOverTitle: "Break's over",
+    breakOverBody: 'Time to head back to work.',
   },
 
   shiftBar: {
@@ -154,6 +159,12 @@ export const en = {
     stopConfirmTitle: 'Finish {{label}}',
     stopConfirmMessage: "Fill in the details below, then confirm — you won't be able to add more to it afterward.",
     confirmEnd: 'Confirm & End Task',
+    cancel: 'Cancel',
+    cancelConfirmTitle: 'Cancel {{label}}?',
+    cancelConfirmMessage: 'This removes the task — nothing is saved. Are you sure?',
+    unfinishedTasksHeader: 'Unfinished tasks',
+    pausedFor: 'Paused {{time}} ago',
+    tapToResume: 'Tap to resume',
     category: {
       pick: 'Pick',
       pack: 'Pack',
@@ -201,6 +212,15 @@ export const en = {
     trackingIdInvalid: 'Capital letters and numbers only, no spaces.',
     numbersOnly: 'Numbers only.',
     locationIdInvalid: 'Letters and numbers only, no spaces.',
+    quick: {
+      buttonLabel: 'Report an issue',
+      title: 'Report an issue',
+      contextLabel: 'Reporting an issue during: {{context}}',
+      placeholder: 'What went wrong?',
+      send: 'Send',
+      cancel: 'Cancel',
+      sent: 'Reported — thanks, an admin has been notified.',
+    },
     category: {
       non_traceable_return_parcel: 'Non-traceable Return Parcel',
       non_fulfillment_return_parcel: 'Non-fulfillment Return Parcel',
@@ -288,14 +308,16 @@ export const en = {
       short_break_used_up: 'Short break allowance for this shift has already been used up.',
       no_break_to_end: 'No break in progress to end.',
       active_task_running: 'Pause your current task before starting a break.',
+      lunch_break_too_short: 'Lunch break must be at least 30 minutes before it can be ended.',
     },
     floorTask: {
       box_prep_merged: '"Box Prep" has been merged into "Backup — Box" — use that one instead.',
-      already_open: 'Already have an open floor task — stop it before starting another.',
+      already_open: 'Already have a running floor task — pause or stop it before starting another.',
       not_yours: 'This floor task is not yours.',
       already_ended: 'This floor task has already ended.',
       already_paused: 'This floor task is already paused.',
       not_paused: 'This floor task is not paused.',
+      max_paused_reached: 'You already have 2 paused tasks — finish one before parking another.',
     },
     reception: {
       missing_required_fields: 'Please fill in all required fields for this category.',

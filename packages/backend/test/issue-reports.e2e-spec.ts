@@ -193,6 +193,22 @@ describe('Issue Reports (e2e)', () => {
     expect(created.body.photoUrls).toEqual([]);
   });
 
+  it('round-trips an optional contextLabel, and leaves it null when omitted', async () => {
+    const withContext = await request(app.getHttpServer())
+      .post('/issue-reports')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'other', comment: 'Forklift blocking aisle 2', contextLabel: 'Floor Task — Pick' })
+      .expect(201);
+    expect(withContext.body.contextLabel).toBe('Floor Task — Pick');
+
+    const withoutContext = await request(app.getHttpServer())
+      .post('/issue-reports')
+      .set('Authorization', `Bearer ${staff.token}`)
+      .send({ category: 'other', comment: 'Something else' })
+      .expect(201);
+    expect(withoutContext.body.contextLabel).toBeNull();
+  });
+
   it('rejects an Other report with no comment', () => {
     return request(app.getHttpServer())
       .post('/issue-reports')

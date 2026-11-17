@@ -21,6 +21,8 @@ export interface IssueReport {
   idNumber: string | null;
   locationId: string | null;
   comment: string | null;
+  /** What the staff member was doing when they raised this — only set by the floating quick-report shortcut, never by the full Issue Reporting menu flow. */
+  contextLabel: string | null;
   alertsAdmin: boolean;
   createdAt: string;
 }
@@ -34,6 +36,7 @@ export interface CreateIssueReportInput {
   idNumber?: string;
   locationId?: string;
   comment?: string;
+  contextLabel?: string;
 }
 
 export interface CategoryMeta {
