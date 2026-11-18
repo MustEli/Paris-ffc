@@ -1,6 +1,12 @@
 {
+  "title": "Se connecter",
+  "subtitle": "Accéder à l'application Elno Team",
   "email": "E-mail",
   "password": "Mot de passe",
+  "showPassword": "Afficher le mot de passe",
+  "hidePassword": "Masquer le mot de passe",
   "signingIn": "Connexion en cours…",
-  "signIn": "Se connecter"
+  "signIn": "Connexion",
+  "needHelp": "Besoin d'aide ?",
+  "contactAdmin": "Contactez l'administrateur"
 }

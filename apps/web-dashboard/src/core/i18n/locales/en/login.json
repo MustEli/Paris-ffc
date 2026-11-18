@@ -1,6 +1,12 @@
 {
+  "title": "Sign in",
+  "subtitle": "Access the ELNO TEAM application",
   "email": "Email",
   "password": "Password",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
   "signingIn": "Signing in…",
-  "signIn": "Sign in"
+  "signIn": "Sign in",
+  "needHelp": "Need help?",
+  "contactAdmin": "Contact the administrator"
 }

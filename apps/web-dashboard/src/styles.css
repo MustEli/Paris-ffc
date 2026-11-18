@@ -690,12 +690,15 @@ textarea:focus {
   overflow: hidden;
 }
 
-/* The warehouse photo, blurred — `background-size: cover` recenters/recrops
-   per viewport, so the login card drawn on top can never reliably land in
-   the exact same spot as the photo's own baked-in content at every screen
-   size. A dark, soft-focus backdrop avoids ever needing that alignment:
-   it reads as ambience behind the real card, not a second, misaligned
-   card. Scaled up (inset: -40px) so the blur's own edge softening never
+/* The warehouse photo — `background-size: cover` recenters/recrops per
+   viewport, so the login card drawn on top can never reliably land in
+   the exact same spot as the photo's own baked-in content at every
+   screen size. A soft-focus backdrop avoids ever needing that
+   alignment: it reads as ambience behind the real card, not a second,
+   misaligned card. Just enough blur to make that baked-in content
+   unreadable as text/shapes (not a flat dark wash — the brief was to
+   keep the photo clearly visible, closer to the reference mock).
+   Scaled up (inset: -40px) so the blur's own edge softening never
    reveals an unblurred strip at the viewport edge. A separate element
    from .login-page's own background specifically so the blur filter
    can't also soften the (unrelated) card drawn on top of it. */
@@ -704,17 +707,86 @@ textarea:focus {
   position: absolute;
   inset: -40px;
   background: url('./assets/login-background.jpg') center / cover no-repeat;
-  filter: blur(18px) brightness(0.4);
+  filter: blur(16px) brightness(0.5) saturate(0.25);
 }
 
 .login-card {
   position: relative;
   z-index: 1;
-  width: 400px;
+  width: 420px;
   background: var(--surface-header);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+}
+
+.login-lang-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: var(--weight-strong);
+  cursor: pointer;
+}
+
+.login-lang-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.login-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-strong);
+  color: #fff;
+  margin: 0 0 4px;
+}
+
+.login-subtitle {
+  font-size: var(--text-sm);
+  color: #9aa7b8;
+  margin: 0 0 var(--space-6);
+}
+
+.login-password-field {
+  position: relative;
+}
+
+.login-password-field input {
+  padding-right: 40px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9aa7b8;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.login-password-toggle:hover {
+  color: #fff;
+}
+
+.login-help {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: #9aa7b8;
+  margin: var(--space-5) 0 0;
+}
+
+.login-help-link {
+  color: #e2e8f0;
+  text-decoration: underline;
 }
 
 /* The French micro-accent — login card top edge only, per UI-Docs. */
@@ -764,16 +836,33 @@ textarea:focus {
   color: #e2e8f0;
 }
 
+/* The password field's `type` toggles to "text" when shown (see
+   .login-password-toggle) — a plain `[type='password']` selector would
+   stop matching at that point and the field would fall back to the
+   browser-default white input, so this keys off the input's actual
+   position in the form instead of its (changeable) type. */
 .login-card input[type='email'],
-.login-card input[type='password'] {
+.login-card .login-password-field input {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
 
 .login-card input[type='email']::placeholder,
-.login-card input[type='password']::placeholder {
+.login-card .login-password-field input::placeholder {
   color: #94a3b8;
+}
+
+/* Chrome (and Safari) force a white background + black text on an
+   autofilled field via this pseudo-class, ignoring normal CSS —
+   without this override, the dark theme visibly breaks the instant a
+   real browser's saved password autofills the form. */
+.login-card input:-webkit-autofill,
+.login-card input:-webkit-autofill:hover,
+.login-card input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.06) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .login-card .btn {
