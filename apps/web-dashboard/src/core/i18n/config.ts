@@ -11,6 +11,7 @@ import sellerStockEn from './locales/en/sellerStock.json';
 import schedulesEn from './locales/en/schedules.json';
 import referenceListsEn from './locales/en/referenceLists.json';
 import chartsEn from './locales/en/charts.json';
+import issueReportsEn from './locales/en/issueReports.json';
 
 import commonFr from './locales/fr/common.json';
 import loginFr from './locales/fr/login.json';
@@ -22,6 +23,7 @@ import sellerStockFr from './locales/fr/sellerStock.json';
 import schedulesFr from './locales/fr/schedules.json';
 import referenceListsFr from './locales/fr/referenceLists.json';
 import chartsFr from './locales/fr/charts.json';
+import issueReportsFr from './locales/fr/issueReports.json';
 
 export const LANGUAGE_STORAGE_KEY = 'warehouse-hq-language';
 
@@ -49,6 +51,7 @@ void i18next.use(initReactI18next).init({
     'schedules',
     'referenceLists',
     'charts',
+    'issueReports',
   ],
   resources: {
     en: {
@@ -62,6 +65,7 @@ void i18next.use(initReactI18next).init({
       schedules: schedulesEn,
       referenceLists: referenceListsEn,
       charts: chartsEn,
+      issueReports: issueReportsEn,
     },
     fr: {
       common: commonFr,
@@ -74,6 +78,7 @@ void i18next.use(initReactI18next).init({
       schedules: schedulesFr,
       referenceLists: referenceListsFr,
       charts: chartsFr,
+      issueReports: issueReportsFr,
     },
   },
   interpolation: { escapeValue: false },

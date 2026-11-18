@@ -2,10 +2,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, History, Megaphone, Radio, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../core/api/client';
-import { createDirective, DIRECTIVE_TYPES, fetchAllDirectives } from '../core/api/directives';
+import { createDirective, DIRECTIVE_TYPES, type DirectiveType, fetchAllDirectives } from '../core/api/directives';
 import { createOpenPoolTask, fetchAllOpenPoolTasks } from '../core/api/openPool';
 import {
   fetchTaskBoard,
@@ -25,6 +25,22 @@ function PhotoThumbnailLink({ url }: { url: string }) {
       <img src={resolvePhotoUrl(url)} alt="" style={{ width: 40, height: 40, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
     </a>
   );
+}
+
+/** How IssueReportsPage's "Create task" action pre-fills this page's Directive form — see its taskPicker flow. */
+export interface DirectivePrefill {
+  type: DirectiveType;
+  message: string;
+  creationPhotoUrl?: string;
+  creationComment?: string;
+}
+
+/** Same idea as DirectivePrefill, for the Open Pool form. */
+export interface OpenPoolPrefill {
+  title: string;
+  description?: string;
+  creationPhotoUrl?: string;
+  creationComment?: string;
 }
 
 const SELECT_STYLE: React.CSSProperties = {
@@ -59,6 +75,24 @@ export function TaskBoardPage() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
 
+  // IssueReportsPage's "Create task" action lands here with a pre-fill
+  // for one of the two forms below, passed via navigation state rather
+  // than a query param since it carries free text/photo URLs, not just
+  // an id. Cleared from history right after reading it once, so
+  // reloading or navigating back here later doesn't re-apply it.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = location.state as { prefillDirective?: DirectivePrefill; prefillOpenPool?: OpenPoolPrefill } | null;
+  const prefillDirective = state?.prefillDirective;
+  const prefillOpenPool = state?.prefillOpenPool;
+  useEffect(() => {
+    if (prefillDirective || prefillOpenPool) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // Only ever meant to run once, right after landing with a pre-fill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onShiftStaff = data?.onShiftStaff ?? [];
 
   return (
@@ -75,9 +109,9 @@ export function TaskBoardPage() {
         </div>
       </div>
 
-      <DirectivesSection onShiftStaff={onShiftStaff} highlightId={highlightId} />
+      <DirectivesSection onShiftStaff={onShiftStaff} highlightId={highlightId} prefill={prefillDirective} />
 
-      <OpenPoolSection highlightId={highlightId} />
+      <OpenPoolSection highlightId={highlightId} prefill={prefillOpenPool} />
     </div>
   );
 }
@@ -99,9 +133,11 @@ const STATUS_PILL_CLASS: Record<string, string> = {
 function DirectivesSection({
   onShiftStaff,
   highlightId,
+  prefill,
 }: {
   onShiftStaff: OnShiftStaffMember[];
   highlightId: string | null;
+  prefill?: DirectivePrefill;
 }) {
   const { t } = useTranslation('taskBoard');
   const { token } = useAuth();
@@ -129,6 +165,24 @@ function DirectivesSection({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const staffName = useStaffNames();
 
+  // Arrived here from IssueReportsPage's "Create task" action — fill
+  // the form in and draw the eye to it, but still require the admin to
+  // review/edit and press Send themselves (nothing auto-submits).
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [justPrefilled, setJustPrefilled] = useState(false);
+  useEffect(() => {
+    if (!prefill) return;
+    setType(prefill.type);
+    setMessage(prefill.message);
+    setCreationPhotoUrl(prefill.creationPhotoUrl ?? null);
+    setCreationComment(prefill.creationComment ?? '');
+    setJustPrefilled(true);
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = setTimeout(() => setJustPrefilled(false), 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+
   async function handlePush() {
     if (!message.trim()) return;
     setIsSubmitting(true);
@@ -153,7 +207,7 @@ function DirectivesSection({
   }
 
   return (
-    <div className="card" style={{ marginTop: 'var(--space-6)' }}>
+    <div ref={sectionRef} className={`card${justPrefilled ? ' highlight-row' : ''}`} style={{ marginTop: 'var(--space-6)' }}>
       <div className="flex-row" style={{ marginBottom: 4 }}>
         <span className="icon-badge icon-badge-sm icon-badge-red">
           <Megaphone />
@@ -278,7 +332,7 @@ function DirectivesSection({
  * board above, since it's not "assign this pending item to that
  * person" — it's "publish this for whoever gets there first."
  */
-function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
+function OpenPoolSection({ highlightId, prefill }: { highlightId: string | null; prefill?: OpenPoolPrefill }) {
   const { t } = useTranslation('taskBoard');
   const { token } = useAuth();
   const queryClient = useQueryClient();
@@ -312,6 +366,22 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const staffName = useStaffNames();
 
+  // See DirectivesSection's matching effect — same IssueReportsPage origin.
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [justPrefilled, setJustPrefilled] = useState(false);
+  useEffect(() => {
+    if (!prefill) return;
+    setTitle(prefill.title);
+    setDescription(prefill.description ?? '');
+    setCreationPhotoUrl(prefill.creationPhotoUrl ?? null);
+    setCreationComment(prefill.creationComment ?? '');
+    setJustPrefilled(true);
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = setTimeout(() => setJustPrefilled(false), 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+
   async function handlePublish() {
     if (!title.trim()) return;
     setIsSubmitting(true);
@@ -340,7 +410,7 @@ function OpenPoolSection({ highlightId }: { highlightId: string | null }) {
   }
 
   return (
-    <div className="card" style={{ marginTop: 'var(--space-6)' }}>
+    <div ref={sectionRef} className={`card${justPrefilled ? ' highlight-row' : ''}`} style={{ marginTop: 'var(--space-6)' }}>
       <div className="flex-row" style={{ marginBottom: 4 }}>
         <span className="icon-badge icon-badge-sm icon-badge-blue">
           <Radio />

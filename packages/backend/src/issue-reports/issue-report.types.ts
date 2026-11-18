@@ -80,11 +80,17 @@ export interface IssueReport {
   comment: string | null;
   /** What the staff member was doing when they raised this (e.g. "Floor Task — Pick") — only set by the in-task quick-report shortcut, never by the full Issue Reporting menu flow. */
   contextLabel: string | null;
+  /** "<task type>:<id>" for the specific task instance (e.g. "floor_task:abc123") — same quick-report-only scope as contextLabel, but precise to one task rather than a whole task type. Powers each task screen's "issues you already raised for this one" list. */
+  taskRef: string | null;
   alertsAdmin: boolean;
   createdAt: string;
+  /** Admin's "confirm seen it" review step — both null until acknowledged. */
+  seenAt: string | null;
+  seenByUserId: string | null;
 }
 
-/** Admin's review list — who reported what, when. */
+/** Admin's review list — who reported what, when, and (once reviewed) who saw it. */
 export interface IssueReportWithReporter extends IssueReport {
   userName: string;
+  seenByName: string | null;
 }

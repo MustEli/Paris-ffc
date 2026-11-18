@@ -20,36 +20,53 @@
   "staffTable": {
     "heading": "Personnel",
     "name": "Nom",
-    "status": "Statut",
-    "shiftsToday": "Quarts aujourd'hui",
-    "hoursWorkedToday": "Heures travaillées aujourd'hui",
-    "putAwayDone": "Rangements effectués",
-    "orderPrepDone": "Préparations effectuées",
+    "loading": "Chargement…",
     "noStaffAccounts": "Aucun compte employé pour le moment.",
-    "onShift": "En service",
-    "onShiftSince": "En service depuis {{time}}",
-    "offShift": "Hors service",
-    "onBreak": "En pause",
-    "shortBreakRemaining": "Pause courte — {{time}} restantes",
-    "lunchBreakRemaining": "Pause déjeuner — {{time}} restantes",
-    "lunchBreakOver": "Pause déjeuner — {{time}} de dépassement"
+    "noPlannedShift": "Aucun quart prévu"
   },
   "staffHistory": {
     "heading": "Historique du personnel",
     "download": "Télécharger",
+    "downloading": "Téléchargement…",
     "loading": "Chargement…",
     "noShiftsYet": "Aucun quart terminé pour le moment.",
     "noStaffAccounts": "Aucun compte employé pour le moment.",
     "staffColumn": "Employé",
+    "dateColumn": "Date",
     "cumulative": "Cumul",
-    "todaySuffix": "{{day}} (Aujourd'hui)",
-    "columns": {
-      "planned": "Prévu",
-      "floorTask": "Tâche terrain",
-      "reception": "Réception",
-      "openPool": "Bassin commun",
-      "urgentTask": "Tâche urgente",
-      "actual": "Réel"
+    "todaySuffix": "{{day}} (Aujourd'hui)"
+  },
+  "activityColumns": {
+    "planned": "Prévu",
+    "online": "En ligne",
+    "claimed": "Revendiqué",
+    "reception": "Réception",
+    "floorTask": "Tâche terrain",
+    "openPool": "Bassin commun",
+    "break": "Pause",
+    "idle": "Inactif"
+  },
+  "openPoolKinds": {
+    "directive": "Directive",
+    "general": "Général"
+  },
+  "breakKinds": {
+    "lunch": "Déjeuner",
+    "short": "Courte"
+  },
+  "idleKinds": {
+    "unclaimed": "Non revendiqué",
+    "offShift": "Hors quart"
+  },
+  "filters": {
+    "staff": {
+      "trigger": "Filtrer le personnel",
+      "all": "Tout le personnel",
+      "search": "Rechercher un employé…"
+    },
+    "categories": {
+      "trigger": "Filtrer les catégories",
+      "all": "Toutes les catégories"
     }
   },
   "staffActivity": {
@@ -58,8 +75,7 @@
     "recent": "Récent",
     "loading": "Chargement…",
     "staffColumn": "Employé",
-    "hoursWorkedToday": "Heures travaillées aujourd'hui",
-    "type": "Type",
+    "currentActivity": "Activité actuelle",
     "detail": "Détail",
     "started": "Début",
     "duration": "Durée",
@@ -71,11 +87,16 @@
     "notYetScanned": "— pas encore scanné",
     "receptionNoDelivery": "Réception — aucune livraison confirmée",
     "reception": "Réception",
+    "breakRemaining": "{{mins}} min restantes",
+    "breakOver": "{{mins}} min de dépassement",
     "types": {
       "floorTask": "Tâche terrain",
       "reception": "Réception",
       "openPool": "Bassin commun",
-      "directive": "Tâche urgente"
+      "directive": "Tâche urgente",
+      "lunchBreak": "Pause déjeuner",
+      "shortBreak": "Pause courte",
+      "idle": "Inactif"
     }
   }
 }

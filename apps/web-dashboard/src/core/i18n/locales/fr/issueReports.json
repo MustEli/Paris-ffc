@@ -1,0 +1,57 @@
+{
+  "pageTitle": "Signalements d'incidents",
+  "pageSubtitle": "Incidents bloquants signalés par les employés — à examiner, confirmer comme vus, ou transformer en tâche.",
+  "loading": "Chargement des signalements…",
+  "empty": "Aucun signalement ne correspond à ces filtres.",
+  "filters": {
+    "allCategories": "Toutes les catégories",
+    "unseenOnly": "Non vus uniquement"
+  },
+  "table": {
+    "category": "Catégorie",
+    "reportedBy": "Signalé par",
+    "when": "Quand",
+    "details": "Détails",
+    "photos": "Photos",
+    "status": "Statut",
+    "actions": "Actions"
+  },
+  "status": {
+    "unseen": "Non vu",
+    "seenBy": "Vu par {{name}}"
+  },
+  "fields": {
+    "trackingId": "N° de suivi",
+    "orderNumber": "N° de commande",
+    "errorNo": "N° d'erreur",
+    "idNumber": "N° d'ID",
+    "locationId": "Emplacement",
+    "context": "Signalé pendant"
+  },
+  "actions": {
+    "markSeen": "Marquer comme vu",
+    "createTask": "Créer une tâche",
+    "delete": "Supprimer"
+  },
+  "confirm": {
+    "delete": "Supprimer ce signalement ? Cette action est irréversible."
+  },
+  "errors": {
+    "markSeenFailed": "Impossible de marquer ce signalement comme vu.",
+    "deleteFailed": "Impossible de supprimer ce signalement."
+  },
+  "gallery": {
+    "title": "Photos",
+    "close": "Fermer",
+    "noPhotos": "Aucune photo jointe."
+  },
+  "taskPicker": {
+    "title": "Créer une tâche à partir de ce signalement",
+    "subtitle": "Choisissez où l'envoyer — le formulaire s'ouvrira pré-rempli, modifiable avant l'envoi.",
+    "directive": "Envoyer comme directive",
+    "directiveHint": "Une alerte urgente en temps réel à un employé ou à quiconque disponible.",
+    "openPool": "Publier comme tâche du pool ouvert",
+    "openPoolHint": "N'importe quel employé actif peut la réclamer — aucun destinataire spécifique requis.",
+    "cancel": "Annuler"
+  }
+}

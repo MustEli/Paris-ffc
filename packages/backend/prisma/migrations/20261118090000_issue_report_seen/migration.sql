@@ -1,0 +1,2 @@
+ALTER TABLE "IssueReport" ADD COLUMN "seenAt" TIMESTAMP(3);
+ALTER TABLE "IssueReport" ADD COLUMN "seenByUserId" TEXT;

@@ -11,7 +11,7 @@ import { translateError } from '../../../core/i18n/errorCodes';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
 import { useOrderPrepTasks } from '../../orderPrep/hooks/useOrderPrep';
-import { useMyOpenFloorTasks } from '../hooks/useFloorTasks';
+import { useMyOpenFloorTasks, useResumeFloorTask } from '../hooks/useFloorTasks';
 import { CATEGORY_META, type FloorTaskCategory, type FloorTaskLog } from '../types';
 import { FloorTaskDetailScreen } from './FloorTaskDetailScreen';
 
@@ -42,10 +42,21 @@ function formatAgo(iso: string): string {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
-/** A compact row for one parked (paused) floor task — tap to jump straight back to resuming it. */
-function ParkedTaskRow({ task, onPress }: { task: FloorTaskLog; onPress: () => void }) {
+/**
+ * A compact row for one parked (paused) floor task — tapping it resumes
+ * the task and opens its detail page in the same action, so staff never
+ * land on a still-paused screen they then have to press Resume on.
+ */
+function ParkedTaskRow({
+  task,
+  navigation,
+}: {
+  task: FloorTaskLog;
+  navigation: NativeStackNavigationProp<StaffStackParamList, 'FloorTasks'>;
+}) {
   const { t } = useTranslation();
   const meta = CATEGORY_META.find((m) => m.category === task.category);
+  const resume = useResumeFloorTask(task.id);
   // Re-renders every minute so "X ago" doesn't go stale while this screen stays open.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -53,14 +64,17 @@ function ParkedTaskRow({ task, onPress }: { task: FloorTaskLog; onPress: () => v
     return () => clearInterval(interval);
   }, []);
 
+  function handlePress() {
+    resume.mutate();
+    navigation.navigate('FloorTaskDetail', { category: task.category });
+  }
+
   return (
-    <Pressable style={styles.parkedRow} onPress={onPress}>
+    <Pressable style={styles.parkedRow} onPress={handlePress}>
       <Ionicons name="pause-circle" size={22} color={colors.brandOrange} />
       <View style={styles.parkedRowText}>
         <Text style={styles.parkedRowLabel}>{meta ? t(meta.label) : task.category}</Text>
-        <Text style={styles.parkedRowMeta}>
-          {t('floorTasks.pausedFor', { time: formatAgo(task.pausedAt!) })} · {t('floorTasks.tapToResume')}
-        </Text>
+        <Text style={styles.parkedRowMeta}>{t('floorTasks.pausedFor', { time: formatAgo(task.pausedAt!) })}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Pressable>
@@ -132,11 +146,7 @@ export function FloorTasksScreen({ navigation }: Props) {
         <View style={styles.parkedSection}>
           <Text style={styles.parkedSectionHeader}>{t('floorTasks.unfinishedTasksHeader')}</Text>
           {pausedTasks.map((task) => (
-            <ParkedTaskRow
-              key={task.id}
-              task={task}
-              onPress={() => navigation.navigate('FloorTaskDetail', { category: task.category })}
-            />
+            <ParkedTaskRow key={task.id} task={task} navigation={navigation} />
           ))}
         </View>
       )}

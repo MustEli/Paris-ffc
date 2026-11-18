@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useAuth } from './core/auth/AuthContext';
 import { DashboardPage } from './pages/DashboardPage';
+import { IssueReportsPage } from './pages/IssueReportsPage';
 import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { ReceptionIntakePage } from './pages/ReceptionIntakePage';
@@ -52,16 +53,7 @@ export function App() {
             />
           }
         />
-        <Route
-          path="/issue-queue"
-          element={
-            <PlaceholderPage
-              variant="issueQueue"
-              title={t('nav.issueQueue')}
-              description={t('placeholder.issueQueueDescription')}
-            />
-          }
-        />
+        <Route path="/issue-queue" element={<IssueReportsPage />} />
         <Route path="/reference-lists" element={<ReferenceListsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

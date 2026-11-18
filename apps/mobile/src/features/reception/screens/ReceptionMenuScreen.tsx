@@ -11,6 +11,7 @@ import { useActiveReceptionTaskStore } from '../../../core/navigation/activeRece
 import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskContextStore';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
+import { RaisedIssuesList } from '../../issueReports/components/RaisedIssuesList';
 import {
   useLeaveUnfinishedReceptionTask,
   useMyActiveReceptionTask,
@@ -68,9 +69,9 @@ export function ReceptionMenuScreen({ navigation }: Props) {
   const setContextLabel = useActiveTaskContextStore((state) => state.setLabel);
   useFocusEffect(
     useCallback(() => {
-      if (isRunning) setContextLabel('Reception');
+      if (isRunning) setContextLabel('Reception', `reception:${activeTask?.id ?? ''}`);
       return () => setContextLabel(null);
-    }, [isRunning, setContextLabel]),
+    }, [isRunning, activeTask?.id, setContextLabel]),
   );
 
   return (
@@ -100,6 +101,8 @@ export function ReceptionMenuScreen({ navigation }: Props) {
         icon={<Ionicons name="construct-outline" size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'equipment_other' })}
       />
+
+      <RaisedIssuesList taskRef={isRunning ? `reception:${activeTask?.id ?? ''}` : null} />
     </ScrollView>
   );
 }

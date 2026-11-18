@@ -50,4 +50,9 @@ export class CreateIssueReportDto {
   @IsOptional()
   @IsString()
   contextLabel?: string;
+
+  /** Stable "<task type>:<id>" identifier for the specific task instance this was raised from (e.g. "floor_task:abc123") — lets the raising screen list back its own prior reports for this exact task, not just this task type. Only ever set by the QuickIssueButton shortcut, same as contextLabel. */
+  @IsOptional()
+  @IsString()
+  taskRef?: string;
 }

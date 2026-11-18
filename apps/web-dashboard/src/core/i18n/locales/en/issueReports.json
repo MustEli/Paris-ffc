@@ -1,0 +1,57 @@
+{
+  "pageTitle": "Issue Reports",
+  "pageSubtitle": "Floor-blocker reports raised by staff — review, confirm seen, or turn one into a task.",
+  "loading": "Loading issue reports…",
+  "empty": "No issue reports match these filters.",
+  "filters": {
+    "allCategories": "All categories",
+    "unseenOnly": "Unseen only"
+  },
+  "table": {
+    "category": "Category",
+    "reportedBy": "Reported by",
+    "when": "When",
+    "details": "Details",
+    "photos": "Photos",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "status": {
+    "unseen": "Unseen",
+    "seenBy": "Seen by {{name}}"
+  },
+  "fields": {
+    "trackingId": "Tracking ID",
+    "orderNumber": "Order #",
+    "errorNo": "Error #",
+    "idNumber": "ID #",
+    "locationId": "Location",
+    "context": "Reported while"
+  },
+  "actions": {
+    "markSeen": "Mark seen",
+    "createTask": "Create task",
+    "delete": "Delete"
+  },
+  "confirm": {
+    "delete": "Delete this issue report? This can't be undone."
+  },
+  "errors": {
+    "markSeenFailed": "Could not mark this report as seen.",
+    "deleteFailed": "Could not delete this report."
+  },
+  "gallery": {
+    "title": "Photos",
+    "close": "Close",
+    "noPhotos": "No photos attached."
+  },
+  "taskPicker": {
+    "title": "Create a task from this report",
+    "subtitle": "Choose where to send this — the form opens pre-filled, and you can edit it before sending.",
+    "directive": "Push as a Directive",
+    "directiveHint": "An urgent, real-time nudge to one staff member or anyone available.",
+    "openPool": "Publish as an Open Pool task",
+    "openPoolHint": "Anyone active can claim it — no specific assignee needed.",
+    "cancel": "Cancel"
+  }
+}

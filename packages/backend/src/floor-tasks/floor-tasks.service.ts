@@ -121,9 +121,10 @@ export class FloorTasksService {
    * Dispatch. Under FLOOR_TASK_CANCEL_NO_TRACE_WINDOW_MS since start,
    * the row is deleted outright (no trace anywhere); at or past it, the
    * row is kept and marked cancelledAt instead — still excluded from
-   * worked-hours totals (see ReportsService.staffHistory), but visible
-   * to Admin in Staff Activity's 'recent' scope so abandoned work isn't
-   * silently invisible once real time has gone into it.
+   * worked-hours totals (see ReportsService.computeActivityBreakdowns),
+   * but visible to Admin in Staff Activity's 'recent' scope so
+   * abandoned work isn't silently invisible once real time has gone
+   * into it.
    */
   async cancel(id: string, user: PublicUser): Promise<{ deleted: boolean }> {
     const task = await this.findOneRow(id);

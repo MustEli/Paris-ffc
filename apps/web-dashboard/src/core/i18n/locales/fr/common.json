@@ -7,13 +7,12 @@
     "receptionReports": "Rapports de réception",
     "orderPrep": "Préparation de commandes (Pick & Pack)",
     "returnProcessing": "Traitement des retours",
-    "issueQueue": "Exceptions & file des incidents",
+    "issueQueue": "File des incidents",
     "referenceLists": "Gestion des utilisateurs & des accès"
   },
   "placeholder": {
     "orderPrepDescription": "Calculateur de main-d'œuvre et échelonnement.",
     "returnProcessingDescription": "Flux de traitement des retours.",
-    "issueQueueDescription": "Stock endommagé, alertes de surpoids, incidents, demandes et questions.",
     "comingSoon": "Cette section arrive bientôt — revenez après la prochaine mise à jour."
   },
   "logOut": "Déconnexion",
@@ -89,5 +88,16 @@
     "parcelsPackaging": "{{count}} colis — {{packagingType}}",
     "pallets": "{{count}} palette(s)",
     "parcelsItem": "{{count}} colis — {{item}}"
+  },
+  "issueReportCategories": {
+    "non_traceable_return_parcel": "Colis de retour introuvable",
+    "non_fulfillment_return_parcel": "Colis de retour non traité",
+    "no_return_request_generated": "Aucune demande de retour générée",
+    "shipment_label_not_generatable": "Étiquette d'expédition non générable",
+    "item_found_out_of_location": "Article trouvé hors emplacement",
+    "empty_crate": "Caisse vide",
+    "part_broken_in_location": "Pièce cassée à l'emplacement",
+    "heavy_crate": "Caisse lourde",
+    "other": "Autre"
   }
 }

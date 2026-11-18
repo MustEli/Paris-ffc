@@ -37,37 +37,7 @@ export interface AttendanceReport {
   rows: AttendanceReportRow[];
 }
 
-export interface StaffHistoryDay {
-  /** 0 on a day outside the staff member's configured working days (or if they have no schedule at all). */
-  plannedHours: number;
-  /** Net of lunch break. Only from completed (clocked-out) shifts that started on this day — unchanged meaning. NOT guaranteed to equal the sum of the 4 category hours below: those only cover time spent in a tracked task, so unattributed/idle shift time means the sum can be less than this. */
-  actualHours: number;
-  /** FloorTaskLog worked time (endedAt set only), bucketed by startedAt's day. */
-  floorTaskHours: number;
-  /** ReceptionTask worked time (endedAt set only, completed or unfinished), bucketed by startedAt's day. */
-  receptionHours: number;
-  /** OpenPoolTask claimed→completed time, bucketed by claimedAt's day. */
-  openPoolHours: number;
-  /** "Urgent Task" in the UI — Directive received→resolved time, bucketed by receivedAt's day. */
-  urgentTaskHours: number;
-}
-
-/** Sums of every StaffHistoryDay field across the full day range — so the web dashboard doesn't have to add up every column itself. */
-export type StaffHistoryCumulative = StaffHistoryDay;
-
-export interface StaffHistoryRow {
-  userId: string;
-  userName: string;
-  /** Keyed by "YYYY-MM-DD" (UTC) — every key in StaffHistoryReport.days is present here, 0s for days with nothing recorded. */
-  days: Record<string, StaffHistoryDay>;
-  cumulative: StaffHistoryCumulative;
-}
-
-export interface StaffHistoryReport {
-  /** "YYYY-MM-DD" (UTC), ascending, from the app's first-ever completed shift to today. Empty if no shift has ever completed. */
-  days: string[];
-  staff: StaffHistoryRow[];
-}
+/** Table 3's day-by-day/Cumulative breakdown shape lives further below as StaffActivityBreakdown — replaced the old plannedHours/actualHours/floorTaskHours/... shape per the Nov 2026 table redesign. */
 
 export type ReportGranularity = 'day' | 'week' | 'month' | 'quarter';
 
@@ -152,7 +122,14 @@ export interface OrderPrepReport {
 }
 
 export type StaffActivityScope = 'live' | 'recent';
-export type StaffActivityType = 'floor_task' | 'reception' | 'open_pool' | 'directive';
+export type StaffActivityType =
+  | 'floor_task'
+  | 'reception'
+  | 'open_pool'
+  | 'directive'
+  | 'lunch_break'
+  | 'short_break'
+  | 'idle';
 
 /**
  * Powers the web dashboard's "Staff Activity" section — a merge of the
@@ -161,15 +138,20 @@ export type StaffActivityType = 'floor_task' | 'reception' | 'open_pool' | 'dire
  * acknowledged Directive), since none of them alone told the full
  * story of "what is everyone doing right now" (that used to be just
  * Floor Tasks). `scope: 'live'` is the 4 sources' in-progress rows
- * (oldest-started first); `scope: 'recent'` is their most recently
- * *finished* rows instead (newest-first, capped — see
- * ReportsService.staffActivity's RECENT_LIMIT), which is also the only
- * place a completed 'dispatch' Floor Task's scannedBarcode becomes
- * visible to Admin (it disappears from 'live' the instant it ends).
- * Only one of the type-specific fields below is ever populated, per
- * `type` — same "raw, typed, category-specific fields" convention as
- * ActiveFloorTask/ReceptionCategoryStats rather than a computed label
- * string, so the frontend decides how to display each type.
+ * (oldest-started first) PLUS one row for every other on-shift staff
+ * member not already covered by one of those 4 — 'lunch_break' /
+ * 'short_break' if they're on a break, 'idle' otherwise (on shift, no
+ * task, no break). `scope: 'recent'` is the original 4 sources' most
+ * recently *finished* rows instead (newest-first, capped — see
+ * ReportsService.staffActivity's RECENT_LIMIT); breaks/idle periods
+ * aren't tracked historically, so they never appear under 'recent'.
+ * This is also the only place a completed 'dispatch' Floor Task's
+ * scannedBarcode becomes visible to Admin (it disappears from 'live'
+ * the instant it ends). Only one of the type-specific fields below is
+ * ever populated, per `type` — same "raw, typed, category-specific
+ * fields" convention as ActiveFloorTask/ReceptionCategoryStats rather
+ * than a computed label string, so the frontend decides how to display
+ * each type.
  */
 export interface StaffActivityEntry {
   type: StaffActivityType;
@@ -195,6 +177,8 @@ export interface StaffActivityEntry {
   /** type === 'directive' only. */
   directiveType?: string;
   directiveMessage?: string;
+  /** type === 'lunch_break' | 'short_break' only — same meaning as StaffStatus.lunchBreakRemainingMs/shortBreakRemainingMs (lunch has no real cap, can go negative). */
+  breakRemainingMs?: number | null;
   /** This person's total clocked shift time today (net of lunch break) — same figure as StaffStatus.hoursWorkedToday, repeated on every one of their rows so admin can compare a specific activity's duration against their overall day without cross-referencing the Staff table. */
   hoursWorkedToday: number;
 }
@@ -255,4 +239,82 @@ export interface AdminDashboardReport {
   };
   /** Sorted on-shift-first, then alphabetically. */
   staff: StaffStatus[];
+}
+
+export type BreakKind = 'lunch' | 'short';
+export type IdleKind = 'unclaimed' | 'off_shift';
+export type OpenPoolBucketKind = 'directive' | 'general';
+
+/**
+ * One staff member's time breakdown for a single day (or a Cumulative
+ * total across days) — shared shape for the web dashboard's "Staff"
+ * table (table 2, today only) and "Staff History" table (table 3, one
+ * of these per day plus a Cumulative), per the Nov 2026 table redesign.
+ * Every *Ms field already has pause time subtracted out. The relationship
+ * between fields:
+ *   onlineMs  = claimedMs + idleMs.unclaimed
+ *   claimedMs = sum(receptionMs) + sum(floorTaskMs) + sum(openPoolMs) + sum(breakMs)
+ * idleMs.off_shift is NOT part of onlineMs (it's the gap between ending
+ * a shift and starting a new one the same day, so by definition not
+ * "online") — it's kept on this shape anyway since the UI's "Idle"
+ * column shows both idle sub-kinds together. openPoolMs.directive is
+ * Directive received->resolved time (shown inside the "Open-Pool"
+ * column per the admin's own categorization — not a separate column).
+ */
+export interface StaffActivityBreakdown {
+  /**
+   * ms between now and today's planned shift-start time (that staff's
+   * StaffSchedule.shiftStartTime for this day's weekday) — clamped to 0
+   * if that time hasn't arrived yet. Null (not 0) when there's no
+   * planned start to measure against at all — no StaffSchedule row, or
+   * this weekday isn't in their workingDays — which the UI shows as an
+   * alert instead of a duration.
+   */
+  plannedMs: number | null;
+  onlineMs: number;
+  claimedMs: number;
+  receptionMs: Record<ReceptionCategory, number>;
+  floorTaskMs: Record<FloorTaskCategory, number>;
+  openPoolMs: Record<OpenPoolBucketKind, number>;
+  breakMs: Record<BreakKind, number>;
+  idleMs: Record<IdleKind, number>;
+}
+
+export interface StaffActivityBreakdownRow {
+  userId: string;
+  userName: string;
+  breakdown: StaffActivityBreakdown;
+}
+
+/** Backs the web dashboard's "Staff" table (table 2) — today only. */
+export interface StaffSummaryReport {
+  staff: StaffActivityBreakdownRow[];
+}
+
+export interface StaffHistoryV2Row {
+  userId: string;
+  userName: string;
+  /** Keyed by "YYYY-MM-DD" (UTC) — every key in StaffHistoryV2Report.days is present here, zeroed out for days with nothing recorded. */
+  days: Record<string, StaffActivityBreakdown>;
+  cumulative: StaffActivityBreakdown;
+}
+
+/** Backs the web dashboard's "Staff History" table (table 3) — the on-screen, day-grouped pivot view. */
+export interface StaffHistoryV2Report {
+  /** "YYYY-MM-DD" (UTC), ascending, from the app's first-ever completed shift to today. Empty if no shift has ever completed. */
+  days: string[];
+  staff: StaffHistoryV2Row[];
+}
+
+/** One staff-member/day row — backs the Staff History Excel export's long format (one row per staff per calendar day since they were added to the app, including zero-activity days). */
+export interface StaffHistoryExportRow {
+  userId: string;
+  userName: string;
+  /** "YYYY-MM-DD" (UTC). */
+  date: string;
+  breakdown: StaffActivityBreakdown;
+}
+
+export interface StaffHistoryExportReport {
+  rows: StaffHistoryExportRow[];
 }

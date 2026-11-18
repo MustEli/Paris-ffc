@@ -13,6 +13,7 @@ import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskCo
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type StaffStackParamList } from '../../../navigation/types';
+import { RaisedIssuesList } from '../../issueReports/components/RaisedIssuesList';
 import { MultiPhotoCapture } from '../../sellerStock/components/MultiPhotoCapture';
 import {
   useCancelFloorTask,
@@ -115,7 +116,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
   const setTaskContextLabel = useActiveTaskContextStore((state) => state.setLabel);
   useFocusEffect(
     useCallback(() => {
-      if (openTask) setTaskContextLabel(`${t('floorTasks.title')} — ${t(meta.label)}`);
+      if (openTask) setTaskContextLabel(`${t('floorTasks.title')} — ${t(meta.label)}`, `floor_task:${openTask.id}`);
       return () => setTaskContextLabel(null);
     }, [openTask, meta.label, setTaskContextLabel, t]),
   );
@@ -406,6 +407,8 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
         </View>
       )}
       {cancel.error && <Text style={styles.error}>{translateError(cancel.error, t)}</Text>}
+
+      <RaisedIssuesList taskRef={openTask ? `floor_task:${openTask.id}` : null} />
     </KeyboardAwareScreen>
   );
 }

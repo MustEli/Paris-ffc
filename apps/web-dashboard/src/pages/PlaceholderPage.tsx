@@ -1,10 +1,9 @@
-import { AlertTriangle, Clock, PackageSearch, RotateCcw, Sparkles } from 'lucide-react';
+import { Clock, PackageSearch, RotateCcw, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ICON_BY_VARIANT = {
   orderPrep: { Icon: PackageSearch, tint: 'orange' },
   returnProcessing: { Icon: RotateCcw, tint: 'blue' },
-  issueQueue: { Icon: AlertTriangle, tint: 'red' },
 } as const;
 
 /** Nav sections the customer named that don't have a real page built yet — see Layout.tsx's NAV_ITEMS. */

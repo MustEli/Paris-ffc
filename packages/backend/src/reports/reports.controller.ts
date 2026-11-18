@@ -31,9 +31,22 @@ export class ReportsController {
     return this.reportsService.attendance();
   }
 
+  /** Staff table (table 2) — today's Planned/Online/Claimed + Reception/Floor Task/Open-Pool/Break/Idle breakdown, one row per staff member. */
+  @Get('staff-summary')
+  staffSummary() {
+    return this.reportsService.staffSummary();
+  }
+
+  /** Staff History table (table 3) — same breakdown as staff-summary, one per day since the app's first shift plus a Cumulative group. */
   @Get('staff-history')
   staffHistory() {
-    return this.reportsService.staffHistory();
+    return this.reportsService.staffHistoryV2();
+  }
+
+  /** Staff History's Excel download — long format, one row per staff member per calendar day since they were added to the app. */
+  @Get('staff-history-export')
+  staffHistoryExport() {
+    return this.reportsService.staffHistoryExport();
   }
 
   /** `scope` defaults to 'live' when omitted. */

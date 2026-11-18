@@ -23,6 +23,8 @@ export interface IssueReport {
   comment: string | null;
   /** What the staff member was doing when they raised this — only set by the floating quick-report shortcut, never by the full Issue Reporting menu flow. */
   contextLabel: string | null;
+  /** "<task type>:<id>" of the specific task instance (e.g. "floor_task:abc123") — same quick-report-only scope as contextLabel, but precise to one task. */
+  taskRef: string | null;
   alertsAdmin: boolean;
   createdAt: string;
 }
@@ -37,6 +39,7 @@ export interface CreateIssueReportInput {
   locationId?: string;
   comment?: string;
   contextLabel?: string;
+  taskRef?: string;
 }
 
 export interface CategoryMeta {

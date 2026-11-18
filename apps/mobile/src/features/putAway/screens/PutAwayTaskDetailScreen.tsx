@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, type RouteProp } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
 import { KeyboardAwareScreen } from '../../../core/components/KeyboardAwareScreen';
@@ -10,14 +10,9 @@ import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskCo
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type PutAwayStackParamList } from '../../../navigation/types';
+import { RaisedIssuesList } from '../../issueReports/components/RaisedIssuesList';
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../tasks/priority';
-import {
-  useCompleteTask,
-  useReassignTask,
-  useReportIssue,
-  useStartTask,
-  useTask,
-} from '../hooks/usePutAwayTasks';
+import { useCompleteTask, useReassignTask, useStartTask, useTask } from '../hooks/usePutAwayTasks';
 import { STATUS_LABELS } from '../types';
 
 interface Props {
@@ -30,17 +25,24 @@ function formatDuration(ms: number): string {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-/** Doc Feature 4 Execution & Branching: Start → Complete (Branch A) or Report Issue (Branch B) → Admin reassigns. */
+/**
+ * Doc Feature 4 Execution & Branching: Start → Complete (Branch A) or
+ * Report Issue (Branch B) → Admin reassigns. Reporting an issue is now
+ * the same global QuickIssueButton every other task screen uses (see
+ * activeTaskContextStore) rather than a bespoke inline form — it no
+ * longer flips this task's own status to "issue_reported" or drives
+ * the reassign branch below; an existing row already in that status
+ * (from before this change) still shows the reassign UI, but no new
+ * report can land there going forward.
+ */
 export function PutAwayTaskDetailScreen({ route }: Props) {
   const { id } = route.params;
   const role = useAuthStore((state) => state.user?.role);
   const { data: task, isPending, error } = useTask(id);
-  const [issueDraft, setIssueDraft] = useState('');
   const [reassignTo, setReassignTo] = useState<string | null>(null);
 
   const start = useStartTask(id);
   const complete = useCompleteTask(id);
-  const report = useReportIssue(id);
   const reassign = useReassignTask(id);
   const { data: staffUsers } = useStaffUsers();
 
@@ -50,9 +52,9 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
   const setLabel = useActiveTaskContextStore((s) => s.setLabel);
   useFocusEffect(
     useCallback(() => {
-      if (task?.status === 'in_progress') setLabel('Put-Away Task');
+      if (task?.status === 'assigned' || task?.status === 'in_progress') setLabel('Put-Away Task', `put_away:${task.id}`);
       return () => setLabel(null);
-    }, [task?.status, setLabel]),
+    }, [task?.status, task?.id, setLabel]),
   );
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
@@ -100,7 +102,6 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
               </>
             )}
           </Pressable>
-          <ReportIssueForm draft={issueDraft} setDraft={setIssueDraft} report={report} styles={styles} isStaffDark={isStaffDark} />
         </View>
       )}
 
@@ -121,7 +122,6 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
               </>
             )}
           </Pressable>
-          <ReportIssueForm draft={issueDraft} setDraft={setIssueDraft} report={report} styles={styles} isStaffDark={isStaffDark} />
         </View>
       )}
 
@@ -158,42 +158,9 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
           </Pressable>
         </View>
       )}
-    </KeyboardAwareScreen>
-  );
-}
 
-function ReportIssueForm({
-  draft,
-  setDraft,
-  report,
-  styles,
-  isStaffDark,
-}: {
-  draft: string;
-  setDraft: (v: string) => void;
-  report: ReturnType<typeof useReportIssue>;
-  styles: ReturnType<typeof getStyles>;
-  isStaffDark: boolean;
-}) {
-  return (
-    <View style={styles.reportBox}>
-      <Text style={styles.label}>Blocked? Report an issue</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. Too many heavy boxes"
-        placeholderTextColor={isStaffDark ? colors.textMuted : undefined}
-        value={draft}
-        onChangeText={setDraft}
-      />
-      {report.error && <Text style={styles.error}>{report.error.message}</Text>}
-      <Pressable
-        style={[styles.secondaryButton, !draft && styles.buttonDisabled]}
-        disabled={!draft || report.isPending}
-        onPress={() => report.mutate(draft)}
-      >
-        <Text style={styles.secondaryButtonText}>Report issue</Text>
-      </Pressable>
-    </View>
+      <RaisedIssuesList taskRef={`put_away:${task.id}`} />
+    </KeyboardAwareScreen>
   );
 }
 
@@ -283,9 +250,6 @@ function getStyles(isStaffDark: boolean) {
     actionBox: {
       marginTop: 28,
     },
-    reportBox: {
-      marginTop: 20,
-    },
     label: {
       fontSize: 13,
       fontWeight: '600',
@@ -317,16 +281,6 @@ function getStyles(isStaffDark: boolean) {
       color: isStaffDark ? '#1a1200' : '#fff',
       fontWeight: '600',
     },
-    input: {
-      borderWidth: 1,
-      borderColor: isStaffDark ? colors.border : '#d1d5db',
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      fontSize: 15,
-      marginBottom: 8,
-      ...(isStaffDark ? { color: colors.textPrimary, backgroundColor: colors.surface } : null),
-    },
     button: {
       flexDirection: 'row',
       backgroundColor: isStaffDark ? colors.brandOrange : '#0f172a',
@@ -344,18 +298,6 @@ function getStyles(isStaffDark: boolean) {
     buttonText: {
       color: isStaffDark ? '#1a1200' : '#fff',
       fontSize: 15,
-      fontWeight: '600',
-    },
-    secondaryButton: {
-      borderWidth: 1,
-      borderColor: isStaffDark ? colors.alert : '#dc2626',
-      paddingVertical: 12,
-      borderRadius: 10,
-      alignItems: 'center',
-    },
-    secondaryButtonText: {
-      color: isStaffDark ? colors.alert : '#dc2626',
-      fontSize: 14,
       fontWeight: '600',
     },
     error: {

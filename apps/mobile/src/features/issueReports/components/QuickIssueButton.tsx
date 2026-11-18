@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,22 +10,35 @@ import { colors } from '../../../core/theme/colors';
 import { PhotoCaptureButton } from '../../sellerStock/components/PhotoCaptureButton';
 import { useCreateIssueReport } from '../hooks/useIssueReports';
 
+/** How long the button stays disabled after a successful report, so a slow double-tap can't fire two in a row — staff can still raise another real issue once it's back up. */
+const COOLDOWN_MS = 2 * 60 * 1000;
+
 /**
  * A small floating shortcut, visible only while some screen has set an
  * active-task context label (see activeTaskContextStore) — lets staff
- * flag a problem without leaving/pausing what they're doing. Submits
- * to the same 'other' Issue Reporting category the full menu flow
- * uses (comment + optional photo, already alerts Admin), just via a
- * lighter popup and with the current task noted automatically.
+ * flag a problem without leaving/pausing what they're doing (nothing
+ * here pauses any task — it's a pure side-channel report). Submits to
+ * the same 'other' Issue Reporting category the full menu flow uses
+ * (comment + optional photo, already alerts Admin), just via a lighter
+ * popup and with the current task noted automatically — staff can send
+ * as many of these as genuinely needed for one task, one at a time,
+ * each gated by COOLDOWN_MS so it can't be spammed.
  */
 export function QuickIssueButton() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const role = useAuthStore((state) => state.user?.role);
   const label = useActiveTaskContextStore((state) => state.label);
+  const taskRef = useActiveTaskContextStore((state) => state.taskRef);
   const [isOpen, setIsOpen] = useState(false);
   const [comment, setComment] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isCoolingDown, setIsCoolingDown] = useState(false);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+  }, []);
 
   const create = useCreateIssueReport();
 
@@ -35,12 +48,14 @@ export function QuickIssueButton() {
     const trimmed = comment.trim();
     if (!trimmed) return;
     create.mutate(
-      { category: 'other', comment: trimmed, photoUrls: photoUrl ? [photoUrl] : [], contextLabel: label ?? undefined },
+      { category: 'other', comment: trimmed, photoUrls: photoUrl ? [photoUrl] : [], contextLabel: label ?? undefined, taskRef: taskRef ?? undefined },
       {
         onSuccess: () => {
           setComment('');
           setPhotoUrl(null);
           setIsOpen(false);
+          setIsCoolingDown(true);
+          cooldownTimer.current = setTimeout(() => setIsCoolingDown(false), COOLDOWN_MS);
           Alert.alert(t('issueReports.quick.title'), t('issueReports.quick.sent'));
         },
       },
@@ -50,9 +65,10 @@ export function QuickIssueButton() {
   return (
     <>
       <Pressable
-        style={[styles.fab, { bottom: insets.bottom + 110 }]}
-        onPress={() => setIsOpen(true)}
-        accessibilityLabel={t('issueReports.quick.buttonLabel')}
+        style={[styles.fab, { bottom: insets.bottom + 110 }, isCoolingDown && styles.fabDisabled]}
+        onPress={() => !isCoolingDown && setIsOpen(true)}
+        disabled={isCoolingDown}
+        accessibilityLabel={isCoolingDown ? t('issueReports.quick.buttonLabelCoolingDown') : t('issueReports.quick.buttonLabel')}
       >
         <Ionicons name="flag-outline" size={22} color="#fff" />
       </Pressable>
@@ -113,6 +129,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
     zIndex: 20,
+  },
+  fabDisabled: {
+    opacity: 0.4,
   },
   backdrop: {
     flex: 1,

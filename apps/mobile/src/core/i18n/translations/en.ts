@@ -164,7 +164,6 @@ export const en = {
     cancelConfirmMessage: 'This removes the task — nothing is saved. Are you sure?',
     unfinishedTasksHeader: 'Unfinished tasks',
     pausedFor: 'Paused {{time}} ago',
-    tapToResume: 'Tap to resume',
     category: {
       pick: 'Pick',
       pack: 'Pack',
@@ -214,12 +213,16 @@ export const en = {
     locationIdInvalid: 'Letters and numbers only, no spaces.',
     quick: {
       buttonLabel: 'Report an issue',
+      buttonLabelCoolingDown: 'Report an issue (wait a moment)',
       title: 'Report an issue',
       contextLabel: 'Reporting an issue during: {{context}}',
       placeholder: 'What went wrong?',
       send: 'Send',
       cancel: 'Cancel',
       sent: 'Reported — thanks, an admin has been notified.',
+    },
+    raisedList: {
+      header: 'Issues you raised for this task ({{count}})',
     },
     category: {
       non_traceable_return_parcel: 'Non-traceable Return Parcel',

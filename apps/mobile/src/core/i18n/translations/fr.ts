@@ -157,7 +157,6 @@ export const fr = {
     cancelConfirmMessage: 'Cela supprime la tâche — rien n’est enregistré. Êtes-vous sûr ?',
     unfinishedTasksHeader: 'Tâches non terminées',
     pausedFor: 'En pause depuis {{time}}',
-    tapToResume: 'Toucher pour reprendre',
     category: {
       pick: 'Prélèvement',
       pack: 'Emballage',
@@ -207,12 +206,16 @@ export const fr = {
     locationIdInvalid: 'Lettres et chiffres uniquement, sans espace.',
     quick: {
       buttonLabel: 'Signaler un problème',
+      buttonLabelCoolingDown: 'Signaler un problème (patientez un instant)',
       title: 'Signaler un problème',
       contextLabel: 'Signalement pendant : {{context}}',
       placeholder: 'Qu’est-ce qui ne va pas ?',
       send: 'Envoyer',
       cancel: 'Annuler',
       sent: 'Signalé — merci, un administrateur a été notifié.',
+    },
+    raisedList: {
+      header: 'Problèmes signalés pour cette tâche ({{count}})',
     },
     category: {
       non_traceable_return_parcel: 'Colis de retour introuvable',

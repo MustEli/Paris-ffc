@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 
+import { ApiError } from '../../../core/api/client';
 import { useAuthStore } from '../../../core/auth/authStore';
 import { useSocketEvent } from '../../../core/realtime/useSocketEvent';
 import { claimOpenPoolTask, completeOpenPoolTask, fetchMyOpenPoolTasks, fetchOpenPoolTasks } from '../api';
@@ -58,6 +59,15 @@ export function useClaimOpenPoolTask() {
       queryClient.invalidateQueries({ queryKey: MINE_KEY });
       // The backend auto-pauses an active floor task on claim — refresh it so the Floor Task screen (if open underneath) reflects that immediately.
       queryClient.invalidateQueries({ queryKey: OPEN_FLOOR_TASK_KEY });
+    },
+    onError: (error, id) => {
+      // Lost the race to someone else who claimed it first — that task is
+      // just as gone as if it had never been there, so drop it from the
+      // open list right away instead of leaving a dangling "already
+      // claimed" error on screen for a task the user can no longer act on.
+      if (error instanceof ApiError && error.code === 'open_pool.already_claimed') {
+        queryClient.setQueryData<OpenPoolTask[]>(OPEN_KEY, (old) => old?.filter((task) => task.id !== id));
+      }
     },
   });
 }

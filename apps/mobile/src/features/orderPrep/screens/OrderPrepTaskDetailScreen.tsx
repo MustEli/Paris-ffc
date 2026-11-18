@@ -8,6 +8,7 @@ import { useActiveTaskContextStore } from '../../../core/navigation/activeTaskCo
 import { goToStaffHome } from '../../../core/navigation/navigationRef';
 import { colors } from '../../../core/theme/colors';
 import { type OrderPrepStackParamList } from '../../../navigation/types';
+import { RaisedIssuesList } from '../../issueReports/components/RaisedIssuesList';
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../../tasks/priority';
 import { useCompleteOrderPrepTask, useOrderPrepTask, useStartOrderPrepTask } from '../hooks/useOrderPrep';
 import { STATUS_LABELS } from '../types';
@@ -38,10 +39,10 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (task?.status === 'in_progress') {
-        setLabel(`Order Prep — ${task.role === 'picker' ? 'Picker task' : 'Packer task'}`);
+        setLabel(`Order Prep — ${task.role === 'picker' ? 'Picker task' : 'Packer task'}`, `order_prep:${task.id}`);
       }
       return () => setLabel(null);
-    }, [task?.status, task?.role, setLabel]),
+    }, [task?.status, task?.role, task?.id, setLabel]),
   );
 
   if (isPending) return <ActivityIndicator style={styles.spinner} />;
@@ -104,6 +105,8 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
           </Pressable>
         </>
       )}
+
+      <RaisedIssuesList taskRef={`order_prep:${task.id}`} />
     </ScrollView>
   );
 }

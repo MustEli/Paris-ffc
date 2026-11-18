@@ -7,13 +7,12 @@
     "receptionReports": "Reception Reports",
     "orderPrep": "Order Prep (Pick & Pack)",
     "returnProcessing": "Return Processing",
-    "issueQueue": "Exceptions & Issue Queue",
+    "issueQueue": "Issue Queue",
     "referenceLists": "User & Access Management"
   },
   "placeholder": {
     "orderPrepDescription": "Labor calculator and staggering.",
     "returnProcessingDescription": "Returns processing workflow.",
-    "issueQueueDescription": "Damaged stock, overweight flags, incidents, requests, and questions.",
     "comingSoon": "This section is coming soon — check back after the next update."
   },
   "logOut": "Log out",
@@ -89,5 +88,16 @@
     "parcelsPackaging": "{{count}} parcel(s) — {{packagingType}}",
     "pallets": "{{count}} pallet(s)",
     "parcelsItem": "{{count}} parcel(s) — {{item}}"
+  },
+  "issueReportCategories": {
+    "non_traceable_return_parcel": "Non-Traceable Return Parcel",
+    "non_fulfillment_return_parcel": "Non-Fulfillment Return Parcel",
+    "no_return_request_generated": "No Return Request Generated",
+    "shipment_label_not_generatable": "Shipment Label Not Generatable",
+    "item_found_out_of_location": "Item Found Out of Location",
+    "empty_crate": "Empty Crate",
+    "part_broken_in_location": "Part Broken in Location",
+    "heavy_crate": "Heavy Crate",
+    "other": "Other"
   }
 }

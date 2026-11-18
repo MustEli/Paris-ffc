@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { FLOOR_TASK_CATEGORIES } from '../floor-tasks/floor-task.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { type ReceptionCategory } from '../receptions/reception.types';
 import { type Weekday } from '../schedules/schedule.types';
@@ -10,6 +11,9 @@ import { type ReportDateRangeQuery } from './dto/report-date-range.dto';
 import {
   type AdminDashboardReport,
   type AttendanceReport,
+  type BreakKind,
+  type IdleKind,
+  type OpenPoolBucketKind,
   type OrderPrepReport,
   type OrderPrepRoleStats,
   type OverviewReport,
@@ -21,13 +25,15 @@ import {
   type ReceptionVolumeReport,
   type ReportGranularity,
   type SellerStockQualityReport,
+  type StaffActivityBreakdown,
   type StaffActivityEntry,
   type StaffActivityReport,
   type StaffActivityScope,
-  type StaffHistoryCumulative,
-  type StaffHistoryDay,
-  type StaffHistoryReport,
+  type StaffHistoryExportReport,
+  type StaffHistoryExportRow,
+  type StaffHistoryV2Report,
   type StaffStatus,
+  type StaffSummaryReport,
 } from './reports.types';
 
 /** Admin never needs an unbounded scrollback of every finished task ever — see staffActivity()'s 'recent' scope. */
@@ -125,6 +131,49 @@ function sumShortBreakMsByShift(breaks: { shiftId: string; type: 'lunch' | 'shor
   return map;
 }
 
+const BREAK_KINDS: BreakKind[] = ['lunch', 'short'];
+const IDLE_KINDS: IdleKind[] = ['unclaimed', 'off_shift'];
+const OPEN_POOL_KINDS: OpenPoolBucketKind[] = ['directive', 'general'];
+
+function zeroRecord<K extends string>(keys: readonly K[]): Record<K, number> {
+  return Object.fromEntries(keys.map((k) => [k, 0])) as Record<K, number>;
+}
+
+function zeroBreakdown(): StaffActivityBreakdown {
+  return {
+    plannedMs: null,
+    onlineMs: 0,
+    claimedMs: 0,
+    receptionMs: zeroRecord(RECEPTION_CATEGORIES),
+    floorTaskMs: zeroRecord(FLOOR_TASK_CATEGORIES),
+    openPoolMs: zeroRecord(OPEN_POOL_KINDS),
+    breakMs: zeroRecord(BREAK_KINDS),
+    idleMs: zeroRecord(IDLE_KINDS),
+  };
+}
+
+function sumRecord(record: Record<string, number>): number {
+  return Object.values(record).reduce((a, b) => a + b, 0);
+}
+
+/** Field-wise accumulation of `source` into `target` — used to build a Cumulative total across many days. `plannedMs` null (no schedule that day) contributes 0 rather than poisoning the whole sum to null. */
+function addBreakdown(target: StaffActivityBreakdown, source: StaffActivityBreakdown): void {
+  target.plannedMs = (target.plannedMs ?? 0) + (source.plannedMs ?? 0);
+  target.onlineMs += source.onlineMs;
+  target.claimedMs += source.claimedMs;
+  for (const k of RECEPTION_CATEGORIES) target.receptionMs[k] += source.receptionMs[k];
+  for (const k of FLOOR_TASK_CATEGORIES) target.floorTaskMs[k] += source.floorTaskMs[k];
+  for (const k of OPEN_POOL_KINDS) target.openPoolMs[k] += source.openPoolMs[k];
+  for (const k of BREAK_KINDS) target.breakMs[k] += source.breakMs[k];
+  for (const k of IDLE_KINDS) target.idleMs[k] += source.idleMs[k];
+}
+
+/** "HH:MM" -> ms since midnight. */
+function parseHHMMToMsOfDay(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h * 60 + m) * 60_000;
+}
+
 function average(values: number[]): number | null {
   if (values.length === 0) return null;
   const sum = values.reduce((total, value) => total + value, 0);
@@ -208,135 +257,288 @@ export class ReportsService {
   }
 
   /**
-   * Backs the web dashboard's "Staff History" section — a planned vs.
-   * actual day-by-day grid, one column per day since the app's very
-   * first completed shift. "Planned" comes from each staff member's
-   * *current* StaffSchedule applied retroactively to every day (no
-   * history of past schedule changes is kept, so a schedule edited
-   * partway through is a known, accepted simplification — same
-   * "current config applied to history" trade-off used elsewhere, e.g.
-   * ReferenceListValue renames). A day outside the staff member's
-   * working days, or with no schedule configured at all, plans 0 hours.
+   * Core engine behind the "Staff" (table 2, today only) and "Staff
+   * History" (table 3, many days + a Cumulative) web dashboard tables —
+   * see StaffActivityBreakdown's doc comment in reports.types.ts for
+   * what each field means and how they relate to one another. One pass
+   * over the underlying records (Shift/Break/FloorTaskLog/ReceptionTask/
+   * OpenPoolTask/Directive), bucketed per user per day by each record's
+   * own start timestamp; callers slice the result differently —
+   * staffSummary() just reads today, staffHistoryV2() reads every day
+   * since the app's first shift and also sums a Cumulative,
+   * staffHistoryExport() reads a per-user day range starting at that
+   * user's own account creation date.
+   *
+   * A record still in progress (no end timestamp yet) only has its
+   * elapsed-so-far time counted when its *start* day is today — a
+   * record that somehow started on a past day and is still open counts
+   * zero additional time for that past day beyond its last known
+   * heartbeat/pause state, rather than ballooning into a many-day
+   * duration (an accepted simplification for an edge case the app's
+   * own stale-shift auto-end logic is expected to clean up promptly —
+   * see Shift.lastHeartbeatAt's doc comment).
    */
-  async staffHistory(): Promise<StaffHistoryReport> {
-    const [staffUsers, schedules, completedShifts] = await Promise.all([
-      this.prisma.user.findMany({ where: { role: 'staff' } }),
-      this.prisma.staffSchedule.findMany(),
-      this.prisma.shift.findMany({ where: { endedAt: { not: null } } }),
+  private async computeActivityBreakdowns(
+    userIds: string[],
+    dayKeys: string[],
+  ): Promise<Map<string, Map<string, StaffActivityBreakdown>>> {
+    const result = new Map<string, Map<string, StaffActivityBreakdown>>();
+    for (const userId of userIds) {
+      const byDay = new Map<string, StaffActivityBreakdown>();
+      for (const day of dayKeys) byDay.set(day, zeroBreakdown());
+      result.set(userId, byDay);
+    }
+    if (userIds.length === 0 || dayKeys.length === 0) return result;
+
+    const now = new Date();
+    const todayKey = dateKeyUTC(now);
+    const rangeStart = new Date(`${dayKeys[0]}T00:00:00.000Z`);
+    const rangeEndExclusive = new Date(`${dayKeys[dayKeys.length - 1]}T00:00:00.000Z`);
+    rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
+    const inDayRange = { gte: rangeStart, lt: rangeEndExclusive };
+
+    const [schedules, shifts, floorTasks, receptionTasks, openPoolTasks, directives] = await Promise.all([
+      this.prisma.staffSchedule.findMany({ where: { userId: { in: userIds } } }),
+      this.prisma.shift.findMany({ where: { userId: { in: userIds }, startedAt: inDayRange } }),
+      this.prisma.floorTaskLog.findMany({ where: { userId: { in: userIds }, startedAt: inDayRange, cancelledAt: null } }),
+      this.prisma.receptionTask.findMany({ where: { userId: { in: userIds }, startedAt: inDayRange } }),
+      this.prisma.openPoolTask.findMany({ where: { claimedByUserId: { in: userIds }, claimedAt: inDayRange } }),
+      this.prisma.directive.findMany({ where: { receivedByUserId: { in: userIds }, receivedAt: inDayRange } }),
     ]);
+    const breaks = shifts.length
+      ? await this.prisma.break.findMany({ where: { shiftId: { in: shifts.map((s) => s.id) } } })
+      : [];
+    const receptionIds = receptionTasks.map((t) => t.receptionId).filter((id): id is string => id !== null);
+    const receptionsForTasks: { id: string; category: ReceptionCategory }[] = receptionIds.length
+      ? await this.prisma.reception.findMany({ where: { id: { in: receptionIds } }, select: { id: true, category: true } })
+      : [];
 
-    const zeroCumulative = (): StaffHistoryCumulative => ({
-      plannedHours: 0,
-      actualHours: 0,
-      floorTaskHours: 0,
-      receptionHours: 0,
-      openPoolHours: 0,
-      urgentTaskHours: 0,
-    });
-
-    if (completedShifts.length === 0) {
-      return {
-        days: [],
-        staff: staffUsers.map((u) => ({ userId: u.id, userName: u.name, days: {}, cumulative: zeroCumulative() })),
-      };
+    const scheduleByUser = new Map(schedules.map((s) => [s.userId, s]));
+    const receptionCategoryById = new Map<string, ReceptionCategory>(receptionsForTasks.map((r) => [r.id, r.category]));
+    const breaksByShiftId = new Map<string, typeof breaks>();
+    for (const b of breaks) {
+      const list = breaksByShiftId.get(b.shiftId) ?? [];
+      list.push(b);
+      breaksByShiftId.set(b.shiftId, list);
     }
 
-    const [breaks, floorTasks, receptionTasks, openPoolTasks, directives] = await Promise.all([
-      this.prisma.break.findMany({ where: { shiftId: { in: completedShifts.map((s) => s.id) } } }),
-      // cancelledAt: null — a cancelled floor task (see FloorTasksService.cancel()) isn't real completed work, so it's excluded from floorTaskHours the same way it's excluded everywhere else hours are totalled.
-      this.prisma.floorTaskLog.findMany({ where: { endedAt: { not: null }, cancelledAt: null } }),
-      this.prisma.receptionTask.findMany({ where: { endedAt: { not: null } } }),
-      this.prisma.openPoolTask.findMany({ where: { claimedByUserId: { not: null }, completedAt: { not: null } } }),
-      this.prisma.directive.findMany({ where: { receivedByUserId: { not: null }, resolvedAt: { not: null } } }),
-    ]);
-    const breakMsByShift = sumBreakMsByShift(breaks);
-    const scheduleByUserId = new Map(schedules.map((s) => [s.userId, s]));
+    const get = (userId: string, day: string) => result.get(userId)?.get(day);
+    const effectiveEnd = (endedAt: Date | null, startDay: string, fallback: Date) =>
+      endedAt ?? (startDay === todayKey ? now : fallback);
 
-    const earliestMs = Math.min(...completedShifts.map((s) => s.startedAt.getTime()));
-    const days = enumerateDaysUTC(dateKeyUTC(new Date(earliestMs)), dateKeyUTC(new Date()));
-
-    const actualHoursByUserDay = new Map<string, Map<string, number>>();
-    for (const shift of completedShifts) {
-      const day = dateKeyUTC(shift.startedAt);
-      const durationMs = shift.endedAt!.getTime() - shift.startedAt.getTime() - (breakMsByShift.get(shift.id) ?? 0);
-      const userDays = actualHoursByUserDay.get(shift.userId) ?? new Map<string, number>();
-      userDays.set(day, (userDays.get(day) ?? 0) + durationMs / 3_600_000);
-      actualHoursByUserDay.set(shift.userId, userDays);
-    }
-
-    /** `startedAt`-bucketed, endedAt-set rows only — mirrors FloorTaskLog.end()'s duration calc (fold any still-open pause back in before subtracting). */
-    function bucketByStartDay<T extends { userId: string; startedAt: Date; endedAt: Date | null; pausedAt: Date | null; totalPausedMs: number }>(
-      rows: T[],
-    ): Map<string, Map<string, number>> {
-      const byUserDay = new Map<string, Map<string, number>>();
-      for (const row of rows) {
-        if (!row.endedAt) continue;
-        const openPauseMs = row.pausedAt ? row.endedAt.getTime() - row.pausedAt.getTime() : 0;
-        const durationMs = row.endedAt.getTime() - row.startedAt.getTime() - row.totalPausedMs - openPauseMs;
-        const day = dateKeyUTC(row.startedAt);
-        const userDays = byUserDay.get(row.userId) ?? new Map<string, number>();
-        userDays.set(day, (userDays.get(day) ?? 0) + durationMs / 3_600_000);
-        byUserDay.set(row.userId, userDays);
+    // Planned — independent of every other source below.
+    for (const userId of userIds) {
+      const schedule = scheduleByUser.get(userId);
+      if (!schedule) continue;
+      for (const day of dayKeys) {
+        const breakdown = get(userId, day);
+        if (!breakdown) continue;
+        const weekday = WEEKDAY_BY_UTC_DAY_INDEX[new Date(`${day}T00:00:00.000Z`).getUTCDay()];
+        if (!schedule.workingDays.includes(weekday)) continue;
+        if (day === todayKey) {
+          const plannedStartMs = new Date(`${day}T00:00:00.000Z`).getTime() + parseHHMMToMsOfDay(schedule.shiftStartTime);
+          breakdown.plannedMs = Math.max(0, now.getTime() - plannedStartMs);
+        } else {
+          // A past day's "planned" is its scheduled shift length — "now minus that day's start time" would just be a stale multi-day figure, not a useful one.
+          breakdown.plannedMs = schedule.requiredWorkingHours * 3_600_000;
+        }
       }
-      return byUserDay;
     }
 
-    const floorTaskHoursByUserDay = bucketByStartDay(floorTasks);
-    const receptionHoursByUserDay = bucketByStartDay(receptionTasks);
+    // Shifts -> Online, their Breaks -> the Break column, and (per user/day) Off-Shift gaps between consecutive shifts.
+    const shiftsByUserDay = new Map<string, Map<string, { startedAt: Date; endedAt: Date | null }[]>>();
+    for (const shift of shifts) {
+      const day = dateKeyUTC(shift.startedAt);
+      const breakdown = get(shift.userId, day);
+      if (breakdown) {
+        const end = effectiveEnd(shift.endedAt, day, shift.lastHeartbeatAt ?? shift.startedAt);
+        breakdown.onlineMs += Math.max(0, end.getTime() - shift.startedAt.getTime());
+      }
+      const userDays = shiftsByUserDay.get(shift.userId) ?? new Map<string, { startedAt: Date; endedAt: Date | null }[]>();
+      const dayShifts = userDays.get(day) ?? [];
+      dayShifts.push({ startedAt: shift.startedAt, endedAt: shift.endedAt });
+      userDays.set(day, dayShifts);
+      shiftsByUserDay.set(shift.userId, userDays);
 
-    const openPoolHoursByUserDay = new Map<string, Map<string, number>>();
-    for (const task of openPoolTasks) {
-      const durationMs = task.completedAt!.getTime() - task.claimedAt!.getTime();
-      const day = dateKeyUTC(task.claimedAt!);
-      const userDays = openPoolHoursByUserDay.get(task.claimedByUserId!) ?? new Map<string, number>();
-      userDays.set(day, (userDays.get(day) ?? 0) + durationMs / 3_600_000);
-      openPoolHoursByUserDay.set(task.claimedByUserId!, userDays);
+      for (const b of breaksByShiftId.get(shift.id) ?? []) {
+        const breakDay = dateKeyUTC(b.startedAt);
+        const breakBreakdown = get(shift.userId, breakDay);
+        if (!breakBreakdown) continue;
+        const bEnd = effectiveEnd(b.endedAt, breakDay, b.startedAt);
+        breakBreakdown.breakMs[b.type] += Math.max(0, bEnd.getTime() - b.startedAt.getTime());
+      }
+    }
+    for (const [userId, userDays] of shiftsByUserDay) {
+      for (const [day, dayShifts] of userDays) {
+        const breakdown = get(userId, day);
+        if (!breakdown) continue;
+        const sorted = [...dayShifts].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+        for (let i = 1; i < sorted.length; i++) {
+          const prevEnd = sorted[i - 1].endedAt;
+          if (!prevEnd) continue; // an unended previous shift means there's no real gap to measure (and no later shift should exist same day anyway)
+          const gapMs = sorted[i].startedAt.getTime() - prevEnd.getTime();
+          if (gapMs > 0) breakdown.idleMs.off_shift += gapMs;
+        }
+      }
     }
 
-    const urgentTaskHoursByUserDay = new Map<string, Map<string, number>>();
-    for (const directive of directives) {
-      const durationMs = directive.resolvedAt!.getTime() - directive.receivedAt!.getTime();
-      const day = dateKeyUTC(directive.receivedAt!);
-      const userDays = urgentTaskHoursByUserDay.get(directive.receivedByUserId!) ?? new Map<string, number>();
-      userDays.set(day, (userDays.get(day) ?? 0) + durationMs / 3_600_000);
-      urgentTaskHoursByUserDay.set(directive.receivedByUserId!, userDays);
+    for (const t of floorTasks) {
+      const day = dateKeyUTC(t.startedAt);
+      const breakdown = get(t.userId, day);
+      if (!breakdown) continue;
+      const end = effectiveEnd(t.endedAt, day, t.startedAt);
+      const openPauseMs = t.pausedAt ? Math.max(0, end.getTime() - t.pausedAt.getTime()) : 0;
+      breakdown.floorTaskMs[t.category] += Math.max(0, end.getTime() - t.startedAt.getTime() - t.totalPausedMs - openPauseMs);
     }
 
-    const round2 = (n: number) => Math.round(n * 100) / 100;
+    for (const t of receptionTasks) {
+      const category = t.receptionId ? receptionCategoryById.get(t.receptionId) : undefined;
+      if (!category) continue; // no linked Reception to categorize by — excluded the same way an unattributable row is excluded elsewhere in this module
+      const day = dateKeyUTC(t.startedAt);
+      const breakdown = get(t.userId, day);
+      if (!breakdown) continue;
+      const end = effectiveEnd(t.endedAt, day, t.startedAt);
+      const openPauseMs = t.pausedAt ? Math.max(0, end.getTime() - t.pausedAt.getTime()) : 0;
+      breakdown.receptionMs[category] += Math.max(0, end.getTime() - t.startedAt.getTime() - t.totalPausedMs - openPauseMs);
+    }
+
+    for (const t of openPoolTasks) {
+      if (!t.claimedByUserId || !t.claimedAt) continue;
+      const day = dateKeyUTC(t.claimedAt);
+      const breakdown = get(t.claimedByUserId, day);
+      if (!breakdown) continue;
+      const end = effectiveEnd(t.completedAt, day, t.claimedAt);
+      breakdown.openPoolMs.general += Math.max(0, end.getTime() - t.claimedAt.getTime());
+    }
+
+    for (const d of directives) {
+      if (!d.receivedByUserId || !d.receivedAt) continue;
+      const day = dateKeyUTC(d.receivedAt);
+      const breakdown = get(d.receivedByUserId, day);
+      if (!breakdown) continue;
+      const end = effectiveEnd(d.resolvedAt, day, d.receivedAt);
+      breakdown.openPoolMs.directive += Math.max(0, end.getTime() - d.receivedAt.getTime());
+    }
+
+    // Claimed + Idle(unclaimed) depend on every other field above, so computed last.
+    for (const userId of userIds) {
+      for (const day of dayKeys) {
+        const breakdown = get(userId, day);
+        if (!breakdown) continue;
+        breakdown.claimedMs =
+          sumRecord(breakdown.receptionMs) + sumRecord(breakdown.floorTaskMs) + sumRecord(breakdown.openPoolMs) + sumRecord(breakdown.breakMs);
+        breakdown.idleMs.unclaimed = Math.max(0, breakdown.onlineMs - breakdown.claimedMs);
+      }
+    }
+
+    return result;
+  }
+
+  /** Backs the web dashboard's "Staff" table (table 2) — today only. */
+  async staffSummary(): Promise<StaffSummaryReport> {
+    const staffUsers = await this.prisma.user.findMany({ where: { role: 'staff' } });
+    const todayKey = dateKeyUTC(new Date());
+    const breakdowns = await this.computeActivityBreakdowns(
+      staffUsers.map((u) => u.id),
+      [todayKey],
+    );
+    return {
+      staff: staffUsers.map((u) => ({
+        userId: u.id,
+        userName: u.name,
+        breakdown: breakdowns.get(u.id)?.get(todayKey) ?? zeroBreakdown(),
+      })),
+    };
+  }
+
+  /**
+   * Backs the web dashboard's "Staff History" table (table 3) — the
+   * on-screen, day-grouped pivot, one column-group per day since the
+   * app's very first shift (completed or still running) plus a
+   * Cumulative group. Same breakdown shape as staffSummary(), just one
+   * per day instead of one for today only.
+   */
+  async staffHistoryV2(): Promise<StaffHistoryV2Report> {
+    const [staffUsers, allShifts] = await Promise.all([
+      this.prisma.user.findMany({ where: { role: 'staff' } }),
+      this.prisma.shift.findMany({ select: { startedAt: true } }),
+    ]);
+
+    if (allShifts.length === 0) {
+      return { days: [], staff: staffUsers.map((u) => ({ userId: u.id, userName: u.name, days: {}, cumulative: zeroBreakdown() })) };
+    }
+
+    const earliestMs = Math.min(...allShifts.map((s) => s.startedAt.getTime()));
+    const days = enumerateDaysUTC(dateKeyUTC(new Date(earliestMs)), dateKeyUTC(new Date()));
+    const breakdowns = await this.computeActivityBreakdowns(
+      staffUsers.map((u) => u.id),
+      days,
+    );
 
     const staff = staffUsers.map((user) => {
-      const schedule = scheduleByUserId.get(user.id);
-      const userActualDays = actualHoursByUserDay.get(user.id);
-      const userFloorTaskDays = floorTaskHoursByUserDay.get(user.id);
-      const userReceptionDays = receptionHoursByUserDay.get(user.id);
-      const userOpenPoolDays = openPoolHoursByUserDay.get(user.id);
-      const userUrgentTaskDays = urgentTaskHoursByUserDay.get(user.id);
-
-      const dayEntries: Record<string, StaffHistoryDay> = {};
-      const cumulative = zeroCumulative();
+      const userDays = breakdowns.get(user.id) ?? new Map<string, StaffActivityBreakdown>();
+      const dayEntries: Record<string, StaffActivityBreakdown> = {};
+      const cumulative = zeroBreakdown();
       for (const day of days) {
-        const weekday = WEEKDAY_BY_UTC_DAY_INDEX[new Date(`${day}T00:00:00.000Z`).getUTCDay()];
-        const plannedHours = schedule && schedule.workingDays.includes(weekday) ? schedule.requiredWorkingHours : 0;
-        const entry: StaffHistoryDay = {
-          plannedHours,
-          actualHours: round2(userActualDays?.get(day) ?? 0),
-          floorTaskHours: round2(userFloorTaskDays?.get(day) ?? 0),
-          receptionHours: round2(userReceptionDays?.get(day) ?? 0),
-          openPoolHours: round2(userOpenPoolDays?.get(day) ?? 0),
-          urgentTaskHours: round2(userUrgentTaskDays?.get(day) ?? 0),
-        };
+        const entry = userDays.get(day) ?? zeroBreakdown();
         dayEntries[day] = entry;
-        cumulative.plannedHours = round2(cumulative.plannedHours + entry.plannedHours);
-        cumulative.actualHours = round2(cumulative.actualHours + entry.actualHours);
-        cumulative.floorTaskHours = round2(cumulative.floorTaskHours + entry.floorTaskHours);
-        cumulative.receptionHours = round2(cumulative.receptionHours + entry.receptionHours);
-        cumulative.openPoolHours = round2(cumulative.openPoolHours + entry.openPoolHours);
-        cumulative.urgentTaskHours = round2(cumulative.urgentTaskHours + entry.urgentTaskHours);
+        addBreakdown(cumulative, entry);
       }
       return { userId: user.id, userName: user.name, days: dayEntries, cumulative };
     });
 
     return { days, staff };
+  }
+
+  /**
+   * Backs the Staff History Excel export's long format — one row per
+   * staff member per calendar day from that staff's own account
+   * creation date through today, including zero-activity days. For a
+   * staff member who already existed when the `User.createdAt` column
+   * was added (backfilled to the migration's run time, not their true
+   * original creation date — see schema.prisma's doc comment on that
+   * column), this still reaches back to cover their real history: the
+   * day range starts at whichever is earlier, their `createdAt` or the
+   * earliest day any activity of theirs was found, so no existing
+   * history is silently dropped.
+   */
+  async staffHistoryExport(): Promise<StaffHistoryExportReport> {
+    const [staffUsers, allShifts] = await Promise.all([
+      this.prisma.user.findMany({ where: { role: 'staff' } }),
+      this.prisma.shift.findMany({ select: { startedAt: true } }),
+    ]);
+
+    const todayKey = dateKeyUTC(new Date());
+    const earliestShiftMs = allShifts.length ? Math.min(...allShifts.map((s) => s.startedAt.getTime())) : null;
+    const earliestUserCreatedMs = staffUsers.length ? Math.min(...staffUsers.map((u) => u.createdAt.getTime())) : Date.now();
+    const globalStartMs = Math.min(earliestShiftMs ?? earliestUserCreatedMs, earliestUserCreatedMs);
+    const days = enumerateDaysUTC(dateKeyUTC(new Date(globalStartMs)), todayKey);
+
+    const breakdowns = await this.computeActivityBreakdowns(
+      staffUsers.map((u) => u.id),
+      days,
+    );
+
+    const isNonZero = (b: StaffActivityBreakdown) => b.onlineMs > 0 || sumRecord(b.idleMs) > 0 || (b.plannedMs ?? 0) > 0;
+
+    const rows: StaffHistoryExportRow[] = [];
+    for (const user of staffUsers) {
+      const userDays = breakdowns.get(user.id) ?? new Map<string, StaffActivityBreakdown>();
+      const createdDay = dateKeyUTC(user.createdAt);
+      let earliestNonZeroDay: string | null = null;
+      for (const day of days) {
+        if (isNonZero(userDays.get(day) ?? zeroBreakdown())) {
+          earliestNonZeroDay = day;
+          break;
+        }
+      }
+      const startDay = earliestNonZeroDay && earliestNonZeroDay < createdDay ? earliestNonZeroDay : createdDay;
+      for (const day of days) {
+        if (day < startDay) continue;
+        rows.push({ userId: user.id, userName: user.name, date: day, breakdown: userDays.get(day) ?? zeroBreakdown() });
+      }
+    }
+    return { rows };
   }
 
   /**
@@ -369,11 +571,13 @@ export class ReportsService {
 
   /**
    * Backs the web dashboard's "Staff Activity" section — see
-   * StaffActivityEntry's doc comment for why this merges 4 sources.
-   * `scope: 'live'` reads each source's in-progress rows; `'recent'`
-   * reads their most recently *finished* rows instead (capped at
-   * STAFF_ACTIVITY_RECENT_LIMIT, newest-first) — the only place a
-   * completed Dispatch Floor Task's scannedBarcode is visible to Admin.
+   * StaffActivityEntry's doc comment for why this merges 4 task sources
+   * plus (live scope only) a Break/Idle row for every other on-shift
+   * staff member. `scope: 'live'` reads each source's in-progress rows;
+   * `'recent'` reads their most recently *finished* rows instead
+   * (capped at STAFF_ACTIVITY_RECENT_LIMIT, newest-first) — the only
+   * place a completed Dispatch Floor Task's scannedBarcode is visible
+   * to Admin.
    */
   async staffActivity(scope: StaffActivityScope): Promise<StaffActivityReport> {
     const isLive = scope === 'live';
@@ -414,6 +618,13 @@ export class ReportsService {
     for (const t of receptionTasks) userIds.add(t.userId);
     for (const t of openPoolTasks) if (t.claimedByUserId) userIds.add(t.claimedByUserId);
     for (const d of directives) if (d.receivedByUserId) userIds.add(d.receivedByUserId);
+
+    // Live only: every other on-shift staff member not already covered by one of the 4 task sources above gets a Break or Idle row — see the block appending `extraEntries` below.
+    const uncoveredShifts = isLive
+      ? await this.prisma.shift.findMany({ where: { endedAt: null, userId: { notIn: [...userIds] } } })
+      : [];
+    for (const shift of uncoveredShifts) userIds.add(shift.userId);
+
     const [users, hoursWorkedTodayByUser] = await Promise.all([
       this.prisma.user.findMany({ where: { id: { in: [...userIds] } } }),
       this.hoursWorkedTodayByUser(),
@@ -481,6 +692,80 @@ export class ReportsService {
         }),
       ),
     ];
+
+    if (isLive && uncoveredShifts.length > 0) {
+      const allBreaksForUncoveredShifts = await this.prisma.break.findMany({
+        where: { shiftId: { in: uncoveredShifts.map((s) => s.id) } },
+      });
+      const shortBreakMsByShift = sumShortBreakMsByShift(allBreaksForUncoveredShifts, new Date());
+      const activeBreakByShiftId = new Map(allBreaksForUncoveredShifts.filter((b) => !b.endedAt).map((b) => [b.shiftId, b]));
+
+      // "Since when" for an Idle row (not on a task or break) — the later of this shift's start or the most recent thing (of any kind) this person finished, each capped to a handful of rows per source so this stays cheap even with a long task history.
+      const idleShifts = uncoveredShifts.filter((s) => !activeBreakByShiftId.has(s.id));
+      const idleUserIds = idleShifts.map((s) => s.userId);
+      const idleSinceByUser = new Map<string, Date>();
+      if (idleUserIds.length > 0) {
+        const recentLimit = Math.max(20, idleUserIds.length * 5);
+        const [lastFloor, lastReception, lastOpenPool, lastDirective, lastBreak] = await Promise.all([
+          this.prisma.floorTaskLog.findMany({ where: { userId: { in: idleUserIds }, endedAt: { not: null } }, orderBy: { endedAt: 'desc' }, take: recentLimit }),
+          this.prisma.receptionTask.findMany({ where: { userId: { in: idleUserIds }, endedAt: { not: null } }, orderBy: { endedAt: 'desc' }, take: recentLimit }),
+          this.prisma.openPoolTask.findMany({ where: { claimedByUserId: { in: idleUserIds }, completedAt: { not: null } }, orderBy: { completedAt: 'desc' }, take: recentLimit }),
+          this.prisma.directive.findMany({ where: { receivedByUserId: { in: idleUserIds }, resolvedAt: { not: null } }, orderBy: { resolvedAt: 'desc' }, take: recentLimit }),
+          this.prisma.break.findMany({ where: { shiftId: { in: idleShifts.map((s) => s.id) }, endedAt: { not: null } }, orderBy: { endedAt: 'desc' }, take: recentLimit }),
+        ]);
+        const considerCandidate = (userId: string, at: Date) => {
+          const current = idleSinceByUser.get(userId);
+          if (!current || at.getTime() > current.getTime()) idleSinceByUser.set(userId, at);
+        };
+        const shiftById = new Map(idleShifts.map((s) => [s.id, s]));
+        for (const t of lastFloor) if (t.endedAt) considerCandidate(t.userId, t.endedAt);
+        for (const t of lastReception) if (t.endedAt) considerCandidate(t.userId, t.endedAt);
+        for (const t of lastOpenPool) if (t.completedAt && t.claimedByUserId) considerCandidate(t.claimedByUserId, t.completedAt);
+        for (const d of lastDirective) if (d.resolvedAt && d.receivedByUserId) considerCandidate(d.receivedByUserId, d.resolvedAt);
+        for (const b of lastBreak) {
+          const shift = shiftById.get(b.shiftId);
+          if (b.endedAt && shift) considerCandidate(shift.userId, b.endedAt);
+        }
+        // Never let a candidate predate this shift's own start — a previous shift's finished task shouldn't anchor idle time before the current shift began.
+        for (const shift of idleShifts) {
+          const candidate = idleSinceByUser.get(shift.userId);
+          if (!candidate || candidate.getTime() < shift.startedAt.getTime()) idleSinceByUser.set(shift.userId, shift.startedAt);
+        }
+      }
+
+      for (const shift of uncoveredShifts) {
+        const activeBreak = activeBreakByShiftId.get(shift.id);
+        if (activeBreak) {
+          const isShort = activeBreak.type === 'short';
+          const breakRemainingMs = isShort
+            ? Math.max(0, SHORT_BREAK_LIMIT_MS - (shortBreakMsByShift.get(shift.id) ?? 0))
+            : LUNCH_BREAK_SUGGESTED_DURATION_MS - (Date.now() - activeBreak.startedAt.getTime());
+          entries.push({
+            type: isShort ? 'short_break' : 'lunch_break',
+            id: activeBreak.id,
+            userId: shift.userId,
+            userName: nameFor(shift.userId),
+            startedAt: activeBreak.startedAt.toISOString(),
+            endedAt: null,
+            durationMs: null,
+            breakRemainingMs,
+            hoursWorkedToday: hoursWorkedTodayFor(shift.userId),
+          });
+        } else {
+          const since = idleSinceByUser.get(shift.userId) ?? shift.startedAt;
+          entries.push({
+            type: 'idle',
+            id: `idle-${shift.id}`,
+            userId: shift.userId,
+            userName: nameFor(shift.userId),
+            startedAt: since.toISOString(),
+            endedAt: null,
+            durationMs: null,
+            hoursWorkedToday: hoursWorkedTodayFor(shift.userId),
+          });
+        }
+      }
+    }
 
     // Live: oldest-started first (who's been at it longest). Recent: newest-finished first.
     entries.sort((a, b) => {

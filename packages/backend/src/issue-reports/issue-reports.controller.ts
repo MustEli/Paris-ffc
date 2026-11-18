@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -20,9 +20,27 @@ export class IssueReportsController {
     return this.issueReportsService.create(user, dto);
   }
 
+  /** Any staff member's own reports (optionally scoped to one task instance) — not admin-only, same access as create(). */
+  @Get('mine')
+  findMine(@CurrentUser() user: PublicUser, @Query('taskRef') taskRef?: string) {
+    return this.issueReportsService.findMine(user.id, taskRef);
+  }
+
   @Get()
   @Roles('admin', 'management')
   findAll() {
     return this.issueReportsService.findAll();
+  }
+
+  @Patch(':id/seen')
+  @Roles('admin', 'management')
+  markSeen(@Param('id') id: string, @CurrentUser() user: PublicUser) {
+    return this.issueReportsService.markSeen(id, user.id);
+  }
+
+  @Delete(':id')
+  @Roles('admin', 'management')
+  remove(@Param('id') id: string) {
+    return this.issueReportsService.remove(id);
   }
 }

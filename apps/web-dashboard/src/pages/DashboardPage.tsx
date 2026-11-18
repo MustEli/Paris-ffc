@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
+  AlertTriangle,
   Boxes,
   CheckCircle2,
   ClipboardCheck,
@@ -19,34 +20,26 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
+import { type FilterOption, FilterPopover } from '../core/components/FilterPopover';
 import {
   fetchAdminDashboard,
   fetchStaffActivity,
   fetchStaffHistory,
-  type AdminDashboardReport,
+  fetchStaffHistoryExport,
+  fetchStaffSummary,
+  type BreakKind,
+  type IdleKind,
+  type OpenPoolBucketKind,
+  type ReceptionCategory,
+  type StaffActivityBreakdown,
   type StaffActivityEntry,
-  type StaffHistoryDay,
-  type StaffHistoryReport,
+  type StaffHistoryExportReport,
 } from '../core/api/reports';
+import { fetchStaffUsers } from '../core/api/users';
 import { useAuth } from '../core/auth/AuthContext';
-
-function elapsedSince(iso: string): string {
-  const totalSeconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const hours = Math.floor(minutes / 60);
-  return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
-}
 
 function formatLocalTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-}
-
-/** `ms` may be negative for lunch (no real cap — see LUNCH_BREAK_SUGGESTED_DURATION_MS on the backend). */
-function formatMinutesSeconds(ms: number): string {
-  const totalSeconds = Math.round(Math.abs(ms) / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 function formatDayHeader(day: string): string {
@@ -54,63 +47,153 @@ function formatDayHeader(day: string): string {
   return new Date(`${day}T00:00:00.000Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-function formatHours(hours: number): string {
-  return `${hours}h`;
+/** Every duration in all 3 tables renders this way — "HH:MM ( X mins )" — per the Nov 2026 table redesign. */
+function formatDurationHHMM(ms: number): string {
+  const totalMinutes = Math.round(Math.max(0, ms) / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ( ${totalMinutes} mins )`;
 }
 
-const STAFF_HISTORY_CATEGORY_COLUMNS: { key: keyof StaffHistoryDay; labelKey: string }[] = [
-  { key: 'plannedHours', labelKey: 'staffHistory.columns.planned' },
-  { key: 'floorTaskHours', labelKey: 'staffHistory.columns.floorTask' },
-  { key: 'receptionHours', labelKey: 'staffHistory.columns.reception' },
-  { key: 'openPoolHours', labelKey: 'staffHistory.columns.openPool' },
-  { key: 'urgentTaskHours', labelKey: 'staffHistory.columns.urgentTask' },
-  { key: 'actualHours', labelKey: 'staffHistory.columns.actual' },
+const RECEPTION_CATEGORY_KEYS: ReceptionCategory[] = ['return_parcels', 'packaging_stock', 'sellers_stock', 'equipment_other'];
+const FLOOR_TASK_CATEGORY_KEYS = [
+  'pick',
+  'pack',
+  'dispatch',
+  'return_processing',
+  'box_prep',
+  'warehousing_inventory_check',
+  'warehousing_location_adjustment',
+  'backup_box',
+  'backup_shredder',
+  'backup_other',
 ];
+const OPEN_POOL_KEYS: OpenPoolBucketKind[] = ['directive', 'general'];
+const BREAK_KEYS: BreakKind[] = ['lunch', 'short'];
+const IDLE_KEYS: IdleKind[] = ['unclaimed', 'off_shift'];
+/** IdleKind's backend values use snake_case; this JSON's keys stay camelCase, matching every other i18n file in this app. */
+const IDLE_KIND_I18N_KEY: Record<IdleKind, string> = { unclaimed: 'unclaimed', off_shift: 'offShift' };
 
-function downloadStaffHistory(report: StaffHistoryReport, t: TFunction<'dashboard'>) {
-  const orderedDays = [...report.days].reverse();
-  const header: string[] = [t('staffHistory.staffColumn')];
-  for (const day of orderedDays) {
-    for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
-      header.push(`${day} ${t(col.labelKey)} (h)`);
-    }
-  }
-  for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
-    header.push(`${t('staffHistory.cumulative')} ${t(col.labelKey)} (h)`);
-  }
+function receptionOptions(t: TFunction<'dashboard'>): FilterOption[] {
+  return RECEPTION_CATEGORY_KEYS.map((k) => ({ key: k, label: t(`receptionCategory.${k}`, { ns: 'common' }) }));
+}
+function floorTaskOptions(t: TFunction<'dashboard'>): FilterOption[] {
+  return FLOOR_TASK_CATEGORY_KEYS.map((k) => ({ key: k, label: t(`floorTaskCategories.${k}`, { ns: 'common' }) }));
+}
+function openPoolOptions(t: TFunction<'dashboard'>): FilterOption[] {
+  return OPEN_POOL_KEYS.map((k) => ({ key: k, label: t(`openPoolKinds.${k}`) }));
+}
+function breakOptions(t: TFunction<'dashboard'>): FilterOption[] {
+  return BREAK_KEYS.map((k) => ({ key: k, label: t(`breakKinds.${k}`) }));
+}
+function idleOptions(t: TFunction<'dashboard'>): FilterOption[] {
+  return IDLE_KEYS.map((k) => ({ key: k, label: t(`idleKinds.${IDLE_KIND_I18N_KEY[k]}`) }));
+}
 
-  const rows: (string | number)[][] = report.staff.map((staffRow) => {
-    const row: (string | number)[] = [staffRow.userName];
-    for (const day of orderedDays) {
-      const entry = staffRow.days[day] ?? { plannedHours: 0, actualHours: 0, floorTaskHours: 0, receptionHours: 0, openPoolHours: 0, urgentTaskHours: 0 };
-      for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
-        row.push(entry[col.key]);
-      }
-    }
-    for (const col of STAFF_HISTORY_CATEGORY_COLUMNS) {
-      row.push(staffRow.cumulative[col.key]);
-    }
-    return row;
+/** Sums every value in `record`, or only the keys in `selected` when non-empty — an empty `selected` set means "all categories," matching FilterPopover's convention. */
+function sumSelected(record: Record<string, number>, selected: Set<string>): number {
+  const entries = Object.entries(record);
+  if (selected.size === 0) return entries.reduce((sum, [, v]) => sum + v, 0);
+  return entries.reduce((sum, [k, v]) => sum + (selected.has(k) ? v : 0), 0);
+}
+
+const ZERO_BREAKDOWN: StaffActivityBreakdown = {
+  plannedMs: 0,
+  onlineMs: 0,
+  claimedMs: 0,
+  receptionMs: { return_parcels: 0, packaging_stock: 0, sellers_stock: 0, equipment_other: 0 },
+  floorTaskMs: {},
+  openPoolMs: { directive: 0, general: 0 },
+  breakMs: { lunch: 0, short: 0 },
+  idleMs: { unclaimed: 0, off_shift: 0 },
+};
+
+interface CategoryFilterSets {
+  reception: Set<string>;
+  floorTask: Set<string>;
+  openPool: Set<string>;
+  breakF: Set<string>;
+  idle: Set<string>;
+}
+
+/** Shared Planned/Online/Claimed/Reception/Floor Task/Open-Pool/Break/Idle cell set — used by both the Staff table (table 2, one breakdown per row) and Staff History (table 3, one breakdown per day-group + Cumulative). */
+function BreakdownCells({
+  breakdown,
+  filters,
+  t,
+}: {
+  breakdown: StaffActivityBreakdown;
+  filters: CategoryFilterSets;
+  t: TFunction<'dashboard'>;
+}) {
+  return (
+    <>
+      <td>
+        {breakdown.plannedMs === null ? (
+          <span className="alert-chip">
+            <AlertTriangle size={11} />
+            {t('staffTable.noPlannedShift')}
+          </span>
+        ) : (
+          formatDurationHHMM(breakdown.plannedMs)
+        )}
+      </td>
+      <td>{formatDurationHHMM(breakdown.onlineMs)}</td>
+      <td>{formatDurationHHMM(breakdown.claimedMs)}</td>
+      <td>{formatDurationHHMM(sumSelected(breakdown.receptionMs, filters.reception))}</td>
+      <td>{formatDurationHHMM(sumSelected(breakdown.floorTaskMs, filters.floorTask))}</td>
+      <td>{formatDurationHHMM(sumSelected(breakdown.openPoolMs, filters.openPool))}</td>
+      <td>{formatDurationHHMM(sumSelected(breakdown.breakMs, filters.breakF))}</td>
+      <td>{formatDurationHHMM(sumSelected(breakdown.idleMs, filters.idle))}</td>
+    </>
+  );
+}
+
+/** One `useQuery` call behind this shared key — every section that needs the staff-name filter's option list reuses the same cached fetch. */
+function useStaffFilterOptions(): FilterOption[] {
+  const { token } = useAuth();
+  const { data } = useQuery({
+    queryKey: ['dashboard-staff-filter-options'],
+    queryFn: () => fetchStaffUsers(token!),
+    enabled: !!token,
   });
+  return (data ?? []).map((u) => ({ key: u.id, label: u.name }));
+}
+
+function downloadStaffHistoryExcel(report: StaffHistoryExportReport, t: TFunction<'dashboard'>) {
+  const toMin = (ms: number) => Math.round(ms / 60_000);
+  const header = [
+    t('staffHistory.staffColumn'),
+    t('staffHistory.dateColumn'),
+    `${t('activityColumns.planned')} (min)`,
+    `${t('activityColumns.online')} (min)`,
+    `${t('activityColumns.claimed')} (min)`,
+    ...RECEPTION_CATEGORY_KEYS.map((k) => `${t('activityColumns.reception')}: ${t(`receptionCategory.${k}`, { ns: 'common' })} (min)`),
+    ...FLOOR_TASK_CATEGORY_KEYS.map((k) => `${t('activityColumns.floorTask')}: ${t(`floorTaskCategories.${k}`, { ns: 'common' })} (min)`),
+    ...OPEN_POOL_KEYS.map((k) => `${t('activityColumns.openPool')}: ${t(`openPoolKinds.${k}`)} (min)`),
+    ...BREAK_KEYS.map((k) => `${t('activityColumns.break')}: ${t(`breakKinds.${k}`)} (min)`),
+    ...IDLE_KEYS.map((k) => `${t('activityColumns.idle')}: ${t(`idleKinds.${IDLE_KIND_I18N_KEY[k]}`)} (min)`),
+  ];
+
+  const rows: (string | number)[][] = report.rows.map((row) => [
+    row.userName,
+    row.date,
+    row.breakdown.plannedMs === null ? '' : toMin(row.breakdown.plannedMs),
+    toMin(row.breakdown.onlineMs),
+    toMin(row.breakdown.claimedMs),
+    ...RECEPTION_CATEGORY_KEYS.map((k) => toMin(row.breakdown.receptionMs[k] ?? 0)),
+    ...FLOOR_TASK_CATEGORY_KEYS.map((k) => toMin(row.breakdown.floorTaskMs[k] ?? 0)),
+    ...OPEN_POOL_KEYS.map((k) => toMin(row.breakdown.openPoolMs[k] ?? 0)),
+    ...BREAK_KEYS.map((k) => toMin(row.breakdown.breakMs[k] ?? 0)),
+    ...IDLE_KEYS.map((k) => toMin(row.breakdown.idleMs[k] ?? 0)),
+  ]);
 
   const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  // Excel's native filter-dropdown header row — "filterable like the dashboard version," applied the way a static downloaded file can be.
+  sheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }) };
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, t('staffHistory.heading'));
   XLSX.writeFile(book, `elno-staff-history-${new Date().toISOString().slice(0, 10)}.xlsx`);
-}
-
-function breakLabel(staff: AdminDashboardReport['staff'][number], t: TFunction<'dashboard'>): string {
-  if (staff.breakType === 'short') {
-    const remaining = staff.shortBreakRemainingMs ?? 0;
-    return t('staffTable.shortBreakRemaining', { time: formatMinutesSeconds(Math.max(0, remaining)) });
-  }
-  if (staff.breakType === 'lunch') {
-    const remaining = staff.lunchBreakRemainingMs ?? 0;
-    return remaining >= 0
-      ? t('staffTable.lunchBreakRemaining', { time: formatMinutesSeconds(remaining) })
-      : t('staffTable.lunchBreakOver', { time: formatMinutesSeconds(remaining) });
-  }
-  return t('staffTable.onBreak');
 }
 
 /**
@@ -260,64 +343,7 @@ export function DashboardPage() {
           </div>
 
           <StaffActivitySection highlightId={highlightId} highlightRef={highlightRef} />
-
-          <div className="flex-row" style={{ marginBottom: 12 }}>
-            <span className="icon-badge icon-badge-sm icon-badge-blue">
-              <Users />
-            </span>
-            <h2 style={{ margin: 0 }}>{t('staffTable.heading')}</h2>
-          </div>
-          <div className="card">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('staffTable.name')}</th>
-                  <th>{t('staffTable.status')}</th>
-                  <th>{t('staffTable.shiftsToday')}</th>
-                  <th>{t('staffTable.hoursWorkedToday')}</th>
-                  <th>{t('staffTable.putAwayDone')}</th>
-                  <th>{t('staffTable.orderPrepDone')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.staff.length === 0 && (
-                  <tr>
-                    <td colSpan={6}>{t('staffTable.noStaffAccounts')}</td>
-                  </tr>
-                )}
-                {data.staff.map((s) => (
-                  <tr
-                    key={s.userId}
-                    ref={s.userId === highlightId ? highlightRef : undefined}
-                    className={s.userId === highlightId ? 'highlight-row' : undefined}
-                  >
-                    <td>{s.userName}</td>
-                    <td>
-                      {s.onShift ? (
-                        <span className="pill pill-green">
-                          {s.shiftStartedAt
-                            ? t('staffTable.onShiftSince', { time: formatLocalTime(s.shiftStartedAt) })
-                            : t('staffTable.onShift')}
-                        </span>
-                      ) : (
-                        <span className="pill pill-gray">{t('staffTable.offShift')}</span>
-                      )}
-                      {s.onBreak && (
-                        <span className="pill pill-amber" style={{ marginLeft: 6 }}>
-                          {breakLabel(s, t)}
-                        </span>
-                      )}
-                    </td>
-                    <td>{s.shiftsToday}</td>
-                    <td>{s.hoursWorkedToday}</td>
-                    <td>{s.putAwayCompletedToday}</td>
-                    <td>{s.orderPrepCompletedToday}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
+          <StaffSummarySection />
           <StaffHistorySection />
         </>
       )}
@@ -325,55 +351,177 @@ export function DashboardPage() {
   );
 }
 
-/** Reusable 6-sub-column group header + body cells, shared by every day-group and the final Cumulative group. */
-function StaffHistoryGroupHeader({ title }: { title: string }) {
+/** Table 2 — today's Planned/Online/Claimed + Reception/Floor Task/Open-Pool/Break/Idle breakdown, one row per staff member. */
+function StaffSummarySection() {
+  const { t } = useTranslation('dashboard');
+  const { token } = useAuth();
+  const { data, isPending, error } = useQuery({
+    queryKey: ['staff-summary'],
+    queryFn: () => fetchStaffSummary(token!),
+    enabled: !!token,
+    refetchInterval: 30_000,
+  });
+  const staffOptions = useStaffFilterOptions();
+
+  const [staffFilter, setStaffFilter] = useState<Set<string>>(new Set());
+  const [receptionFilter, setReceptionFilter] = useState<Set<string>>(new Set());
+  const [floorTaskFilter, setFloorTaskFilter] = useState<Set<string>>(new Set());
+  const [openPoolFilter, setOpenPoolFilter] = useState<Set<string>>(new Set());
+  const [breakFilter, setBreakFilter] = useState<Set<string>>(new Set());
+  const [idleFilter, setIdleFilter] = useState<Set<string>>(new Set());
+  const filters: CategoryFilterSets = { reception: receptionFilter, floorTask: floorTaskFilter, openPool: openPoolFilter, breakF: breakFilter, idle: idleFilter };
+
+  const rows = (data?.staff ?? []).filter((row) => staffFilter.size === 0 || staffFilter.has(row.userId));
+
   return (
-    <th colSpan={STAFF_HISTORY_CATEGORY_COLUMNS.length} style={{ textAlign: 'center', borderLeft: '1px solid var(--gray-150)' }}>
+    <>
+      <div className="flex-row" style={{ marginBottom: 12 }}>
+        <span className="icon-badge icon-badge-sm icon-badge-blue">
+          <Users />
+        </span>
+        <h2 style={{ margin: 0 }}>{t('staffTable.heading')}</h2>
+      </div>
+      <div className="card">
+        {isPending && <p>{t('staffTable.loading')}</p>}
+        {error && <p className="error-text">{error.message}</p>}
+        {data && (
+          <div style={{ overflowX: 'auto' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    {t('staffTable.name')}
+                    <FilterPopover
+                      options={staffOptions}
+                      selected={staffFilter}
+                      onChange={setStaffFilter}
+                      triggerLabel={t('filters.staff.trigger')}
+                      allLabel={t('filters.staff.all')}
+                      searchPlaceholder={t('filters.staff.search')}
+                    />
+                  </th>
+                  <th>{t('activityColumns.planned')}</th>
+                  <th>{t('activityColumns.online')}</th>
+                  <th>{t('activityColumns.claimed')}</th>
+                  <th>
+                    {t('activityColumns.reception')}
+                    <FilterPopover options={receptionOptions(t)} selected={receptionFilter} onChange={setReceptionFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
+                  </th>
+                  <th>
+                    {t('activityColumns.floorTask')}
+                    <FilterPopover options={floorTaskOptions(t)} selected={floorTaskFilter} onChange={setFloorTaskFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
+                  </th>
+                  <th>
+                    {t('activityColumns.openPool')}
+                    <FilterPopover options={openPoolOptions(t)} selected={openPoolFilter} onChange={setOpenPoolFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
+                  </th>
+                  <th>
+                    {t('activityColumns.break')}
+                    <FilterPopover options={breakOptions(t)} selected={breakFilter} onChange={setBreakFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
+                  </th>
+                  <th>
+                    {t('activityColumns.idle')}
+                    <FilterPopover options={idleOptions(t)} selected={idleFilter} onChange={setIdleFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={9}>{t('staffTable.noStaffAccounts')}</td>
+                  </tr>
+                )}
+                {rows.map((row) => (
+                  <tr key={row.userId}>
+                    <td>{row.userName}</td>
+                    <BreakdownCells breakdown={row.breakdown} filters={filters} t={t} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** Reusable 8-sub-column group header, shared by every day-group and the Cumulative group. */
+function ActivityGroupHeader({ title }: { title: string }) {
+  return (
+    <th colSpan={8} style={{ textAlign: 'center', borderLeft: '1px solid var(--gray-150)' }}>
       {title}
     </th>
   );
 }
 
-function StaffHistorySubHeaderRow({ groupCount, t }: { groupCount: number; t: TFunction<'dashboard'> }) {
-  return (
-    <tr>
-      <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }} />
-      {Array.from({ length: groupCount }).map((_, groupIndex) =>
-        STAFF_HISTORY_CATEGORY_COLUMNS.map((col, i) => (
-          <th
-            key={`${groupIndex}-${col.key}`}
-            style={{ textAlign: 'center', fontSize: 11, fontWeight: 'var(--weight-regular)', color: 'var(--gray-500)', minWidth: 64, borderLeft: i === 0 ? '1px solid var(--gray-150)' : undefined }}
-          >
-            {t(col.labelKey)}
-          </th>
-        )),
-      )}
-    </tr>
-  );
-}
-
-function StaffHistoryCells({ entry }: { entry: StaffHistoryDay }) {
+/** The 8 sub-column labels repeated under every group — filter icons only render once, on the first (Cumulative) group, since all 5 category filters are shared across every group per the Nov 2026 design decision. */
+function ActivitySubHeaderCells({
+  withFilters,
+  t,
+  receptionFilter,
+  setReceptionFilter,
+  floorTaskFilter,
+  setFloorTaskFilter,
+  openPoolFilter,
+  setOpenPoolFilter,
+  breakFilter,
+  setBreakFilter,
+  idleFilter,
+  setIdleFilter,
+}: {
+  withFilters: boolean;
+  t: TFunction<'dashboard'>;
+  receptionFilter: Set<string>;
+  setReceptionFilter: (s: Set<string>) => void;
+  floorTaskFilter: Set<string>;
+  setFloorTaskFilter: (s: Set<string>) => void;
+  openPoolFilter: Set<string>;
+  setOpenPoolFilter: (s: Set<string>) => void;
+  breakFilter: Set<string>;
+  setBreakFilter: (s: Set<string>) => void;
+  idleFilter: Set<string>;
+  setIdleFilter: (s: Set<string>) => void;
+}) {
+  const subHeaderStyle = { textAlign: 'center' as const, fontSize: 11, fontWeight: 'var(--weight-regular)', color: 'var(--gray-500)', minWidth: 78 };
+  const firstStyle = { ...subHeaderStyle, borderLeft: '1px solid var(--gray-150)' };
   return (
     <>
-      {STAFF_HISTORY_CATEGORY_COLUMNS.map((col, i) => (
-        <td key={col.key} style={{ textAlign: 'center', fontSize: 'var(--text-xs)', borderLeft: i === 0 ? '1px solid var(--gray-100)' : undefined }}>
-          {formatHours(entry[col.key])}
-        </td>
-      ))}
+      <th style={firstStyle}>{t('activityColumns.planned')}</th>
+      <th style={subHeaderStyle}>{t('activityColumns.online')}</th>
+      <th style={subHeaderStyle}>{t('activityColumns.claimed')}</th>
+      <th style={subHeaderStyle}>
+        {t('activityColumns.reception')}
+        {withFilters && <FilterPopover options={receptionOptions(t)} selected={receptionFilter} onChange={setReceptionFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
+      </th>
+      <th style={subHeaderStyle}>
+        {t('activityColumns.floorTask')}
+        {withFilters && <FilterPopover options={floorTaskOptions(t)} selected={floorTaskFilter} onChange={setFloorTaskFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
+      </th>
+      <th style={subHeaderStyle}>
+        {t('activityColumns.openPool')}
+        {withFilters && <FilterPopover options={openPoolOptions(t)} selected={openPoolFilter} onChange={setOpenPoolFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
+      </th>
+      <th style={subHeaderStyle}>
+        {t('activityColumns.break')}
+        {withFilters && <FilterPopover options={breakOptions(t)} selected={breakFilter} onChange={setBreakFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
+      </th>
+      <th style={subHeaderStyle}>
+        {t('activityColumns.idle')}
+        {withFilters && <FilterPopover options={idleOptions(t)} selected={idleFilter} onChange={setIdleFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
+      </th>
     </>
   );
 }
 
-const EMPTY_DAY: StaffHistoryDay = { plannedHours: 0, actualHours: 0, floorTaskHours: 0, receptionHours: 0, openPoolHours: 0, urgentTaskHours: 0 };
-
 /**
- * Today-first (admin scrolls right/left to see older days — a plain
- * reverse of the backend's ascending order), each day broken down by
- * category (Floor Task / Reception / Open Pool / Urgent Task), plus a
- * final Cumulative group summing every day since the app's first-ever
- * completed shift. No ratio/percentage column — dropped per customer
- * request. See ReportsService.staffHistory() for how each number's
- * computed.
+ * Table 3 — today-first (admin scrolls right/left to see older days — a
+ * plain reverse of the backend's ascending order), one 8-column group
+ * per day (Planned/Online/Claimed/Reception/Floor Task/Open-Pool/
+ * Break/Idle — same shape as table 2), plus a Cumulative group pinned
+ * right after the sticky Staff column. The 5 category filters
+ * (Reception/Floor Task/Open-Pool/Break/Idle) are shared across every
+ * group at once — see ActivitySubHeaderCells.
  */
 function StaffHistorySection() {
   const { t } = useTranslation('dashboard');
@@ -383,14 +531,18 @@ function StaffHistorySection() {
     queryFn: () => fetchStaffHistory(token!),
     enabled: !!token,
   });
+  const staffOptions = useStaffFilterOptions();
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  // Ascending (oldest -> today), matching the backend's own order —
-  // Cumulative is pinned right after the sticky Staff column (a
-  // running total, not part of the day timeline) and the day-by-day
-  // breakdown scrolls oldest-to-newest ending with Today as the
-  // rightmost group, which is also where the view defaults to (see the
-  // scroll effect below) so Today's columns are visible without the
-  // admin needing to notice there's more to scroll to.
+  const [staffFilter, setStaffFilter] = useState<Set<string>>(new Set());
+  const [receptionFilter, setReceptionFilter] = useState<Set<string>>(new Set());
+  const [floorTaskFilter, setFloorTaskFilter] = useState<Set<string>>(new Set());
+  const [openPoolFilter, setOpenPoolFilter] = useState<Set<string>>(new Set());
+  const [breakFilter, setBreakFilter] = useState<Set<string>>(new Set());
+  const [idleFilter, setIdleFilter] = useState<Set<string>>(new Set());
+  const filters: CategoryFilterSets = { reception: receptionFilter, floorTask: floorTaskFilter, openPool: openPoolFilter, breakF: breakFilter, idle: idleFilter };
+
   const orderedDays = data ? data.days : [];
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -399,6 +551,22 @@ function StaffHistorySection() {
       scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
     }
   }, [data]);
+
+  const rows = (data?.staff ?? []).filter((row) => staffFilter.size === 0 || staffFilter.has(row.userId));
+
+  async function handleDownload() {
+    if (!token) return;
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      const exportReport = await fetchStaffHistoryExport(token);
+      downloadStaffHistoryExcel(exportReport, t);
+    } catch (e) {
+      setDownloadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <>
@@ -409,14 +577,15 @@ function StaffHistorySection() {
           </span>
           <h2 style={{ margin: 0 }}>{t('staffHistory.heading')}</h2>
         </div>
-        <button className="btn btn-outline" onClick={() => data && downloadStaffHistory(data, t)} disabled={!data || data.days.length === 0}>
+        <button className="btn btn-outline" onClick={handleDownload} disabled={downloading}>
           <Download size={14} />
-          {t('staffHistory.download')}
+          {downloading ? t('staffHistory.downloading') : t('staffHistory.download')}
         </button>
       </div>
       <div className="card">
         {isPending && <p>{t('staffHistory.loading')}</p>}
         {error && <p className="error-text">{error.message}</p>}
+        {downloadError && <p className="error-text">{downloadError}</p>}
         {data && data.days.length === 0 && <p className="hint-text">{t('staffHistory.noShiftsYet')}</p>}
         {data && data.days.length > 0 && (
           <div ref={scrollRef} style={{ overflowX: 'auto' }}>
@@ -425,34 +594,57 @@ function StaffHistorySection() {
                 <tr>
                   <th rowSpan={2} style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, verticalAlign: 'bottom' }}>
                     {t('staffHistory.staffColumn')}
+                    <FilterPopover
+                      options={staffOptions}
+                      selected={staffFilter}
+                      onChange={setStaffFilter}
+                      triggerLabel={t('filters.staff.trigger')}
+                      allLabel={t('filters.staff.all')}
+                      searchPlaceholder={t('filters.staff.search')}
+                    />
                   </th>
-                  <StaffHistoryGroupHeader title={t('staffHistory.cumulative')} />
+                  <ActivityGroupHeader title={t('staffHistory.cumulative')} />
                   {orderedDays.map((day, i) => (
-                    <StaffHistoryGroupHeader
+                    <ActivityGroupHeader
                       key={day}
-                      title={
-                        i === orderedDays.length - 1
-                          ? t('staffHistory.todaySuffix', { day: formatDayHeader(day) })
-                          : formatDayHeader(day)
-                      }
+                      title={i === orderedDays.length - 1 ? t('staffHistory.todaySuffix', { day: formatDayHeader(day) }) : formatDayHeader(day)}
                     />
                   ))}
                 </tr>
-                <StaffHistorySubHeaderRow groupCount={orderedDays.length + 1} t={t} />
+                <tr>
+                  <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }} />
+                  {Array.from({ length: orderedDays.length + 1 }).map((_, groupIndex) => (
+                    <ActivitySubHeaderCells
+                      key={groupIndex}
+                      withFilters={groupIndex === 0}
+                      t={t}
+                      receptionFilter={receptionFilter}
+                      setReceptionFilter={setReceptionFilter}
+                      floorTaskFilter={floorTaskFilter}
+                      setFloorTaskFilter={setFloorTaskFilter}
+                      openPoolFilter={openPoolFilter}
+                      setOpenPoolFilter={setOpenPoolFilter}
+                      breakFilter={breakFilter}
+                      setBreakFilter={setBreakFilter}
+                      idleFilter={idleFilter}
+                      setIdleFilter={setIdleFilter}
+                    />
+                  ))}
+                </tr>
               </thead>
               <tbody>
-                {data.staff.map((staffRow) => (
-                  <tr key={staffRow.userId}>
-                    <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 'var(--weight-strong)' }}>{staffRow.userName}</td>
-                    <StaffHistoryCells entry={staffRow.cumulative} />
+                {rows.map((row) => (
+                  <tr key={row.userId}>
+                    <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 'var(--weight-strong)' }}>{row.userName}</td>
+                    <BreakdownCells breakdown={row.cumulative} filters={filters} t={t} />
                     {orderedDays.map((day) => (
-                      <StaffHistoryCells key={day} entry={staffRow.days[day] ?? EMPTY_DAY} />
+                      <BreakdownCells key={day} breakdown={row.days[day] ?? ZERO_BREAKDOWN} filters={filters} t={t} />
                     ))}
                   </tr>
                 ))}
-                {data.staff.length === 0 && (
+                {rows.length === 0 && (
                   <tr>
-                    <td colSpan={(orderedDays.length + 1) * STAFF_HISTORY_CATEGORY_COLUMNS.length + 1}>{t('staffHistory.noStaffAccounts')}</td>
+                    <td colSpan={(orderedDays.length + 1) * 8 + 1}>{t('staffHistory.noStaffAccounts')}</td>
                   </tr>
                 )}
               </tbody>
@@ -469,6 +661,9 @@ const STAFF_ACTIVITY_TYPE_KEYS: Record<StaffActivityEntry['type'], string> = {
   reception: 'staffActivity.types.reception',
   open_pool: 'staffActivity.types.openPool',
   directive: 'staffActivity.types.directive',
+  lunch_break: 'staffActivity.types.lunchBreak',
+  short_break: 'staffActivity.types.shortBreak',
+  idle: 'staffActivity.types.idle',
 };
 
 function staffActivityDetail(entry: StaffActivityEntry, t: TFunction<'dashboard'>): string {
@@ -486,24 +681,25 @@ function staffActivityDetail(entry: StaffActivityEntry, t: TFunction<'dashboard'
       return entry.openPoolTitle ?? '—';
     case 'directive':
       return entry.directiveType ? t(`directiveTypes.${entry.directiveType}`, { ns: 'common', defaultValue: entry.directiveType }) : '—';
+    case 'lunch_break':
+    case 'short_break': {
+      if (entry.breakRemainingMs === undefined || entry.breakRemainingMs === null) return '—';
+      const mins = Math.round(entry.breakRemainingMs / 60_000);
+      return mins >= 0 ? t('staffActivity.breakRemaining', { mins }) : t('staffActivity.breakOver', { mins: Math.abs(mins) });
+    }
+    case 'idle':
+      return '';
   }
 }
 
-function formatDurationMs(ms: number): string {
-  const totalMinutes = Math.round(ms / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-}
-
 /**
- * Merges the 4 "someone is doing something" sources (Floor Task, the
- * Reception timer, a claimed Open Pool task, an acknowledged Directive)
- * that used to only ever show Floor Tasks — see
- * packages/backend/src/reports/reports.types.ts's StaffActivityEntry
- * doc comment. "Recent" is also the only place a completed Dispatch
- * Floor Task's scanned barcode becomes visible, since it drops out of
- * "Live" the instant it ends.
+ * Table 1 — merges the 4 "someone is doing something" sources (Floor
+ * Task, the Reception timer, a claimed Open Pool task, an acknowledged
+ * Directive) plus, live scope only, a Break or Idle row for every other
+ * on-shift staff member — see packages/backend/src/reports/
+ * reports.types.ts's StaffActivityEntry doc comment. "Recent" is also
+ * the only place a completed Dispatch Floor Task's scanned barcode
+ * becomes visible, since it drops out of "Live" the instant it ends.
  */
 function StaffActivitySection({
   highlightId,
@@ -521,6 +717,10 @@ function StaffActivitySection({
     enabled: !!token,
     refetchInterval: scope === 'live' ? 15_000 : false,
   });
+  const staffOptions = useStaffFilterOptions();
+  const [staffFilter, setStaffFilter] = useState<Set<string>>(new Set());
+
+  const entries = (data?.entries ?? []).filter((e) => staffFilter.size === 0 || staffFilter.has(e.userId));
 
   return (
     <>
@@ -546,28 +746,36 @@ function StaffActivitySection({
         <table>
           <thead>
             <tr>
-              <th>{t('staffActivity.staffColumn')}</th>
-              <th>{t('staffActivity.hoursWorkedToday')}</th>
-              <th>{t('staffActivity.type')}</th>
+              <th>
+                {t('staffActivity.staffColumn')}
+                <FilterPopover
+                  options={staffOptions}
+                  selected={staffFilter}
+                  onChange={setStaffFilter}
+                  triggerLabel={t('filters.staff.trigger')}
+                  allLabel={t('filters.staff.all')}
+                  searchPlaceholder={t('filters.staff.search')}
+                />
+              </th>
+              <th>{t('staffActivity.currentActivity')}</th>
               <th>{t('staffActivity.detail')}</th>
               <th>{t('staffActivity.started')}</th>
               <th>{scope === 'live' ? t('staffActivity.duration') : t('staffActivity.finished')}</th>
             </tr>
           </thead>
           <tbody>
-            {data && data.entries.length === 0 && (
+            {entries.length === 0 && (
               <tr>
-                <td colSpan={6}>{scope === 'live' ? t('staffActivity.noneLive') : t('staffActivity.noneRecent')}</td>
+                <td colSpan={5}>{scope === 'live' ? t('staffActivity.noneLive') : t('staffActivity.noneRecent')}</td>
               </tr>
             )}
-            {data?.entries.map((entry) => (
+            {entries.map((entry) => (
               <tr
                 key={entry.id}
                 ref={entry.id === highlightId ? highlightRef : undefined}
                 className={entry.id === highlightId ? 'highlight-row' : undefined}
               >
                 <td>{entry.userName}</td>
-                <td>{entry.hoursWorkedToday}h</td>
                 <td>{t(STAFF_ACTIVITY_TYPE_KEYS[entry.type])}</td>
                 <td>
                   {staffActivityDetail(entry, t)}
@@ -579,9 +787,15 @@ function StaffActivitySection({
                 </td>
                 <td>{formatLocalTime(entry.startedAt)}</td>
                 <td>
-                  {scope === 'live' ? elapsedSince(entry.startedAt) : entry.endedAt ? formatLocalTime(entry.endedAt) : '—'}
+                  {scope === 'live' ? (
+                    formatDurationHHMM(Date.now() - new Date(entry.startedAt).getTime())
+                  ) : entry.endedAt ? (
+                    formatLocalTime(entry.endedAt)
+                  ) : (
+                    '—'
+                  )}
                   {scope === 'recent' && entry.durationMs !== null && (
-                    <span style={{ color: 'var(--gray-500)', marginLeft: 6 }}>({formatDurationMs(entry.durationMs)})</span>
+                    <span style={{ color: 'var(--gray-500)', marginLeft: 6 }}>{formatDurationHHMM(entry.durationMs)}</span>
                   )}
                 </td>
               </tr>

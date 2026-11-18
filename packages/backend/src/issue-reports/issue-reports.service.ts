@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { type IssueReport as PrismaIssueReport } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
@@ -68,8 +68,11 @@ export class IssueReportsService {
       locationId: row.locationId,
       comment: row.comment,
       contextLabel: row.contextLabel,
+      taskRef: row.taskRef,
       alertsAdmin: row.alertsAdmin,
       createdAt: row.createdAt.toISOString(),
+      seenAt: row.seenAt ? row.seenAt.toISOString() : null,
+      seenByUserId: row.seenByUserId,
     };
   }
 
@@ -115,6 +118,7 @@ export class IssueReportsService {
         locationId: dto.locationId ?? null,
         comment: dto.comment ?? null,
         contextLabel: dto.contextLabel ?? null,
+        taskRef: dto.taskRef ?? null,
         alertsAdmin,
       },
     });
@@ -127,16 +131,52 @@ export class IssueReportsService {
     return report;
   }
 
+  /** A staff member's own reports, optionally scoped to one specific task instance — powers each task screen's "issues you already raised for this one" list. */
+  async findMine(userId: string, taskRef?: string): Promise<IssueReport[]> {
+    const rows = await this.prisma.issueReport.findMany({
+      where: { userId, ...(taskRef ? { taskRef } : {}) },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async findAll(): Promise<IssueReportWithReporter[]> {
     const rows = await this.prisma.issueReport.findMany({ orderBy: { createdAt: 'desc' } });
     if (rows.length === 0) return [];
 
-    const users = await this.prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId) } } });
+    const userIds = new Set<string>();
+    for (const row of rows) {
+      userIds.add(row.userId);
+      if (row.seenByUserId) userIds.add(row.seenByUserId);
+    }
+    const users = await this.prisma.user.findMany({ where: { id: { in: [...userIds] } } });
     const nameByUserId = new Map(users.map((u) => [u.id, u.name]));
 
     return rows.map((row) => ({
       ...this.toDomain(row),
       userName: nameByUserId.get(row.userId) ?? 'Unknown',
+      seenByName: row.seenByUserId ? (nameByUserId.get(row.seenByUserId) ?? 'Unknown') : null,
     }));
+  }
+
+  /** Admin's "confirm seen it" review step — idempotent, re-marking just refreshes who/when. */
+  async markSeen(id: string, userId: string): Promise<IssueReport> {
+    const existing = await this.prisma.issueReport.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Issue report not found');
+    }
+    const row = await this.prisma.issueReport.update({
+      where: { id },
+      data: { seenAt: new Date(), seenByUserId: userId },
+    });
+    return this.toDomain(row);
+  }
+
+  async remove(id: string): Promise<void> {
+    const existing = await this.prisma.issueReport.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Issue report not found');
+    }
+    await this.prisma.issueReport.delete({ where: { id } });
   }
 }

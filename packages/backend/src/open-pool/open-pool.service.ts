@@ -137,7 +137,10 @@ export class OpenPoolService {
       data: { status: 'claimed', claimedByUserId: userId, claimedAt: new Date() },
     });
     if (result.count === 0) {
-      throw new ConflictException('Task already claimed by another staff member');
+      throw new ConflictException({
+        message: 'Task already claimed by another staff member',
+        code: 'open_pool.already_claimed',
+      });
     }
 
     // Claiming a pool task means dropping whatever floor task was

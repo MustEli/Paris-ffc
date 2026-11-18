@@ -20,36 +20,53 @@
   "staffTable": {
     "heading": "Staff",
     "name": "Name",
-    "status": "Status",
-    "shiftsToday": "Shifts today",
-    "hoursWorkedToday": "Hours worked today",
-    "putAwayDone": "Put-away done",
-    "orderPrepDone": "Order prep done",
+    "loading": "Loading…",
     "noStaffAccounts": "No staff accounts yet.",
-    "onShift": "On shift",
-    "onShiftSince": "On shift since {{time}}",
-    "offShift": "Off shift",
-    "onBreak": "On break",
-    "shortBreakRemaining": "Short break — {{time}} remaining",
-    "lunchBreakRemaining": "Lunch break — {{time}} remaining",
-    "lunchBreakOver": "Lunch break — {{time}} over"
+    "noPlannedShift": "No shift scheduled"
   },
   "staffHistory": {
     "heading": "Staff History",
     "download": "Download",
+    "downloading": "Downloading…",
     "loading": "Loading…",
     "noShiftsYet": "No completed shifts yet.",
     "noStaffAccounts": "No staff accounts yet.",
     "staffColumn": "Staff",
+    "dateColumn": "Date",
     "cumulative": "Cumulative",
-    "todaySuffix": "{{day}} (Today)",
-    "columns": {
-      "planned": "Planned",
-      "floorTask": "Floor Task",
-      "reception": "Reception",
-      "openPool": "Open Pool",
-      "urgentTask": "Urgent Task",
-      "actual": "Actual"
+    "todaySuffix": "{{day}} (Today)"
+  },
+  "activityColumns": {
+    "planned": "Planned",
+    "online": "Online",
+    "claimed": "Claimed",
+    "reception": "Reception",
+    "floorTask": "Floor Task",
+    "openPool": "Open-Pool",
+    "break": "Break",
+    "idle": "Idle"
+  },
+  "openPoolKinds": {
+    "directive": "Directive",
+    "general": "General"
+  },
+  "breakKinds": {
+    "lunch": "Lunch",
+    "short": "Short"
+  },
+  "idleKinds": {
+    "unclaimed": "Unclaimed",
+    "offShift": "Off-Shift"
+  },
+  "filters": {
+    "staff": {
+      "trigger": "Filter staff",
+      "all": "All staff",
+      "search": "Search staff…"
+    },
+    "categories": {
+      "trigger": "Filter categories",
+      "all": "All categories"
     }
   },
   "staffActivity": {
@@ -58,8 +75,7 @@
     "recent": "Recent",
     "loading": "Loading…",
     "staffColumn": "Staff",
-    "hoursWorkedToday": "Hours worked today",
-    "type": "Type",
+    "currentActivity": "Current Activity",
     "detail": "Detail",
     "started": "Started",
     "duration": "Duration",
@@ -71,11 +87,16 @@
     "notYetScanned": "— not yet scanned",
     "receptionNoDelivery": "Reception — no confirmed delivery",
     "reception": "Reception",
+    "breakRemaining": "{{mins}} min left",
+    "breakOver": "{{mins}} min over",
     "types": {
       "floorTask": "Floor Task",
       "reception": "Reception",
       "openPool": "Open Pool",
-      "directive": "Urgent Task"
+      "directive": "Urgent Task",
+      "lunchBreak": "Lunch Break",
+      "shortBreak": "Short Break",
+      "idle": "Idle"
     }
   }
 }

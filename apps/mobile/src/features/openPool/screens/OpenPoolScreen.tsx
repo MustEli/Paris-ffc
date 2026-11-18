@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { ApiError } from '../../../core/api/client';
 import { resolvePhotoUrl } from '../../../core/api/upload';
 import { colors } from '../../../core/theme/colors';
 import { elevation } from '../../../core/theme/elevation';
@@ -40,7 +41,9 @@ export function OpenPoolScreen() {
       <Text style={styles.sectionTitle}>Available tasks</Text>
       {openPending || minePending ? <ActivityIndicator style={styles.spinner} /> : null}
       {openError && <Text style={styles.error}>{openError.message}</Text>}
-      {claim.error && <Text style={styles.error}>{claim.error.message}</Text>}
+      {claim.error && !(claim.error instanceof ApiError && claim.error.code === 'open_pool.already_claimed') && (
+        <Text style={styles.error}>{claim.error.message}</Text>
+      )}
       {!openPending && (!openTasks || openTasks.length === 0) && (
         <Text style={styles.empty}>Nothing in the open pool right now.</Text>
       )}

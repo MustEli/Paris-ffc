@@ -58,41 +58,78 @@ export function fetchAttendanceReport(token: string) {
   return apiRequest<AttendanceReport>('/reports/attendance', { token });
 }
 
-/** Mirrors packages/backend/src/reports/reports.types.ts's StaffHistoryReport. */
-export interface StaffHistoryDay {
-  /** 0 on a day outside the staff member's configured working days (or with no schedule configured at all). */
-  plannedHours: number;
-  /** Net of lunch break. Only from completed (clocked-out) shifts that started on this day — NOT guaranteed to equal the sum of the 4 category hours below (those only cover tracked-task time; unattributed/idle shift time isn't in any of them). */
-  actualHours: number;
-  /** Floor Task worked time, bucketed by start day. */
-  floorTaskHours: number;
-  /** Reception-flow worked time (Start -> Log Delivery or Leave Unfinished), bucketed by start day. */
-  receptionHours: number;
-  /** Open Pool claimed -> completed time, bucketed by claim day. */
-  openPoolHours: number;
-  /** "Urgent Task" in the UI — Directive received -> resolved time, bucketed by receive day. */
-  urgentTaskHours: number;
+/** Mirrors packages/backend/src/reports/reports.types.ts's BreakKind/IdleKind/OpenPoolBucketKind/StaffActivityBreakdown. */
+export type BreakKind = 'lunch' | 'short';
+export type IdleKind = 'unclaimed' | 'off_shift';
+export type OpenPoolBucketKind = 'directive' | 'general';
+
+/**
+ * One staff member's time breakdown for a single day (or a Cumulative
+ * total) — shared shape for the "Staff" table (table 2, today only)
+ * and "Staff History" table (table 3, one per day + Cumulative).
+ *   onlineMs  = claimedMs + idleMs.unclaimed
+ *   claimedMs = sum(receptionMs) + sum(floorTaskMs) + sum(openPoolMs) + sum(breakMs)
+ * idleMs.off_shift is NOT part of onlineMs. openPoolMs.directive is
+ * Directive received->resolved time shown inside the Open-Pool column.
+ */
+export interface StaffActivityBreakdown {
+  /** ms until/since today's planned shift-start; null when there's no planned start to measure against (no schedule, or this weekday isn't a working day) — show an alert instead of a duration. */
+  plannedMs: number | null;
+  onlineMs: number;
+  claimedMs: number;
+  receptionMs: Record<ReceptionCategory, number>;
+  floorTaskMs: Record<string, number>;
+  openPoolMs: Record<OpenPoolBucketKind, number>;
+  breakMs: Record<BreakKind, number>;
+  idleMs: Record<IdleKind, number>;
 }
 
-/** Sums of every StaffHistoryDay field across the full day range. */
-export type StaffHistoryCumulative = StaffHistoryDay;
-
-export interface StaffHistoryRow {
+export interface StaffActivityBreakdownRow {
   userId: string;
   userName: string;
-  /** Keyed by "YYYY-MM-DD" — every key in StaffHistoryReport.days is present here. */
-  days: Record<string, StaffHistoryDay>;
-  cumulative: StaffHistoryCumulative;
+  breakdown: StaffActivityBreakdown;
 }
 
-export interface StaffHistoryReport {
-  /** "YYYY-MM-DD", ascending, from the app's first-ever completed shift to today. Empty if no shift has ever completed. */
+export interface StaffSummaryReport {
+  staff: StaffActivityBreakdownRow[];
+}
+
+export function fetchStaffSummary(token: string) {
+  return apiRequest<StaffSummaryReport>('/reports/staff-summary', { token });
+}
+
+export interface StaffHistoryV2Row {
+  userId: string;
+  userName: string;
+  /** Keyed by "YYYY-MM-DD" — every key in StaffHistoryV2Report.days is present here. */
+  days: Record<string, StaffActivityBreakdown>;
+  cumulative: StaffActivityBreakdown;
+}
+
+export interface StaffHistoryV2Report {
+  /** "YYYY-MM-DD", ascending, from the app's first-ever shift to today. Empty if no shift has ever started. */
   days: string[];
-  staff: StaffHistoryRow[];
+  staff: StaffHistoryV2Row[];
 }
 
 export function fetchStaffHistory(token: string) {
-  return apiRequest<StaffHistoryReport>('/reports/staff-history', { token });
+  return apiRequest<StaffHistoryV2Report>('/reports/staff-history', { token });
+}
+
+export interface StaffHistoryExportRow {
+  userId: string;
+  userName: string;
+  /** "YYYY-MM-DD". */
+  date: string;
+  breakdown: StaffActivityBreakdown;
+}
+
+export interface StaffHistoryExportReport {
+  rows: StaffHistoryExportRow[];
+}
+
+export function fetchStaffHistoryExport(token: string) {
+  return apiRequest<StaffHistoryExportReport>('/reports/staff-history-export', { token });
 }
 
 /** Mirrors packages/backend/src/reports/reports.types.ts's ReportGranularity + the 5 Reception Reports endpoints. */
@@ -178,7 +215,14 @@ export function fetchReceptionReliability(token: string, params?: ReportDateRang
 }
 
 /** Mirrors packages/backend/src/reports/reports.types.ts's StaffActivityEntry — only one of the type-specific fields is ever populated, per `type`. */
-export type StaffActivityType = 'floor_task' | 'reception' | 'open_pool' | 'directive';
+export type StaffActivityType =
+  | 'floor_task'
+  | 'reception'
+  | 'open_pool'
+  | 'directive'
+  | 'lunch_break'
+  | 'short_break'
+  | 'idle';
 
 export interface StaffActivityEntry {
   type: StaffActivityType;
@@ -197,6 +241,8 @@ export interface StaffActivityEntry {
   openPoolDescription?: string | null;
   directiveType?: string;
   directiveMessage?: string;
+  /** type === 'lunch_break' | 'short_break' only — ms remaining (lunch has no real cap, can go negative). */
+  breakRemainingMs?: number | null;
   /** This person's total clocked shift time today (net of lunch break) — same figure on every one of their rows. */
   hoursWorkedToday: number;
 }

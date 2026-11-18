@@ -131,6 +131,9 @@ model User {
 
   /** Staff-view redesign: staff take their own selfie on first shift start, shown in the persistent shift-status bar. Null until they do. */
   photoUrl String?
+
+  /** Defaults to now() on existing rows at migration time (their true creation date isn't recoverable) — accurate going forward. Drives the Staff History Excel export's per-staff "every day since they were added" row range. */
+  createdAt DateTime @default(now())
 }
 
 model Shift {
@@ -578,9 +581,15 @@ model IssueReport {
   comment     String?
   /** What the staff member was doing when they raised this — e.g. "Floor Task — Pick". Only ever set by the in-task quick-report shortcut; the full Issue Reporting menu flow leaves it null. */
   contextLabel String?
+  /** "<task type>:<id>" of the specific task instance, e.g. "floor_task:abc123" — same quick-report-only scope as contextLabel, see issue-report.types.ts. */
+  taskRef      String?
   alertsAdmin Boolean
   createdAt   DateTime            @default(now())
+  /** Admin's "confirm seen it" review step — both null until an admin/management user acknowledges it. */
+  seenAt       DateTime?
+  seenByUserId String?
 
   @@index([userId])
   @@index([alertsAdmin])
+  @@index([userId, taskRef])
 }
