@@ -1,47 +1,69 @@
+/* UI-Docs/elno-variables.css's exact font stack — Plus Jakarta Sans for UI text, JetBrains Mono mandatory for OEM/SKU/bin/barcode/tracking-ID style text. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
 :root {
-  /* Sampled directly from the ELNO logo's actual letters, not picked freehand.
-     Used sparingly — primary actions, key numbers, active states — never as
-     a base fill. Every other color below is neutral on purpose, same
-     "one signature accent, clean neutral base" approach as the brand
-     reference this redesign is built from. */
-  --brand-orange: #fd8c1e;
-  --brand-orange-dark: #d9740f;
-  /* Top header tricolor stripe — exact hex values from the customer's
-     spec. Deliberately distinct from the mobile app's own tricolor
-     values; not meant to reconcile the two. */
-  --header-stripe-navy: #052370;
+  /* Ovoko Signature Orange — UI-Docs' --brand-primary. Used sparingly —
+     primary actions, key numbers, active states — never as a base
+     fill. Every other color below is neutral on purpose, same
+     "one signature accent, clean neutral base" approach as before. */
+  --brand-orange: #ff5a00;
+  --brand-orange-dark: #e04e00;
+  --brand-orange-tint: #fff3eb;
+
+  /* French micro-accent — UI-Docs' exact tricolor values. Strictly the
+     3px login-card top strip and the 2px main-nav top border; never a
+     standard UI color. */
+  --header-stripe-navy: #002654;
   --header-stripe-white: #ffffff;
-  --header-stripe-red: #e1000f;
+  --header-stripe-red: #ed2939;
+
+  /* UI-Docs' own token names, aliased to the values above — so the
+     exact variable names from the design handoff work here too,
+     keeping this file's CSS literally greppable against that doc. */
+  --brand-primary: var(--brand-orange);
+  --brand-primary-hover: var(--brand-orange-dark);
+  --brand-primary-tint: var(--brand-orange-tint);
+  --accent-fr-blue: var(--header-stripe-navy);
+  --accent-fr-white: var(--header-stripe-white);
+  --accent-fr-red: var(--header-stripe-red);
+
+  /* Deep Carbon — top nav bar / sidebar chrome. Distinct from
+     --gray-950 below (that's for *text*; this is for backgrounds). */
+  --surface-header: #18181b;
 
   /* Neutral scale — every gray used anywhere in this file should be one
-     of these, not a one-off hex. Light surfaces, dark text. */
-  --gray-950: #0f172a;
+     of these, not a one-off hex. Light surfaces, dark text. 950/500/150/100
+     are pinned to UI-Docs' text-primary/text-secondary/border-subtle/
+     surface-bg values; the rest fill in the scale between them. */
+  --gray-950: #111827;
   --gray-900: #1e293b;
   --gray-700: #374151;
   --gray-600: #475569;
-  --gray-500: #64748b;
+  --gray-500: #4b5563;
   --gray-400: #94a3b8;
   --gray-300: #cbd5e1;
   --gray-200: #d1d5db;
-  --gray-150: #e5e7eb;
-  --gray-100: #f1f5f9;
+  --gray-150: #e2e8f0;
+  --gray-100: #f4f5f7;
   --gray-50: #f9fafb;
 
   /* Status — reserved for state, never reused as a 4th/5th categorical color. */
   --status-success-bg: #dcfce7;
-  --status-success-text: #15803d;
+  --status-success-text: #16a34a;
   --status-warning-bg: #fef3c7;
-  --status-warning-text: #b45309;
+  --status-warning-text: #d97706;
   --status-danger-bg: #fee2e2;
   --status-danger-text: #b91c1c;
   --status-danger: #dc2626;
-  --status-neutral-bg: #f1f5f9;
+  --status-neutral-bg: #f4f5f7;
   --status-neutral-text: #64748b;
 
   /* Type — one family, two confident weights (regular body, strong
      headline) rather than the 400/500/600/700 mix that used to creep in
-     page by page. */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+     page by page. --font-mono is opt-in per element (OEM/SKU/bin
+     location/barcode/tracking-ID text), never the page default. */
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
   --text-xs: 12px;
   --text-sm: 13px;
   --text-base: 14px;
@@ -62,11 +84,15 @@
   --space-8: 32px;
   --space-10: 40px;
 
-  /* Shape — soft-rounded cards, pill-shaped badges/tags, never sharp corners. */
+  /* Shape — soft-rounded cards, pill-shaped badges/tags, never sharp
+     corners. --radius-md/lg are pinned to UI-Docs' button/card radii. */
   --radius-sm: 6px;
+  --radius-thumb: 8px;
   --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 12px;
   --radius-pill: 999px;
+  --radius-btn: var(--radius-md);
+  --radius-card: var(--radius-lg);
 
   /* Elevation — real shadow depth instead of a flat 1px border doing
      all the work. Cards/tiles/modals now read as raised surfaces. */
@@ -74,13 +100,13 @@
   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
-  --shadow-orange-glow: 0 8px 20px rgba(253, 140, 30, 0.25);
+  --shadow-orange-glow: 0 8px 20px rgba(255, 90, 0, 0.25);
 
   /* Icon-badge tints — identity accents for nav/stat icons only, never
      used as data-viz categorical colors (those stay in ReportCharts'
      own fixed-order palette). Each pairs a soft tint background with a
      saturated icon color from the same hue. */
-  --tint-orange-bg: #fff1e2;
+  --tint-orange-bg: var(--brand-orange-tint);
   --tint-orange-icon: #c2660a;
   --tint-blue-bg: #e3edff;
   --tint-blue-icon: #3356c9;
@@ -124,7 +150,7 @@ svg {
 .sidebar {
   width: 248px;
   flex-shrink: 0;
-  background: var(--gray-950);
+  background: var(--surface-header);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -608,54 +634,94 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gray-950);
+  background: var(--surface-header);
   overflow: hidden;
 }
 
-.login-page::before,
-.login-page::after {
+/* The warehouse photo, blurred — `background-size: cover` recenters/recrops
+   per viewport, so the login card drawn on top can never reliably land in
+   the exact same spot as the photo's own baked-in content at every screen
+   size. A dark, soft-focus backdrop avoids ever needing that alignment:
+   it reads as ambience behind the real card, not a second, misaligned
+   card. Scaled up (inset: -40px) so the blur's own edge softening never
+   reveals an unblurred strip at the viewport edge. A separate element
+   from .login-page's own background specifically so the blur filter
+   can't also soften the (unrelated) card drawn on top of it. */
+.login-page::before {
   content: '';
   position: absolute;
-  border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.55;
-}
-
-.login-page::before {
-  width: 520px;
-  height: 520px;
-  top: -160px;
-  left: -140px;
-  background: radial-gradient(circle, var(--brand-orange) 0%, transparent 70%);
-}
-
-.login-page::after {
-  width: 480px;
-  height: 480px;
-  bottom: -180px;
-  right: -120px;
-  background: radial-gradient(circle, var(--header-stripe-navy) 0%, transparent 70%);
+  inset: -40px;
+  background: url('./assets/login-background.jpg') center / cover no-repeat;
+  filter: blur(18px) brightness(0.4);
 }
 
 .login-card {
   position: relative;
-  width: 380px;
-  background: #fff;
-  border-radius: var(--radius-lg);
-  padding: var(--space-8) var(--space-6);
+  z-index: 1;
+  width: 400px;
+  background: var(--surface-header);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* The French micro-accent — login card top edge only, per UI-Docs. */
+.login-card-accent {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    var(--header-stripe-navy) 0% 33.33%,
+    var(--header-stripe-white) 33.33% 66.66%,
+    var(--header-stripe-red) 66.66% 100%
+  );
+}
+
+.login-card-body {
+  padding: var(--space-8) var(--space-6);
+}
+
+.login-logo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
 .login-logo {
   display: block;
-  width: 220px;
-  height: auto;
-  margin: 0 auto var(--space-2);
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
-.login-card .page-subtitle {
-  text-align: center;
-  margin-bottom: var(--space-6);
+.login-logo-wordmark {
+  font-size: 20px;
+  font-weight: var(--weight-strong);
+}
+
+.login-logo-elno {
+  color: #fff;
+}
+
+.login-logo-team {
+  color: var(--brand-orange);
+}
+
+.login-card .form-label {
+  color: #e2e8f0;
+}
+
+.login-card input[type='email'],
+.login-card input[type='password'] {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.login-card input[type='email']::placeholder,
+.login-card input[type='password']::placeholder {
+  color: #94a3b8;
 }
 
 .login-card .btn {
@@ -837,12 +903,15 @@ textarea:focus {
 }
 
 .top-header {
-  background: #0f172a;
+  background: var(--surface-header);
   flex-shrink: 0;
 }
 
+/* UI-Docs: "a thin top border (2px) on the main navigation bar" — a
+   decorative accent, not a standard UI color, so it's deliberately
+   thin rather than a bold banner. */
 .top-header-stripe {
-  height: 8px;
+  height: 2px;
   background: linear-gradient(
     to right,
     var(--header-stripe-navy) 0% 33.33%,
@@ -868,20 +937,22 @@ textarea:focus {
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
+}
+
+.top-header-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 .top-header-logo-elno {
   color: #fff;
 }
 
-.top-header-logo-x {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.top-header-logo-ovoko {
+.top-header-logo-team {
   color: var(--brand-orange);
 }
 
@@ -1240,4 +1311,88 @@ textarea:focus {
   100% {
     background: transparent;
   }
+}
+
+/* ==========================================================================
+   UI-Docs component helpers — straight from elno-variables.css, kept
+   under their exact documented class names so this file stays
+   greppable against the design handoff. Not every page uses these yet
+   (the Nov 2026 pass was tokens/branding first, hardware/layout work
+   — e.g. the scan-flash animations below — is a later phase per that
+   same handoff), but they're here, token-driven, ready to use.
+   ========================================================================== */
+
+/* Monospace technical identifiers — OEM/SKU/bin-location/barcode/tracking-ID text. Opt-in per element, never the page default. */
+.elno-code-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: slashed-zero;
+  letter-spacing: 0.02em;
+}
+
+.elno-bin-badge {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary, var(--gray-950));
+  background-color: var(--brand-primary-tint);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-thumb);
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Glove-friendly primary button (Elno Team mobile/tablet) — 56px minimum height. Desktop/WMS stays on the existing 40px .btn. */
+.elno-btn-primary-touch {
+  min-height: 56px;
+  padding: 0 20px;
+  background-color: var(--brand-primary);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-btn);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.elno-btn-primary-touch:hover {
+  background-color: var(--brand-primary-hover);
+}
+
+.elno-btn-primary-touch:active {
+  transform: scale(0.98);
+}
+
+/* Full-screen scanner visual flash feedback — barcode scan match/mismatch. */
+@keyframes elno-scan-success-flash {
+  0% {
+    box-shadow: inset 0 0 0 8px var(--status-success-text);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0px transparent;
+  }
+}
+
+@keyframes elno-scan-error-flash {
+  0% {
+    box-shadow: inset 0 0 0 8px var(--status-danger);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0px transparent;
+  }
+}
+
+.elno-scan-flash-success {
+  animation: elno-scan-success-flash 0.6s ease-out;
+}
+
+.elno-scan-flash-error {
+  animation: elno-scan-error-flash 0.6s ease-out;
 }

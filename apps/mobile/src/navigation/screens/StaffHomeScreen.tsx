@@ -1,6 +1,6 @@
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { CircleAlert, Footprints, Layers, Package } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackHandler, ScrollView, StyleSheet } from 'react-native';
@@ -57,23 +57,23 @@ export function StaffHomeScreen({ navigation }: Props) {
     >
       <MenuBox
         label={t('mainMenu.reception')}
-        icon={<Ionicons name="cube-outline" size={28} color={colors.brandOrange} />}
+        icon={<Package size={28} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionStart')}
       />
       <MenuBox
         label={t('mainMenu.floorTasks')}
-        icon={<Ionicons name="walk-outline" size={28} color={colors.brandOrange} />}
+        icon={<Footprints size={28} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('FloorTasks')}
       />
       <MenuBox
         label={t('mainMenu.openPoolTasks')}
-        icon={<Ionicons name="layers-outline" size={28} color={colors.brandOrange} />}
+        icon={<Layers size={28} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('OpenPool')}
         badgeCount={availableOpenPoolTasks?.length}
       />
       <MenuBox
         label={t('mainMenu.issueReporting')}
-        icon={<Ionicons name="alert-circle-outline" size={28} color={colors.alert} />}
+        icon={<CircleAlert size={28} color={colors.alert} />}
         variant="alert"
         spacedAbove
         onPress={() => navigation.navigate('IssueReportingMenu')}

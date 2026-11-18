@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -78,7 +78,7 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
             <Text style={styles.rowTitle}>{task.location}</Text>
             <Text style={styles.rowSubtitle}>{t(STATUS_LABEL_KEYS[task.status])}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <ChevronRight size={18} color={colors.textMuted} />
         </Pressable>
       ))}
       {assignedReceptionsList.map((reception) => (
@@ -91,7 +91,7 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
             <Text style={styles.rowTitle}>{t(CATEGORY_LABELS[reception.details.category])}</Text>
             <Text style={styles.rowSubtitle}>{summarizeDetails(reception)}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <ChevronRight size={18} color={colors.textMuted} />
         </Pressable>
       ))}
 
@@ -109,7 +109,7 @@ export function PutawayUnifiedScreen({ navigation }: Props) {
               {t('putaway.palletSubtitle', { sellerName: pallet.sellerName, boxNumber: pallet.boxNumber })}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <ChevronRight size={18} color={colors.textMuted} />
         </Pressable>
       ))}
     </ScrollView>

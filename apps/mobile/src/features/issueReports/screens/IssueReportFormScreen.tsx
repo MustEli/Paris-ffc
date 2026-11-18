@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type RouteProp } from '@react-navigation/native';
+import { Send } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -188,7 +188,7 @@ export function IssueReportFormScreen({ navigation, route }: Props) {
           <ActivityIndicator color="#1a1200" />
         ) : (
           <>
-            <Ionicons name="send-outline" size={16} color="#1a1200" style={styles.submitIcon} />
+            <Send size={16} color="#1a1200" style={styles.submitIcon} />
             <Text style={styles.submitText}>{t('issueReports.submit')}</Text>
           </>
         )}

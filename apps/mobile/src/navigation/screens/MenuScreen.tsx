@@ -1,11 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import { type ComponentProps } from 'react';
+import { ChevronRight, type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../core/auth/authStore';
 
-const BRAND_ORANGE = '#fd8c1e';
+const BRAND_ORANGE = '#FF5A00';
 
 interface MenuItem {
   label: string;
@@ -16,7 +15,7 @@ interface MenuItem {
   /** Shown instead of `description` while disabled, if provided — e.g. "Start your shift to unlock this." */
   disabledHint?: string;
   /** Leading icon in a tinted circle — optional so existing callers keep working without it. */
-  icon?: ComponentProps<typeof Ionicons>['name'];
+  icon?: LucideIcon;
 }
 
 interface MenuScreenProps {
@@ -55,7 +54,7 @@ export function MenuScreen({ roleLabel, items }: MenuScreenProps) {
             <View style={styles.cardRow}>
               {item.icon && (
                 <View style={[styles.iconBadge, item.disabled && styles.iconBadgeDisabled]}>
-                  <Ionicons name={item.icon} size={20} color={item.disabled ? '#9ca3af' : BRAND_ORANGE} />
+                  <item.icon size={20} color={item.disabled ? '#9ca3af' : BRAND_ORANGE} />
                 </View>
               )}
               <View style={styles.cardText}>
@@ -64,7 +63,7 @@ export function MenuScreen({ roleLabel, items }: MenuScreenProps) {
                   {item.disabled && item.disabledHint ? item.disabledHint : item.description}
                 </Text>
               </View>
-              {!item.disabled && <Ionicons name="chevron-forward" size={18} color="#9ca3af" />}
+              {!item.disabled && <ChevronRight size={18} color="#9ca3af" />}
             </View>
           </Pressable>
         ))}

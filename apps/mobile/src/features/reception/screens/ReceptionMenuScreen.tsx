@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Archive, Layers, Undo2, Wrench } from 'lucide-react-native';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
@@ -83,22 +83,22 @@ export function ReceptionMenuScreen({ navigation }: Props) {
 
       <MenuBox
         label={t('reception.returnParcels')}
-        icon={<Ionicons name="arrow-undo-outline" size={26} color={colors.brandOrange} />}
+        icon={<Undo2 size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'return_parcels' })}
       />
       <MenuBox
         label={t('reception.packagingStock')}
-        icon={<Ionicons name="archive-outline" size={26} color={colors.brandOrange} />}
+        icon={<Archive size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'packaging_stock' })}
       />
       <MenuBox
         label={t('reception.sellersStock')}
-        icon={<Ionicons name="layers-outline" size={26} color={colors.brandOrange} />}
+        icon={<Layers size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('SellerStockList')}
       />
       <MenuBox
         label={t('reception.equipmentOther')}
-        icon={<Ionicons name="construct-outline" size={26} color={colors.brandOrange} />}
+        icon={<Wrench size={26} color={colors.brandOrange} />}
         onPress={() => navigation.navigate('ReceptionList', { categoryFilter: 'equipment_other' })}
       />
 

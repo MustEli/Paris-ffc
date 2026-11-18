@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -79,7 +79,7 @@ export function NewUserScreen({ navigation }: Props) {
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Ionicons name="person-add-outline" size={16} color="#fff" style={styles.buttonIcon} />
+            <UserPlus size={16} color="#fff" style={styles.buttonIcon} />
             <Text style={styles.buttonText}>Create user</Text>
           </>
         )}

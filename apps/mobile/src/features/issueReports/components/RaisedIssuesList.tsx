@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Flag } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -23,7 +23,7 @@ export function RaisedIssuesList({ taskRef }: { taskRef: string | null }) {
       <Text style={styles.header}>{t('issueReports.raisedList.header', { count: data.length })}</Text>
       {data.map((report) => (
         <View key={report.id} style={styles.row}>
-          <Ionicons name="flag" size={14} color={colors.alert} style={styles.rowIcon} />
+          <Flag size={14} color={colors.alert} style={styles.rowIcon} />
           <View style={styles.rowText}>
             <Text style={styles.rowComment} numberOfLines={2}>
               {report.comment}

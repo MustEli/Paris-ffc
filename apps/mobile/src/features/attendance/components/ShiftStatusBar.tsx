@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronDown, ChevronRight, ChevronUp, House, User } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -261,7 +261,7 @@ export function ShiftStatusBar() {
         <View style={styles.row}>
           {showNavIcons && (
             <Pressable style={styles.navButton} onPress={goHome} hitSlop={8}>
-              <Ionicons name="home" size={22} color={colors.textPrimary} />
+              <House size={22} color={colors.textPrimary} />
             </Pressable>
           )}
 
@@ -270,7 +270,7 @@ export function ShiftStatusBar() {
               <Image source={{ uri: resolvePhotoUrl(user.photoUrl) }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Ionicons name="person" size={18} color={colors.textMuted} />
+                <User size={18} color={colors.textMuted} />
               </View>
             )}
             <Text style={styles.name} numberOfLines={1}>
@@ -303,7 +303,11 @@ export function ShiftStatusBar() {
           onPress={() => setIsOpen((v) => !v)}
           hitSlop={8}
         >
-          <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+          {isOpen ? (
+            <ChevronUp size={18} color={colors.textMuted} />
+          ) : (
+            <ChevronDown size={18} color={colors.textMuted} />
+          )}
         </Pressable>
       </View>
 
@@ -327,7 +331,7 @@ export function ShiftStatusBar() {
                       <Text style={styles.pendingItem} numberOfLines={2}>
                         {item.label}
                       </Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      <ChevronRight size={16} color={colors.textMuted} />
                     </Pressable>
                     {index < pendingItems.length - 1 && <View style={styles.pendingItemDivider} />}
                   </View>

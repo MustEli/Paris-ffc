@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import elnoLogo from '../assets/elno-logo.png';
 import { fetchSearch, type PalletSearchResult, type StaffSearchResult, type TaskSearchResult } from '../core/api/search';
 import { useAuth } from '../core/auth/AuthContext';
 import { setLanguage } from '../core/i18n/config';
@@ -82,9 +83,9 @@ export function TopHeader() {
       <div className="top-header-stripe" />
       <div className="top-header-row">
         <div className="top-header-logo">
-          <span className="top-header-logo-elno">Elno</span>
-          <span className="top-header-logo-x">x</span>
-          <span className="top-header-logo-ovoko">Ovoko</span>
+          <img src={elnoLogo} alt="" className="top-header-logo-mark" />
+          <span className="top-header-logo-elno">ELNO</span>
+          <span className="top-header-logo-team">TEAM</span>
         </div>
 
         <div className="top-header-search" ref={containerRef}>

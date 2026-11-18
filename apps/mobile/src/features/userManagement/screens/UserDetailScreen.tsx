@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp, useNavigation } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -80,7 +80,7 @@ export function UserDetailScreen({ route }: Props) {
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Ionicons name="shield-checkmark-outline" size={16} color="#fff" style={styles.buttonIcon} />
+            <ShieldCheck size={16} color="#fff" style={styles.buttonIcon} />
             <Text style={styles.buttonText}>Update role</Text>
           </>
         )}

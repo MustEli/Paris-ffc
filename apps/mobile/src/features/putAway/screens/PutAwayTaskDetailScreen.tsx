@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, type RouteProp } from '@react-navigation/native';
+import { ArrowLeftRight, CheckCheck, Play } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -97,7 +97,7 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
               <ActivityIndicator color={isStaffDark ? '#1a1200' : '#fff'} />
             ) : (
               <>
-                <Ionicons name="play-outline" size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
+                <Play size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Start task</Text>
               </>
             )}
@@ -117,7 +117,7 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
               <ActivityIndicator color={isStaffDark ? '#1a1200' : '#fff'} />
             ) : (
               <>
-                <Ionicons name="checkmark-done-outline" size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
+                <CheckCheck size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Task completed</Text>
               </>
             )}
@@ -151,7 +151,7 @@ export function PutAwayTaskDetailScreen({ route }: Props) {
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Ionicons name="swap-horizontal-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <ArrowLeftRight size={16} color="#fff" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Reassign task</Text>
               </>
             )}

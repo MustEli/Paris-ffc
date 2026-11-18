@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp, useFocusEffect } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Pause, Play, Square, X } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -369,7 +369,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
               {pause.isPending || resume.isPending ? (
                 <ActivityIndicator color={colors.brandOrange} />
               ) : (
-                <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color={colors.brandOrange} />
+                isPaused ? <Play size={28} color={colors.brandOrange} /> : <Pause size={28} color={colors.brandOrange} />
               )}
             </Pressable>
             <Text style={styles.iconButtonLabel}>{isPaused ? t('floorTasks.resume') : t('floorTasks.pause')}</Text>
@@ -384,7 +384,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
               {end.isPending && !hasEndingForm ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Ionicons name="stop" size={28} color="#fff" />
+                <Square size={28} color="#fff" />
               )}
             </Pressable>
             <Text style={styles.iconButtonLabel}>{t('floorTasks.stop')}</Text>
@@ -399,7 +399,7 @@ export function FloorTaskDetailScreen({ navigation, route }: Props) {
               {cancel.isPending ? (
                 <ActivityIndicator color={colors.textSecondary} />
               ) : (
-                <Ionicons name="close" size={28} color={colors.textSecondary} />
+                <X size={28} color={colors.textSecondary} />
               )}
             </Pressable>
             <Text style={styles.iconButtonLabel}>{t('floorTasks.cancel')}</Text>

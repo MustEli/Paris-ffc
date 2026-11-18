@@ -1,6 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { type ComponentProps, useState } from 'react';
+import {
+  ChevronRight,
+  Download,
+  Layers,
+  type LucideIcon,
+  Package,
+  ShoppingCart,
+  Users,
+} from 'lucide-react-native';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,12 +31,12 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: 'staff', label: 'Staff' },
 ];
 
-const MODULES: { key: string; label: string; icon: ComponentProps<typeof Ionicons>['name']; onPress: (nav: Props['navigation']) => void }[] = [
-  { key: 'reception', label: 'Reception', icon: 'cube-outline', onPress: (nav) => nav.navigate('ReceptionList') },
-  { key: 'sellerStock', label: 'Seller Stock', icon: 'layers-outline', onPress: (nav) => nav.navigate('SellerStockList') },
-  { key: 'putAway', label: 'Put-Away', icon: 'download-outline', onPress: (nav) => nav.navigate('PutAwayTaskList') },
-  { key: 'orderPrep', label: 'Order Prep', icon: 'cart-outline', onPress: (nav) => nav.navigate('OrderPrepSessionList') },
-  { key: 'users', label: 'Users', icon: 'people-outline', onPress: (nav) => nav.navigate('UserList') },
+const MODULES: { key: string; label: string; icon: LucideIcon; onPress: (nav: Props['navigation']) => void }[] = [
+  { key: 'reception', label: 'Reception', icon: Package, onPress: (nav) => nav.navigate('ReceptionList') },
+  { key: 'sellerStock', label: 'Seller Stock', icon: Layers, onPress: (nav) => nav.navigate('SellerStockList') },
+  { key: 'putAway', label: 'Put-Away', icon: Download, onPress: (nav) => nav.navigate('PutAwayTaskList') },
+  { key: 'orderPrep', label: 'Order Prep', icon: ShoppingCart, onPress: (nav) => nav.navigate('OrderPrepSessionList') },
+  { key: 'users', label: 'Users', icon: Users, onPress: (nav) => nav.navigate('UserList') },
 ];
 
 /**
@@ -133,10 +141,10 @@ export function AdminHomeScreen({ navigation }: Props) {
                 onPress={() => module.onPress(navigation)}
               >
                 <View style={styles.moduleIconBadge}>
-                  <Ionicons name={module.icon} size={20} color="#c2660a" />
+                  <module.icon size={20} color="#c2660a" />
                 </View>
                 <Text style={styles.moduleLabel}>{module.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+                <ChevronRight size={18} color="#9ca3af" />
               </Pressable>
             ))}
           </View>

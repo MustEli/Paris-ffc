@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Plus } from 'lucide-react-native';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
@@ -25,7 +25,7 @@ export function OrderPrepSessionListScreen({ navigation }: Props) {
     <View style={styles.container}>
       {role === 'admin' && (
         <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewOrderPrepSession')}>
-          <Ionicons name="add" size={18} color="#fff" />
+          <Plus size={18} color="#fff" />
           <Text style={styles.newButtonText}>New Session</Text>
         </Pressable>
       )}

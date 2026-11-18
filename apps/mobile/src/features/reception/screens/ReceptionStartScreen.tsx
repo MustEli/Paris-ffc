@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CirclePlay } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -72,7 +72,7 @@ export function ReceptionStartScreen({ navigation }: Props) {
           <ActivityIndicator color="#1a1200" />
         ) : (
           <>
-            <Ionicons name="play-circle-outline" size={18} color="#1a1200" style={styles.startButtonIcon} />
+            <CirclePlay size={18} color="#1a1200" style={styles.startButtonIcon} />
             <Text style={styles.startButtonText}>{t('receptionStart.start')}</Text>
           </>
         )}

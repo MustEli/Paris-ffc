@@ -1,5 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
-import { type ComponentProps } from 'react';
+import { ChevronRight, type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
@@ -11,11 +10,11 @@ interface Props {
   strongDividerBelow?: boolean;
   disabled?: boolean;
   /** Optional leading icon in a tinted circle — makes rows scannable at a glance instead of plain text. */
-  icon?: ComponentProps<typeof Ionicons>['name'];
+  icon?: LucideIcon;
 }
 
 /** Floor Tasks' and Issue Reporting's shared vertical list row, one task/category per row. */
-export function ListRow({ label, onPress, strongDividerBelow, disabled, icon }: Props) {
+export function ListRow({ label, onPress, strongDividerBelow, disabled, icon: Icon }: Props) {
   return (
     <View>
       <Pressable
@@ -23,13 +22,13 @@ export function ListRow({ label, onPress, strongDividerBelow, disabled, icon }: 
         onPress={onPress}
         disabled={disabled}
       >
-        {icon && (
+        {Icon && (
           <View style={styles.iconBadge}>
-            <Ionicons name={icon} size={18} color={colors.brandOrange} />
+            <Icon size={18} color={colors.brandOrange} />
           </View>
         )}
         <Text style={[styles.label, disabled && styles.labelDisabled]}>{label}</Text>
-        <Ionicons name="chevron-forward" size={18} color={disabled ? colors.textMuted : colors.textSecondary} />
+        <ChevronRight size={18} color={disabled ? colors.textMuted : colors.textSecondary} />
       </Pressable>
       <View style={strongDividerBelow ? styles.strongDivider : styles.divider} />
     </View>

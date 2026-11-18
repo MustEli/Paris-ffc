@@ -16,7 +16,7 @@ interface Props {
   spacedAbove?: boolean;
   /** A small count pill in the top-right corner — e.g. Open Pool Tasks' current unclaimed count. Hidden entirely at 0/undefined. */
   badgeCount?: number;
-  /** An Ionicons element shown above the label — optional so this stays a drop-in prop, not a required redesign of every call site. */
+  /** A Lucide icon element shown above the label — optional so this stays a drop-in prop, not a required redesign of every call site. */
   icon?: ReactNode;
 }
 

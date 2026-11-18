@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CircleCheck, UserPlus } from 'lucide-react-native';
 import { Image, ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 
 import { resolvePhotoUrl } from '../../../core/api/upload';
@@ -104,7 +104,7 @@ export function SellerStockDetailScreen({ route }: Props) {
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Ionicons name="checkmark-circle-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <CircleCheck size={16} color="#fff" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Confirm put-away</Text>
               </>
             )}
@@ -117,7 +117,7 @@ export function SellerStockDetailScreen({ route }: Props) {
           style={styles.button}
           onPress={() => navigation.navigate('AssignTask', { palletId: pallet.id })}
         >
-          <Ionicons name="person-add-outline" size={16} color="#fff" style={styles.buttonIcon} />
+          <UserPlus size={16} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Assign put-away task</Text>
         </Pressable>
       )}

@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Calculator } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
@@ -51,7 +51,7 @@ export function NewOrderPrepSessionScreen({ navigation }: Props) {
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Ionicons name="calculator-outline" size={16} color="#fff" style={styles.buttonIcon} />
+            <Calculator size={16} color="#fff" style={styles.buttonIcon} />
             <Text style={styles.buttonText}>Calculate & create</Text>
           </>
         )}

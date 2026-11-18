@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../core/components/KeyboardAwareScreen';
 import { useAuthStore } from '../../core/auth/authStore';
+import { colors } from '../../core/theme/colors';
 import { spacing } from '../../core/theme/spacing';
 import { fontSize, fontWeight } from '../../core/theme/typography';
 
 const elnoLogo = require('../../../assets/elno-logo.png');
+const loginBackground = require('../../../assets/login-background.jpg');
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -30,110 +32,156 @@ export function LoginScreen() {
   }
 
   return (
-    <KeyboardAwareScreen
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
-      ]}
-    >
-      <Image source={elnoLogo} style={styles.logo} resizeMode="contain" />
-      <Text style={styles.poweredBy}>Powered by OVOKO France</Text>
-      <Text style={styles.title}>Sign in</Text>
+    <ImageBackground source={loginBackground} style={styles.background} resizeMode="cover" blurRadius={18}>
+      <View style={styles.scrim} />
+      <KeyboardAwareScreen
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.container,
+          { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        <View style={styles.card}>
+          <View style={styles.cardAccent}>
+            <View style={[styles.cardAccentSegment, { backgroundColor: colors.frBlue }]} />
+            <View style={[styles.cardAccentSegment, { backgroundColor: colors.frWhite }]} />
+            <View style={[styles.cardAccentSegment, { backgroundColor: colors.frRed }]} />
+          </View>
+          <View style={styles.cardBody}>
+            <View style={styles.logoRow}>
+              <Image source={elnoLogo} style={styles.logo} resizeMode="contain" />
+              <Text style={styles.wordmark}>
+                <Text style={styles.wordmarkElno}>ELNO</Text> <Text style={styles.wordmarkTeam}>TEAM</Text>
+              </Text>
+            </View>
+            <Text style={styles.title}>Sign in</Text>
 
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#9ca3af"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          editable={!isLoading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#9ca3af"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          editable={!isLoading}
-        />
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#9aa7b8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                editable={!isLoading}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#9aa7b8"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                editable={!isLoading}
+              />
 
-        {error && <Text style={styles.error}>{error}</Text>}
+              {error && <Text style={styles.error}>{error}</Text>}
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            (pressed || isLoading) && styles.buttonPressed,
-            (!email || !password) && styles.buttonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isLoading || !email || !password}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
-          )}
-        </Pressable>
-      </View>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  (pressed || isLoading) && styles.buttonPressed,
+                  (!email || !password) && styles.buttonDisabled,
+                ]}
+                onPress={handleSubmit}
+                disabled={isLoading || !email || !password}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#1a1200" />
+                ) : (
+                  <Text style={styles.buttonText}>Sign in</Text>
+                )}
+              </Pressable>
+            </View>
 
-      {/* Only shown in local dev (talking to a laptop-hosted backend) —
-          never in a standalone build pointed at the live hosted backend,
-          which is what any build handed to someone outside this project
-          uses (EXPO_PUBLIC_API_BASE_URL is only ever set for those). No
-          credentials should be visible on a client-facing build. */}
-      {!process.env.EXPO_PUBLIC_API_BASE_URL && (
-        <Text style={styles.devNotice}>
-          Dev accounts: staff@warehousehq.dev / admin@warehousehq.dev /{'\n'}
-          management@warehousehq.dev — password: password123
-        </Text>
-      )}
-    </KeyboardAwareScreen>
+            {/* Only shown in local dev (talking to a laptop-hosted backend) —
+                never in a standalone build pointed at the live hosted backend,
+                which is what any build handed to someone outside this project
+                uses (EXPO_PUBLIC_API_BASE_URL is only ever set for those). No
+                credentials should be visible on a client-facing build. */}
+            {!process.env.EXPO_PUBLIC_API_BASE_URL && (
+              <Text style={styles.devNotice}>
+                Dev accounts: staff@warehousehq.dev / admin@warehousehq.dev /{'\n'}
+                management@warehousehq.dev — password: password123
+              </Text>
+            )}
+          </View>
+        </View>
+      </KeyboardAwareScreen>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
+  // Paired with ImageBackground's blurRadius above — a soft-focus,
+  // darkened backdrop rather than a sharp photo, so there's no risk of
+  // the login card needing to land exactly over the photo's own
+  // content at every screen size. Same treatment as the web login page.
+  scrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(9, 10, 13, 0.68)',
+  },
+  screen: {
+    backgroundColor: 'transparent',
+  },
   container: {
     flex: 1,
-    // Deliberately NOT the Staff-only dark `colors` palette — this
-    // screen is shared by all 3 roles (Staff/Admin/Management), and
-    // Admin/Management stay on a light theme app-wide (see colors.ts's
-    // own doc comment). A separate, intentional light palette, not an
-    // oversight — left as literal values rather than forced onto the
-    // dark token set.
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing[6],
   },
-  logo: {
-    // Fixed dp dimensions rather than width:'%' + aspectRatio — the
-    // percentage-based version rendered at the image's native pixel
-    // size instead of being constrained (a real RN layout quirk, not
-    // just a "make it smaller" tweak). elno-logo.png is cropped tight to
-    // the letters themselves (no more baked-in transparent padding), so
-    // 240x65 matches its real ~3.68:1 ratio.
-    width: 240,
-    height: 65,
-    marginBottom: spacing[1],
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  poweredBy: {
-    fontSize: fontSize.sm,
-    color: '#6b7280',
-    // Deliberately left as a literal 14, not snapped to the spacing
-    // scale's 12/16 neighbors — this exact value was tuned to "half of
-    // the original 28" per specific client feedback (see git history),
-    // and nudging it either way would quietly undo that tuning.
-    marginBottom: 14,
+  // The French micro-accent — login card top edge only, per UI-Docs.
+  // 3 flat segments rather than a gradient (no expo-linear-gradient
+  // dependency in this app) — indistinguishable at 3px tall.
+  cardAccent: {
+    height: 3,
+    flexDirection: 'row',
+  },
+  cardAccentSegment: {
+    flex: 1,
+  },
+  cardBody: {
+    padding: spacing[6],
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    marginBottom: spacing[6],
+  },
+  logo: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+  },
+  wordmark: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.strong,
+  },
+  wordmarkElno: {
+    color: colors.textPrimary,
+  },
+  wordmarkTeam: {
+    color: colors.brandOrange,
   },
   title: {
     fontSize: fontSize.display,
     fontWeight: fontWeight.strong,
-    marginBottom: spacing[8],
+    color: colors.textPrimary,
+    marginBottom: spacing[6],
   },
   form: {
     width: '100%',
@@ -141,7 +189,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
@@ -150,33 +198,35 @@ const styles = StyleSheet.create({
     // the app's "larger body text" (imperceptible, same consolidation
     // applied to buttonText below).
     fontSize: fontSize.lg,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
   },
   error: {
-    color: '#dc2626',
+    color: colors.alert,
     fontSize: fontSize.sm,
   },
   button: {
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.brandOrange,
     paddingVertical: spacing[4],
     borderRadius: 10,
     alignItems: 'center',
     marginTop: spacing[2],
   },
   buttonPressed: {
-    opacity: 0.8,
+    opacity: 0.85,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
+    color: '#1a1200',
     fontSize: fontSize.lg,
     fontWeight: fontWeight.strong,
   },
   devNotice: {
     marginTop: spacing[10],
     fontSize: fontSize.xs,
-    color: '#9ca3af',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });

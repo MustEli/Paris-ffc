@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Layers } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -178,7 +178,7 @@ export function NewPalletScreen({ navigation }: Props) {
           <ActivityIndicator color="#1a1200" />
         ) : (
           <>
-            <Ionicons name="layers-outline" size={16} color="#1a1200" style={styles.submitIcon} />
+            <Layers size={16} color="#1a1200" style={styles.submitIcon} />
             <Text style={styles.submitText}>{t('sellerStock.newPallet.logPallet')}</Text>
           </>
         )}

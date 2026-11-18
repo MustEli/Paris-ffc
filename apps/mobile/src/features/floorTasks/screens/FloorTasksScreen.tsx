@@ -1,7 +1,21 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { type ComponentProps, useEffect, useState } from 'react';
+import {
+  Archive,
+  ArrowUpDown,
+  ChevronRight,
+  CircleEllipsis,
+  CirclePause,
+  ClipboardList,
+  Download,
+  type LucideIcon,
+  Package,
+  Send,
+  ShoppingBasket,
+  Trash2,
+  Undo2,
+} from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,17 +35,17 @@ interface Props {
 
 const OPEN_ORDER_PREP_STATUSES = ['assigned', 'in_progress'];
 
-const CATEGORY_ICON: Record<FloorTaskCategory, ComponentProps<typeof Ionicons>['name']> = {
-  pick: 'basket-outline',
-  pack: 'cube-outline',
-  dispatch: 'send-outline',
-  return_processing: 'arrow-undo-outline',
-  warehousing_inventory_check: 'clipboard-outline',
-  warehousing_location_adjustment: 'swap-vertical-outline',
-  box_prep: 'archive-outline',
-  backup_box: 'archive-outline',
-  backup_shredder: 'trash-outline',
-  backup_other: 'ellipsis-horizontal-circle-outline',
+const CATEGORY_ICON: Record<FloorTaskCategory, LucideIcon> = {
+  pick: ShoppingBasket,
+  pack: Package,
+  dispatch: Send,
+  return_processing: Undo2,
+  warehousing_inventory_check: ClipboardList,
+  warehousing_location_adjustment: ArrowUpDown,
+  box_prep: Archive,
+  backup_box: Archive,
+  backup_shredder: Trash2,
+  backup_other: CircleEllipsis,
 };
 
 /** "3h 20m ago" / "12m ago" — used for how long a parked task has been paused. */
@@ -71,12 +85,12 @@ function ParkedTaskRow({
 
   return (
     <Pressable style={styles.parkedRow} onPress={handlePress}>
-      <Ionicons name="pause-circle" size={22} color={colors.brandOrange} />
+      <CirclePause size={22} color={colors.brandOrange} />
       <View style={styles.parkedRowText}>
         <Text style={styles.parkedRowLabel}>{meta ? t(meta.label) : task.category}</Text>
         <Text style={styles.parkedRowMeta}>{t('floorTasks.pausedFor', { time: formatAgo(task.pausedAt!) })}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      <ChevronRight size={18} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -176,7 +190,7 @@ export function FloorTasksScreen({ navigation }: Props) {
 
       <ListRow
         label={t('floorTasks.putaway')}
-        icon="download-outline"
+        icon={Download}
         strongDividerBelow
         onPress={() => navigation.navigate('PutawayUnified')}
       />

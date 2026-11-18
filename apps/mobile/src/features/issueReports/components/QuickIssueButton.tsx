@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Flag } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -70,7 +70,7 @@ export function QuickIssueButton() {
         disabled={isCoolingDown}
         accessibilityLabel={isCoolingDown ? t('issueReports.quick.buttonLabelCoolingDown') : t('issueReports.quick.buttonLabel')}
       >
-        <Ionicons name="flag-outline" size={22} color="#fff" />
+        <Flag size={22} color="#fff" />
       </Pressable>
 
       <Modal transparent visible={isOpen} animationType="fade" onRequestClose={() => setIsOpen(false)}>

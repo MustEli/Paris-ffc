@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Plus } from 'lucide-react-native';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuthStore } from '../../../core/auth/authStore';
@@ -35,7 +35,7 @@ export function SellerStockListScreen({ navigation }: Props) {
     <View style={styles.container}>
       {role === 'staff' && (
         <Pressable style={styles.newButton} onPress={() => navigation.navigate('NewPallet')}>
-          <Ionicons name="add" size={18} color="#1a1200" />
+          <Plus size={18} color="#1a1200" />
           <Text style={styles.newButtonText}>New Pallet</Text>
         </Pressable>
       )}

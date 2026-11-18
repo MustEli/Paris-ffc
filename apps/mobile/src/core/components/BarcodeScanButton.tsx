@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Barcode, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -72,7 +72,7 @@ export function BarcodeScanButton({ onScan }: Props) {
         accessibilityLabel={t('barcodeScanner.scanButtonLabel')}
         hitSlop={8}
       >
-        <Ionicons name="barcode-outline" size={22} color={colors.brandOrange} />
+        <Barcode size={22} color={colors.brandOrange} />
       </Pressable>
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -91,7 +91,7 @@ export function BarcodeScanButton({ onScan }: Props) {
             onPress={() => setIsOpen(false)}
             hitSlop={12}
           >
-            <Ionicons name="close" size={26} color="#fff" />
+            <X size={26} color="#fff" />
           </Pressable>
         </View>
       </Modal>

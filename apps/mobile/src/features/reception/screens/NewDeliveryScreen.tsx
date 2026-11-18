@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CircleCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -200,7 +200,7 @@ export function NewDeliveryScreen({ navigation, route }: Props) {
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#1a1200" style={styles.submitIcon} />
+            <CircleCheck size={16} color="#1a1200" style={styles.submitIcon} />
             <Text style={styles.submitText}>{t('reception.logDelivery')}</Text>
           </>
         )}

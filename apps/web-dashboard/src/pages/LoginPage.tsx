@@ -22,43 +22,50 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <img src={elnoLogo} alt="ELNO" className="login-logo" />
-        <p className="page-subtitle">{t('poweredBy')}</p>
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <label className="form-label" htmlFor="email">
-              {t('email')}
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          <div className="form-row">
-            <label className="form-label" htmlFor="password">
-              {t('password')}
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-            />
+        <div className="login-card-accent" />
+        <div className="login-card-body">
+          <div className="login-logo-row">
+            <img src={elnoLogo} alt="" className="login-logo" />
+            <div className="login-logo-wordmark">
+              <span className="login-logo-elno">ELNO</span> <span className="login-logo-team">TEAM</span>
+            </div>
           </div>
 
-          {error && <p className="error-text">{error}</p>}
+          <form onSubmit={handleSubmit}>
+            <div className="form-row">
+              <label className="form-label" htmlFor="email">
+                {t('email')}
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="form-row">
+              <label className="form-label" htmlFor="password">
+                {t('password')}
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
 
-          <button type="submit" className="btn btn-primary" disabled={isLoading || !email || !password}>
-            {isLoading ? t('signingIn') : t('signIn')}
-          </button>
-        </form>
+            {error && <p className="error-text">{error}</p>}
+
+            <button type="submit" className="btn btn-accent" disabled={isLoading || !email || !password}>
+              {isLoading ? t('signingIn') : t('signIn')}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

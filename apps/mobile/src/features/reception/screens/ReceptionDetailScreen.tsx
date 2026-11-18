@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
+import { CircleCheck, Send } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -116,7 +116,7 @@ export function ReceptionDetailScreen({ route }: Props) {
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Ionicons name="paper-plane-outline" size={16} color="#fff" style={styles.buttonIcon} />
+                <Send size={16} color="#fff" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>{t('reception.sendInstructions')}</Text>
               </>
             )}
@@ -136,7 +136,7 @@ export function ReceptionDetailScreen({ route }: Props) {
               <ActivityIndicator color={isStaffDark ? '#1a1200' : '#fff'} />
             ) : (
               <>
-                <Ionicons name="checkmark-circle-outline" size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
+                <CircleCheck size={16} color={isStaffDark ? '#1a1200' : '#fff'} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>{t('reception.confirmPutAway')}</Text>
               </>
             )}

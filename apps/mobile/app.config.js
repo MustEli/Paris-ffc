@@ -10,14 +10,14 @@
 const IS_DEV_BUILD = process.env.EAS_BUILD_PROFILE === 'development';
 
 // Package name/bundle ID deliberately left as-is (not renamed to match
-// "ELNO") — changing it would orphan every already-installed build
+// "ELNO TEAM") — changing it would orphan every already-installed build
 // (same "installing one wipes the other" problem this file was created
 // to solve in the first place), and nothing about the app's technical
 // identity needs to match its display name. Only user-facing text
 // (name, permission descriptions) changed.
 const BASE_PACKAGE = 'com.warehousehq.mobile';
 const androidPackage = IS_DEV_BUILD ? `${BASE_PACKAGE}.dev` : BASE_PACKAGE;
-const appName = IS_DEV_BUILD ? 'ELNO (Dev)' : 'ELNO';
+const appName = IS_DEV_BUILD ? 'ELNO TEAM (Dev)' : 'ELNO TEAM';
 
 module.exports = {
   expo: {
@@ -32,15 +32,15 @@ module.exports = {
       bundleIdentifier: androidPackage,
       infoPlist: {
         NSCameraUsageDescription:
-          'ELNO uses the camera to capture shipping label and damage-evidence photos, and to scan tracking ID barcodes.',
+          'ELNO TEAM uses the camera to capture shipping label and damage-evidence photos, and to scan tracking ID barcodes.',
         NSPhotoLibraryUsageDescription:
-          'ELNO needs photo library access to attach an existing photo instead of using the camera.',
+          'ELNO TEAM needs photo library access to attach an existing photo instead of using the camera.',
       },
     },
     android: {
       package: androidPackage,
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
+        backgroundColor: '#18181B',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
@@ -51,6 +51,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
+    plugins: ['expo-font'],
     extra: {
       eas: {
         projectId: 'ab3c5ff5-673d-4633-8e09-1335b3197a95',

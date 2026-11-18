@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type RouteProp } from '@react-navigation/native';
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,7 +50,7 @@ export function ReceptionListScreen({ navigation, route }: Props) {
           style={styles.newButton}
           onPress={() => navigation.navigate('NewDelivery', { presetCategory: categoryFilter })}
         >
-          <Ionicons name="add" size={18} color="#1a1200" />
+          <Plus size={18} color="#1a1200" />
           <Text style={styles.newButtonText}>{t('reception.newDeliveryButton')}</Text>
         </Pressable>
       )}

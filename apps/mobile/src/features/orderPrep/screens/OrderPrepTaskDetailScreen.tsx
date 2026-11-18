@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, type RouteProp } from '@react-navigation/native';
+import { CheckCheck, Play } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -78,7 +78,7 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
               <ActivityIndicator color={primaryIconColor} />
             ) : (
               <>
-                <Ionicons name="play-outline" size={16} color={primaryIconColor} style={styles.buttonIcon} />
+                <Play size={16} color={primaryIconColor} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Start task</Text>
               </>
             )}
@@ -98,7 +98,7 @@ export function OrderPrepTaskDetailScreen({ route }: Props) {
               <ActivityIndicator color={primaryIconColor} />
             ) : (
               <>
-                <Ionicons name="checkmark-done-outline" size={16} color={primaryIconColor} style={styles.buttonIcon} />
+                <CheckCheck size={16} color={primaryIconColor} style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Task completed</Text>
               </>
             )}
