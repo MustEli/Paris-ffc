@@ -128,7 +128,7 @@ function BreakdownCells({
 }) {
   return (
     <>
-      <td>
+      <td className="breakdown-data-cell breakdown-group-start">
         {breakdown.plannedMs === null ? (
           <span className="alert-chip">
             <AlertTriangle size={11} />
@@ -138,13 +138,13 @@ function BreakdownCells({
           formatDurationHHMM(breakdown.plannedMs)
         )}
       </td>
-      <td>{formatDurationHHMM(breakdown.onlineMs)}</td>
-      <td>{formatDurationHHMM(breakdown.claimedMs)}</td>
-      <td>{formatDurationHHMM(sumSelected(breakdown.receptionMs, filters.reception))}</td>
-      <td>{formatDurationHHMM(sumSelected(breakdown.floorTaskMs, filters.floorTask))}</td>
-      <td>{formatDurationHHMM(sumSelected(breakdown.openPoolMs, filters.openPool))}</td>
-      <td>{formatDurationHHMM(sumSelected(breakdown.breakMs, filters.breakF))}</td>
-      <td>{formatDurationHHMM(sumSelected(breakdown.idleMs, filters.idle))}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(breakdown.onlineMs)}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(breakdown.claimedMs)}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(sumSelected(breakdown.receptionMs, filters.reception))}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(sumSelected(breakdown.floorTaskMs, filters.floorTask))}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(sumSelected(breakdown.openPoolMs, filters.openPool))}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(sumSelected(breakdown.breakMs, filters.breakF))}</td>
+      <td className="breakdown-data-cell">{formatDurationHHMM(sumSelected(breakdown.idleMs, filters.idle))}</td>
     </>
   );
 }
@@ -389,7 +389,7 @@ function StaffSummarySection() {
             <table>
               <thead>
                 <tr>
-                  <th>
+                  <th className="staff-header-cell">
                     {t('staffTable.name')}
                     <FilterPopover
                       options={staffOptions}
@@ -400,26 +400,26 @@ function StaffSummarySection() {
                       searchPlaceholder={t('filters.staff.search')}
                     />
                   </th>
-                  <th>{t('activityColumns.planned')}</th>
-                  <th>{t('activityColumns.online')}</th>
-                  <th>{t('activityColumns.claimed')}</th>
-                  <th>
+                  <th className="breakdown-header-cell breakdown-group-start">{t('activityColumns.planned')}</th>
+                  <th className="breakdown-header-cell">{t('activityColumns.online')}</th>
+                  <th className="breakdown-header-cell">{t('activityColumns.claimed')}</th>
+                  <th className="breakdown-header-cell">
                     {t('activityColumns.reception')}
                     <FilterPopover options={receptionOptions(t)} selected={receptionFilter} onChange={setReceptionFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
                   </th>
-                  <th>
+                  <th className="breakdown-header-cell">
                     {t('activityColumns.floorTask')}
                     <FilterPopover options={floorTaskOptions(t)} selected={floorTaskFilter} onChange={setFloorTaskFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
                   </th>
-                  <th>
+                  <th className="breakdown-header-cell">
                     {t('activityColumns.openPool')}
                     <FilterPopover options={openPoolOptions(t)} selected={openPoolFilter} onChange={setOpenPoolFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
                   </th>
-                  <th>
+                  <th className="breakdown-header-cell">
                     {t('activityColumns.break')}
                     <FilterPopover options={breakOptions(t)} selected={breakFilter} onChange={setBreakFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
                   </th>
-                  <th>
+                  <th className="breakdown-header-cell">
                     {t('activityColumns.idle')}
                     <FilterPopover options={idleOptions(t)} selected={idleFilter} onChange={setIdleFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />
                   </th>
@@ -483,30 +483,28 @@ function ActivitySubHeaderCells({
   idleFilter: Set<string>;
   setIdleFilter: (s: Set<string>) => void;
 }) {
-  const subHeaderStyle = { textAlign: 'center' as const, fontSize: 11, fontWeight: 'var(--weight-regular)', color: 'var(--gray-500)', minWidth: 78 };
-  const firstStyle = { ...subHeaderStyle, borderLeft: '1px solid var(--gray-150)' };
   return (
     <>
-      <th style={firstStyle}>{t('activityColumns.planned')}</th>
-      <th style={subHeaderStyle}>{t('activityColumns.online')}</th>
-      <th style={subHeaderStyle}>{t('activityColumns.claimed')}</th>
-      <th style={subHeaderStyle}>
+      <th className="breakdown-header-cell breakdown-group-start">{t('activityColumns.planned')}</th>
+      <th className="breakdown-header-cell">{t('activityColumns.online')}</th>
+      <th className="breakdown-header-cell">{t('activityColumns.claimed')}</th>
+      <th className="breakdown-header-cell">
         {t('activityColumns.reception')}
         {withFilters && <FilterPopover options={receptionOptions(t)} selected={receptionFilter} onChange={setReceptionFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
       </th>
-      <th style={subHeaderStyle}>
+      <th className="breakdown-header-cell">
         {t('activityColumns.floorTask')}
         {withFilters && <FilterPopover options={floorTaskOptions(t)} selected={floorTaskFilter} onChange={setFloorTaskFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
       </th>
-      <th style={subHeaderStyle}>
+      <th className="breakdown-header-cell">
         {t('activityColumns.openPool')}
         {withFilters && <FilterPopover options={openPoolOptions(t)} selected={openPoolFilter} onChange={setOpenPoolFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
       </th>
-      <th style={subHeaderStyle}>
+      <th className="breakdown-header-cell">
         {t('activityColumns.break')}
         {withFilters && <FilterPopover options={breakOptions(t)} selected={breakFilter} onChange={setBreakFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
       </th>
-      <th style={subHeaderStyle}>
+      <th className="breakdown-header-cell">
         {t('activityColumns.idle')}
         {withFilters && <FilterPopover options={idleOptions(t)} selected={idleFilter} onChange={setIdleFilter} triggerLabel={t('filters.categories.trigger')} allLabel={t('filters.categories.all')} />}
       </th>
@@ -592,7 +590,11 @@ function StaffHistorySection() {
             <table style={{ width: 'max-content' }}>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, verticalAlign: 'bottom' }}>
+                  <th
+                    rowSpan={2}
+                    className="staff-header-cell"
+                    style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, verticalAlign: 'bottom' }}
+                  >
                     {t('staffHistory.staffColumn')}
                     <FilterPopover
                       options={staffOptions}
@@ -746,7 +748,7 @@ function StaffActivitySection({
         <table>
           <thead>
             <tr>
-              <th>
+              <th className="staff-header-cell">
                 {t('staffActivity.staffColumn')}
                 <FilterPopover
                   options={staffOptions}
@@ -757,10 +759,10 @@ function StaffActivitySection({
                   searchPlaceholder={t('filters.staff.search')}
                 />
               </th>
-              <th>{t('staffActivity.currentActivity')}</th>
+              <th className="nowrap-cell">{t('staffActivity.currentActivity')}</th>
               <th>{t('staffActivity.detail')}</th>
-              <th>{t('staffActivity.started')}</th>
-              <th>{scope === 'live' ? t('staffActivity.duration') : t('staffActivity.finished')}</th>
+              <th className="nowrap-cell">{t('staffActivity.started')}</th>
+              <th className="nowrap-cell">{scope === 'live' ? t('staffActivity.duration') : t('staffActivity.finished')}</th>
             </tr>
           </thead>
           <tbody>
@@ -776,7 +778,7 @@ function StaffActivitySection({
                 className={entry.id === highlightId ? 'highlight-row' : undefined}
               >
                 <td>{entry.userName}</td>
-                <td>{t(STAFF_ACTIVITY_TYPE_KEYS[entry.type])}</td>
+                <td className="nowrap-cell">{t(STAFF_ACTIVITY_TYPE_KEYS[entry.type])}</td>
                 <td>
                   {staffActivityDetail(entry, t)}
                   {entry.floorTaskOutcome === 'cancelled' && (
@@ -785,8 +787,8 @@ function StaffActivitySection({
                     </span>
                   )}
                 </td>
-                <td>{formatLocalTime(entry.startedAt)}</td>
-                <td>
+                <td className="nowrap-cell">{formatLocalTime(entry.startedAt)}</td>
+                <td className="duration-cell">
                   {scope === 'live' ? (
                     formatDurationHHMM(Date.now() - new Date(entry.startedAt).getTime())
                   ) : entry.endedAt ? (

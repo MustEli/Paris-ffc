@@ -34,10 +34,22 @@ const filterControlStyle: React.CSSProperties = {
   width: 'auto',
 };
 
-function SortHeader({ label, active, dir, onClick }: { label: string; active: boolean; dir: 'asc' | 'desc'; onClick: () => void }) {
+function SortHeader({
+  label,
+  active,
+  dir,
+  onClick,
+  align = 'left',
+}: {
+  label: string;
+  active: boolean;
+  dir: 'asc' | 'desc';
+  onClick: () => void;
+  align?: 'left' | 'right';
+}) {
   return (
-    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={onClick}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <th style={{ cursor: 'pointer', userSelect: 'none', textAlign: align }} onClick={onClick}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexDirection: align === 'right' ? 'row-reverse' : 'row' }}>
         {label}
         {active ? dir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} style={{ opacity: 0.4 }} />}
       </span>
@@ -339,7 +351,13 @@ export function SellerStockSection() {
                 <SortHeader label={t('pallets.table.dateTime')} active={sortKey === 'createdAt'} dir={sortDir} onClick={() => toggleSort('createdAt')} />
                 <th>{t('pallets.table.boxNumber')}</th>
                 <SortHeader label={t('pallets.table.seller')} active={sortKey === 'sellerName'} dir={sortDir} onClick={() => toggleSort('sellerName')} />
-                <SortHeader label={t('pallets.table.weightKg')} active={sortKey === 'weightKg'} dir={sortDir} onClick={() => toggleSort('weightKg')} />
+                <SortHeader
+                  label={t('pallets.table.weightKg')}
+                  active={sortKey === 'weightKg'}
+                  dir={sortDir}
+                  onClick={() => toggleSort('weightKg')}
+                  align="right"
+                />
                 <th>{t('pallets.table.condition')}</th>
                 <th>{t('pallets.table.status')}</th>
                 <th>{t('pallets.table.photos')}</th>
@@ -371,8 +389,10 @@ export function SellerStockSection() {
                     <td>{formatDateTime(pallet.createdAt)}</td>
                     <td>{pallet.boxNumber}</td>
                     <td>{pallet.sellerName}</td>
-                    <td>
-                      {pallet.weightKg.toLocaleString()}
+                    <td style={{ textAlign: 'right' }}>
+                      <span className="nowrap-cell" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                        {pallet.weightKg.toLocaleString()}
+                      </span>
                       {pallet.overweightFlag && (
                         <span className="pill pill-amber" style={{ marginLeft: 6 }}>
                           {t('pallets.table.overweight')}

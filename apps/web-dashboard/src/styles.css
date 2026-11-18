@@ -402,10 +402,62 @@ th {
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  /* A header label breaking onto 2 lines (e.g. "DATE" / "& TIME") reads as
+     a layout bug, not a deliberate choice — every header in this app is a
+     short label, so this is a global floor, not a per-table opt-in. A
+     column needing more room than its label naturally takes just grows
+     to fit it (standard table auto-layout), the same way the data cells
+     beneath it already do. */
+  white-space: nowrap;
 }
 
 tr:hover td {
   background: var(--gray-50);
+}
+
+/* Planned/Online/Claimed/Reception/Floor Task/Open-Pool/Break/Idle columns
+   (Staff / Staff History tables) — a fixed "HH:MM ( X mins )" format needs
+   real breathing room and must never line-wrap mid-value, which is what
+   was producing the ragged, broken-looking cells: too-narrow columns
+   forced "05:59 ( 359" onto one line and "mins )" onto the next. Centered
+   + tabular-mono reads as a proper data column instead of run-on text. */
+.breakdown-header-cell,
+.breakdown-data-cell {
+  text-align: center;
+  white-space: nowrap;
+  min-width: 132px;
+}
+
+/* Marks the first column of a Planned/Online/.../Idle group (Planned itself) — a divider against whatever sits to its left (the sticky Staff column, or the previous day-group). */
+.breakdown-group-start {
+  border-left: 1px solid var(--gray-150);
+}
+
+.breakdown-header-cell .filter-trigger-wrap {
+  vertical-align: middle;
+}
+
+.breakdown-data-cell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  color: var(--gray-950);
+}
+
+/* The Staff/Name column's own header — keeps "Filter staff" from ever wrapping onto its own line below the label. */
+.staff-header-cell {
+  white-space: nowrap;
+}
+
+/* Staff Activity's Started/Duration columns — short, fixed-format values (a clock time or "HH:MM ( X mins )") that should never wrap. */
+.nowrap-cell {
+  white-space: nowrap;
+}
+
+.duration-cell {
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 tr:last-child td {
@@ -1293,6 +1345,7 @@ textarea:focus {
   gap: 4px;
   padding: 3px 8px;
   border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: var(--weight-strong);
   background: var(--status-danger-bg);
