@@ -50,11 +50,15 @@ export function LoginScreen() {
           <View style={styles.cardBody}>
             <View style={styles.logoRow}>
               <Image source={elnoLogo} style={styles.logo} resizeMode="contain" />
-              <Text style={styles.wordmark}>
-                <Text style={styles.wordmarkElno}>ELNO</Text> <Text style={styles.wordmarkTeam}>TEAM</Text>
-              </Text>
+              <View style={styles.logoTextCol}>
+                <Text style={styles.wordmark}>
+                  <Text style={styles.wordmarkElno}>ELNO</Text> <Text style={styles.wordmarkTeam}>TEAM</Text>
+                </Text>
+                <Text style={styles.logoTag}>for Ovoko Fulfillment</Text>
+              </View>
             </View>
             <Text style={styles.title}>Sign in</Text>
+            <Text style={styles.subtitle}>Access the ELNO TEAM application</Text>
 
             <View style={styles.form}>
               <TextInput
@@ -145,9 +149,10 @@ const styles = StyleSheet.create({
   },
   // The French micro-accent — login card top edge only, per UI-Docs.
   // 3 flat segments rather than a gradient (no expo-linear-gradient
-  // dependency in this app) — indistinguishable at 3px tall.
+  // dependency in this app). Height is 2.5x the original 3px per
+  // client request.
   cardAccent: {
-    height: 3,
+    height: 7.5,
     flexDirection: 'row',
   },
   cardAccentSegment: {
@@ -155,33 +160,61 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     padding: spacing[6],
+    paddingTop: spacing[5],
+    paddingBottom: spacing[5],
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing[3],
-    marginBottom: spacing[6],
+    marginBottom: spacing[4],
   },
   logo: {
-    width: 48,
-    height: 48,
+    width: 96,
+    height: 96,
     borderRadius: 10,
   },
+  logoTextCol: {
+    alignItems: 'flex-start',
+    gap: 4,
+  },
   wordmark: {
-    fontSize: fontSize.xl,
+    fontSize: 29,
     fontWeight: fontWeight.strong,
   },
   wordmarkElno: {
     color: colors.textPrimary,
   },
+  // Distinct condensed/geometric family matching the logo artwork's
+  // actual "TEAM" lettering, not just a color change (see the web
+  // login page's matching styles.css comment).
   wordmarkTeam: {
     color: colors.brandOrange,
+    fontFamily: 'Oswald_700Bold',
+    letterSpacing: 0.5,
+  },
+  logoTag: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 999,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
   title: {
     fontSize: fontSize.display,
     fontWeight: fontWeight.strong,
     color: colors.textPrimary,
-    marginBottom: spacing[6],
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: fontSize.md,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing[4],
   },
   form: {
     width: '100%',

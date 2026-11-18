@@ -1,4 +1,5 @@
 import { JetBrainsMono_500Medium, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
+import { Oswald_700Bold } from '@expo-google-fonts/oswald';
 import { PlusJakartaSans_500Medium, PlusJakartaSans_700Bold, useFonts } from '@expo-google-fonts/plus-jakarta-sans';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -38,6 +39,7 @@ export default function App() {
     PlusJakartaSans_700Bold,
     JetBrainsMono_500Medium,
     JetBrainsMono_700Bold,
+    Oswald_700Bold,
   });
 
   useEffect(() => {

@@ -37,8 +37,11 @@ export function LoginPage() {
         <div className="login-card-body">
           <div className="login-logo-row">
             <img src={elnoLogo} alt="" className="login-logo" />
-            <div className="login-logo-wordmark">
-              <span className="login-logo-elno">ELNO</span> <span className="login-logo-team">TEAM</span>
+            <div className="login-logo-text">
+              <div className="login-logo-wordmark">
+                <span className="login-logo-elno">ELNO</span> <span className="login-logo-team">TEAM</span>
+              </div>
+              <span className="login-logo-tag">{t('tagline')}</span>
             </div>
           </div>
 
