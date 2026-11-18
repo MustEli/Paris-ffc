@@ -690,24 +690,24 @@ textarea:focus {
   overflow: hidden;
 }
 
-/* The warehouse photo — `background-size: cover` recenters/recrops per
-   viewport, so the login card drawn on top can never reliably land in
-   the exact same spot as the photo's own baked-in content at every
-   screen size. A soft-focus backdrop avoids ever needing that
-   alignment: it reads as ambience behind the real card, not a second,
-   misaligned card. Just enough blur to make that baked-in content
-   unreadable as text/shapes (not a flat dark wash — the brief was to
-   keep the photo clearly visible, closer to the reference mock).
-   Scaled up (inset: -40px) so the blur's own edge softening never
-   reveals an unblurred strip at the viewport edge. A separate element
-   from .login-page's own background specifically so the blur filter
-   can't also soften the (unrelated) card drawn on top of it. */
+/* A black & white warehouse/car-parts photo (recomposed from the two
+   halves of the original reference photo that sit clear of where its
+   own baked-in card mockup was, see the Nov 2026 design pass) plus a
+   generated geometric line-art overlay, matching the client's own
+   reference. Unlike the original full-color crop, this source has no
+   baked-in UI of its own to accidentally duplicate behind the real
+   card, so it only needs a light touch — not the heavy blur/darken
+   that earlier version needed to stay safe. Scaled up (inset: -40px)
+   so cover's own edge handling never reveals a seam at the viewport
+   edge. A separate element from .login-page's own background
+   specifically so the blur filter can't also soften the (unrelated)
+   card drawn on top of it. */
 .login-page::before {
   content: '';
   position: absolute;
   inset: -40px;
   background: url('./assets/login-background.jpg') center / cover no-repeat;
-  filter: blur(16px) brightness(0.5) saturate(0.25);
+  filter: blur(1px) brightness(0.72) contrast(1.05);
 }
 
 .login-card {

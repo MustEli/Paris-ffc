@@ -32,7 +32,7 @@ export function LoginScreen() {
   }
 
   return (
-    <ImageBackground source={loginBackground} style={styles.background} resizeMode="cover" blurRadius={18}>
+    <ImageBackground source={loginBackground} style={styles.background} resizeMode="cover" blurRadius={1}>
       <View style={styles.scrim} />
       <KeyboardAwareScreen
         style={styles.screen}
@@ -119,13 +119,13 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  // Paired with ImageBackground's blurRadius above — a soft-focus,
-  // darkened backdrop rather than a sharp photo, so there's no risk of
-  // the login card needing to land exactly over the photo's own
-  // content at every screen size. Same treatment as the web login page.
+  // A black & white photo with its own generated geometric line-art
+  // overlay (see the web login page's matching styles.css comment) —
+  // no baked-in UI of its own, so this only needs a light darkening
+  // for contrast, not the heavy blur the original color crop needed.
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(9, 10, 13, 0.68)',
+    backgroundColor: 'rgba(9, 10, 13, 0.3)',
   },
   screen: {
     backgroundColor: 'transparent',
