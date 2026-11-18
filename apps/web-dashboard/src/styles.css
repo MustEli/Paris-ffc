@@ -744,12 +744,14 @@ textarea:focus {
   font-weight: var(--weight-strong);
   color: #fff;
   margin: 0 0 4px;
+  text-align: center;
 }
 
 .login-subtitle {
   font-size: var(--text-sm);
   color: #9aa7b8;
   margin: 0 0 var(--space-6);
+  text-align: center;
 }
 
 .login-password-field {
@@ -807,21 +809,24 @@ textarea:focus {
 .login-logo-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-3);
   margin-bottom: var(--space-6);
 }
 
 .login-logo {
   display: block;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-sm);
+  width: 112px;
+  height: 112px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
+/* Sized so logo + wordmark together span ~75% of the card's width (420px card -> ~315px combined, logo fixed at 112px -> ~191px of text) — tuned against the rendered result, not computed from a formula CSS can enforce on glyph width. */
 .login-logo-wordmark {
-  font-size: 20px;
+  font-size: 34px;
   font-weight: var(--weight-strong);
+  white-space: nowrap;
 }
 
 .login-logo-elno {
