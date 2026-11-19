@@ -393,14 +393,13 @@ export function DeliveriesSection() {
                 <th>{t('table.staff')}</th>
                 <th>{t('table.summary')}</th>
                 <SortHeader label={t('table.status')} active={sortKey === 'status'} dir={sortDir} onClick={() => toggleSort('status')} />
-                <th>{t('table.photos')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={8}>{t('table.noResults')}</td>
+                  <td colSpan={7}>{t('table.noResults')}</td>
                 </tr>
               )}
               {sorted.map((r) => {
@@ -412,7 +411,7 @@ export function DeliveriesSection() {
                     </td>
                     <td>{formatDateTime(r.arrivedAt)}</td>
                     <td>{t(`receptionCategory.${r.details.category}`, { ns: 'common' })}</td>
-                    <td>{staffName(r.createdByUserId)}</td>
+                    <td className="staff-name-cell">{staffName(r.createdByUserId)}</td>
                     <td>{summarizeDetails(r, t)}</td>
                     <td>
                       {t(`receptionStatus.${r.status}`, { ns: 'common' })}
@@ -422,34 +421,34 @@ export function DeliveriesSection() {
                         </span>
                       )}
                     </td>
-                    <td>{photoCount}</td>
                     <td>
-                      <div className="flex-row">
+                      <div className="flex-row icon-action-row">
                         <button
-                          className="btn-danger-text"
-                          style={{ color: 'var(--gray-950)', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          className="icon-action-btn"
                           onClick={() => setDetailsReception(r)}
+                          aria-label={t('table.viewDetails')}
+                          title={t('table.viewDetails')}
                         >
-                          <Eye size={13} />
-                          {t('table.viewDetails')}
+                          <Eye size={15} />
                         </button>
                         <button
-                          className="btn-danger-text"
-                          style={{ color: 'var(--gray-950)', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          className="icon-action-btn"
                           onClick={() => setGalleryReception(r)}
                           disabled={photoCount === 0}
+                          aria-label={t('table.photosAction')}
+                          title={t('table.photosAction')}
                         >
-                          <Image size={13} />
-                          {t('table.photosAction')}
+                          <Image size={15} />
+                          {photoCount > 0 && <span className="icon-action-count">{photoCount}</span>}
                         </button>
                         <button
-                          className="btn-danger-text"
-                          style={{ color: '#dc2626', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          className="icon-action-btn icon-action-btn-danger"
                           onClick={() => handleDeleteOne(r.id)}
                           disabled={isDeleting}
+                          aria-label={t('table.delete')}
+                          title={t('table.delete')}
                         >
-                          <Trash2 size={13} />
-                          {t('table.delete')}
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>

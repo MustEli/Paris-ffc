@@ -199,7 +199,7 @@ export function IssueReportsPage() {
               return (
                 <tr key={report.id}>
                   <td>{tCommon(`issueReportCategories.${report.category}`)}</td>
-                  <td>{report.userName}</td>
+                  <td className="staff-name-cell">{report.userName}</td>
                   <td>{new Date(report.createdAt).toLocaleString()}</td>
                   <td>
                     {fields.map((f) => (

@@ -391,7 +391,7 @@ table {
 
 th,
 td {
-  text-align: left;
+  text-align: center;
   padding: 10px var(--space-3);
   border-bottom: 1px solid var(--gray-100);
 }
@@ -449,7 +449,7 @@ tr:hover td {
   white-space: nowrap;
 }
 
-/* Staff Activity's Started/Duration columns — short, fixed-format values (a clock time or "HH:MM ( X mins )") that should never wrap. */
+/* Staff Activity's Started/Duration columns — short, fixed-format values (a clock time or "HH:MM") that should never wrap. */
 .nowrap-cell {
   white-space: nowrap;
 }
@@ -458,6 +458,23 @@ tr:hover td {
   white-space: nowrap;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Every staff-name cell across the Staff Activity / Staff / Staff History
+   tables uses this same bold, single-line style (previously only the
+   Staff History table's sticky name column had it). */
+.staff-name-cell {
+  font-weight: var(--weight-strong);
+  white-space: nowrap;
+}
+
+/* Seller Stock Pallets' Pallet column — IDs can run long (e.g.
+   "Hmp-H12-D32"); never wrap to a 2nd line, bold for scannability, a
+   size step down from the table's base font so long IDs still fit. */
+.pallet-id-cell {
+  font-weight: var(--weight-strong);
+  white-space: nowrap;
+  font-size: var(--text-sm);
 }
 
 tr:last-child td {
@@ -936,6 +953,51 @@ textarea:focus {
   align-items: center;
 }
 
+/* Per-row action icons (view / photos / delete) across the Deliveries and
+   Seller Stock Pallets tables — icon-only, no text label, since these are
+   universally recognizable actions. A small count badge (e.g. photo
+   count) can sit next to the icon instead of a separate table column. */
+.icon-action-row {
+  justify-content: center;
+}
+
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--gray-700);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+}
+
+.icon-action-btn:hover:not(:disabled) {
+  background: var(--gray-100);
+  color: var(--gray-950);
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon-action-btn-danger {
+  color: #dc2626;
+}
+
+.icon-action-btn-danger:hover:not(:disabled) {
+  background: var(--status-danger-bg);
+  color: #dc2626;
+}
+
+.icon-action-count {
+  font-size: 11px;
+  font-weight: var(--weight-strong);
+  color: var(--gray-600);
+}
+
 .section-toolbar {
   display: flex;
   justify-content: space-between;
@@ -1377,10 +1439,11 @@ textarea:focus {
   color: var(--brand-orange-dark);
 }
 
+/* `position`/`top`/`left` come from FilterPopover.tsx's inline style —
+   it's portaled to <body> and positioned in viewport coordinates so a
+   table's own overflow-x/y scroll wrapper can never clip it. z-index is
+   high enough to sit above everything else on the page, modals included. */
 .filter-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
   background: #fff;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
@@ -1388,7 +1451,7 @@ textarea:focus {
   padding: 6px;
   min-width: 210px;
   max-width: 260px;
-  z-index: 45;
+  z-index: 1000;
   text-transform: none;
   font-weight: var(--weight-regular);
   letter-spacing: normal;

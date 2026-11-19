@@ -47,12 +47,12 @@ function formatDayHeader(day: string): string {
   return new Date(`${day}T00:00:00.000Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-/** Every duration in all 3 tables renders this way — "HH:MM ( X mins )" — per the Nov 2026 table redesign. */
+/** Every duration in all 3 tables renders this way — "HH:MM" — per the Nov 2026 table redesign. */
 function formatDurationHHMM(ms: number): string {
   const totalMinutes = Math.round(Math.max(0, ms) / 60_000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ( ${totalMinutes} mins )`;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 const RECEPTION_CATEGORY_KEYS: ReceptionCategory[] = ['return_parcels', 'packaging_stock', 'sellers_stock', 'equipment_other'];
@@ -433,7 +433,7 @@ function StaffSummarySection() {
                 )}
                 {rows.map((row) => (
                   <tr key={row.userId}>
-                    <td>{row.userName}</td>
+                    <td className="staff-name-cell">{row.userName}</td>
                     <BreakdownCells breakdown={row.breakdown} filters={filters} t={t} />
                   </tr>
                 ))}
@@ -637,7 +637,9 @@ function StaffHistorySection() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.userId}>
-                    <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 'var(--weight-strong)' }}>{row.userName}</td>
+                    <td className="staff-name-cell" style={{ position: 'sticky', left: 0, background: '#fff' }}>
+                      {row.userName}
+                    </td>
                     <BreakdownCells breakdown={row.cumulative} filters={filters} t={t} />
                     {orderedDays.map((day) => (
                       <BreakdownCells key={day} breakdown={row.days[day] ?? ZERO_BREAKDOWN} filters={filters} t={t} />
@@ -777,7 +779,7 @@ function StaffActivitySection({
                 ref={entry.id === highlightId ? highlightRef : undefined}
                 className={entry.id === highlightId ? 'highlight-row' : undefined}
               >
-                <td>{entry.userName}</td>
+                <td className="staff-name-cell">{entry.userName}</td>
                 <td className="nowrap-cell">{t(STAFF_ACTIVITY_TYPE_KEYS[entry.type])}</td>
                 <td>
                   {staffActivityDetail(entry, t)}

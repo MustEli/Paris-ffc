@@ -146,7 +146,7 @@ function AttendanceTotalsTable() {
           <tbody>
             {data.rows.map((row) => (
               <tr key={row.userId}>
-                <td>{row.userName}</td>
+                <td className="staff-name-cell">{row.userName}</td>
                 <td>{row.totalShifts}</td>
                 <td>{row.totalHoursWorked}</td>
               </tr>

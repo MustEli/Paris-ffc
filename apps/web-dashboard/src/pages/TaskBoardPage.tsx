@@ -305,7 +305,7 @@ function DirectivesSection({
             >
               <td>{t(`directiveTypes.${d.type}`, { ns: 'common' })}</td>
               <td>{d.message}</td>
-              <td>
+              <td className="staff-name-cell">
                 {d.targetUserId
                   ? onShiftStaff.find((s) => s.userId === d.targetUserId)?.userName ?? d.targetUserId
                   : t('directives.anyone')}
@@ -317,7 +317,7 @@ function DirectivesSection({
               <td>{d.completionPhotoUrl ? <PhotoThumbnailLink url={d.completionPhotoUrl} /> : '—'}</td>
               <td>{d.completionComment ?? '—'}</td>
               <td>{d.resolvedAt ? new Date(d.resolvedAt).toLocaleString() : '—'}</td>
-              <td>{staffName(d.receivedByUserId)}</td>
+              <td className="staff-name-cell">{staffName(d.receivedByUserId)}</td>
             </tr>
           ))}
         </tbody>
@@ -513,7 +513,7 @@ function OpenPoolSection({ highlightId, prefill }: { highlightId: string | null;
             >
               <td>{task.title}</td>
               <td>{task.description ?? '—'}</td>
-              <td>{task.targetUserId ? staffName(task.targetUserId) : t('openPool.anyone')}</td>
+              <td className="staff-name-cell">{task.targetUserId ? staffName(task.targetUserId) : t('openPool.anyone')}</td>
               <td>{t(`priority.${task.priority}`, { ns: 'common' })}</td>
               <td>
                 <span className={`pill ${STATUS_PILL_CLASS[task.status]}`}>{t(`status.${task.status}`)}</span>
@@ -522,7 +522,7 @@ function OpenPoolSection({ highlightId, prefill }: { highlightId: string | null;
               <td>{task.completionPhotoUrl ? <PhotoThumbnailLink url={task.completionPhotoUrl} /> : '—'}</td>
               <td>{task.completionComment ?? '—'}</td>
               <td>{task.completedAt ? new Date(task.completedAt).toLocaleString() : '—'}</td>
-              <td>{staffName(task.claimedByUserId)}</td>
+              <td className="staff-name-cell">{staffName(task.claimedByUserId)}</td>
             </tr>
           ))}
         </tbody>

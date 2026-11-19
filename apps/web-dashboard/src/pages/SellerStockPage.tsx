@@ -360,14 +360,13 @@ export function SellerStockSection() {
                 />
                 <th>{t('pallets.table.condition')}</th>
                 <th>{t('pallets.table.status')}</th>
-                <th>{t('pallets.table.photos')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {pallets.length === 0 && (
                 <tr>
-                  <td colSpan={10}>{t('pallets.table.noResults')}</td>
+                  <td colSpan={9}>{t('pallets.table.noResults')}</td>
                 </tr>
               )}
               {pallets.map((pallet) => {
@@ -385,7 +384,7 @@ export function SellerStockSection() {
                         onChange={() => toggle(pallet.id)}
                       />
                     </td>
-                    <td>{pallet.palletIndex}</td>
+                    <td className="pallet-id-cell">{pallet.palletIndex}</td>
                     <td>{formatDateTime(pallet.createdAt)}</td>
                     <td>{pallet.boxNumber}</td>
                     <td>{pallet.sellerName}</td>
@@ -401,35 +400,35 @@ export function SellerStockSection() {
                     </td>
                     <td>{conditionLabel(pallet, t)}</td>
                     <td>{t(`sellerStockStatus.${pallet.status}`, { ns: 'common' })}</td>
-                    <td>{photoCount}</td>
                     <td>
-                      <div className="flex-row">
+                      <div className="flex-row icon-action-row">
                         <button
-                          className="btn-danger-text"
-                          style={{ color: 'var(--gray-950)', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          className="icon-action-btn"
                           onClick={() => setGalleryPallet(pallet)}
                           disabled={photoCount === 0}
+                          aria-label={t('pallets.actions.viewPhotos')}
+                          title={t('pallets.actions.viewPhotos')}
                         >
-                          <Image size={13} />
-                          {t('pallets.actions.viewPhotos')}
+                          <Image size={15} />
+                          {photoCount > 0 && <span className="icon-action-count">{photoCount}</span>}
                         </button>
                         <button
-                          className="btn-danger-text"
-                          style={{ color: 'var(--gray-950)', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          className="icon-action-btn"
                           onClick={() => handleDownloadZip([pallet])}
                           disabled={isZipping || photoCount === 0}
+                          aria-label={t('pallets.actions.downloadThisOne')}
+                          title={t('pallets.actions.downloadThisOne')}
                         >
-                          <Download size={13} />
-                          {t('pallets.actions.downloadThisOne')}
+                          <Download size={15} />
                         </button>
                         <button
-                          className="btn-danger-text"
-                          style={{ color: '#dc2626', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          className="icon-action-btn icon-action-btn-danger"
                           onClick={() => handleDeleteOne(pallet.id)}
                           disabled={isDeleting}
+                          aria-label={t('pallets.actions.delete')}
+                          title={t('pallets.actions.delete')}
                         >
-                          <Trash2 size={13} />
-                          {t('pallets.actions.delete')}
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
