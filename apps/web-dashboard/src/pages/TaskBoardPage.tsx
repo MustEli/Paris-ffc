@@ -277,6 +277,7 @@ function DirectivesSection({
       </div>
       {isPending && <p>{t('directives.loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
+      <div style={{ overflowX: 'auto' }}>
       <table>
         <thead>
           <tr>
@@ -322,6 +323,7 @@ function DirectivesSection({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -484,6 +486,7 @@ function OpenPoolSection({ highlightId, prefill }: { highlightId: string | null;
       </div>
       {isPending && <p>{t('openPool.loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
+      <div style={{ overflowX: 'auto' }}>
       <table>
         <thead>
           <tr>
@@ -527,6 +530,7 @@ function OpenPoolSection({ highlightId, prefill }: { highlightId: string | null;
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

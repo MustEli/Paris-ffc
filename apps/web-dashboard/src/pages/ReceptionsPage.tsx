@@ -384,6 +384,7 @@ export function DeliveriesSection() {
           {zipError && <p className="error-text">{zipError}</p>}
           {deleteError && <p className="error-text">{deleteError}</p>}
 
+          <div style={{ overflowX: 'auto' }}>
           <table>
             <thead>
               <tr>
@@ -457,6 +458,7 @@ export function DeliveriesSection() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

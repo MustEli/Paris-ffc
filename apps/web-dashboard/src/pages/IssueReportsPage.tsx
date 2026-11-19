@@ -176,6 +176,7 @@ export function IssueReportsPage() {
         {error && <p className="error-text">{error.message}</p>}
         {actionError && <p className="error-text">{actionError}</p>}
 
+        <div style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
@@ -269,6 +270,7 @@ export function IssueReportsPage() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {galleryReport && (

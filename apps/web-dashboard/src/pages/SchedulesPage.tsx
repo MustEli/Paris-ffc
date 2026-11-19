@@ -135,6 +135,7 @@ function AttendanceTotalsTable() {
       {isPending && <p>{t('loading')}</p>}
       {error && <p className="error-text">{error.message}</p>}
       {data && (
+        <div style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
@@ -153,6 +154,7 @@ function AttendanceTotalsTable() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       {data && data.rows.length === 0 && <p className="hint-text">{t('attendanceTotals.noCompletedShifts')}</p>}
     </div>

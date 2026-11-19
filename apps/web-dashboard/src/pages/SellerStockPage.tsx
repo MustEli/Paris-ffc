@@ -343,6 +343,7 @@ export function SellerStockSection() {
           {zipError && <p className="error-text">{zipError}</p>}
           {deleteError && <p className="error-text">{deleteError}</p>}
 
+          <div style={{ overflowX: 'auto' }}>
           <table>
             <thead>
               <tr>
@@ -437,6 +438,7 @@ export function SellerStockSection() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
